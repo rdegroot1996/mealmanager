@@ -1,0 +1,172 @@
+<app-modal #modal (closed)="endSession()">
+  <h2 modal-title>
+    @if (editingProfile()) {
+      <ng-container i18n="@@recipes.editProfile">Edit Profile</ng-container>
+    } @else {
+      <ng-container i18n="@@recipes.addProfile">Add Profile</ng-container>
+    }
+  </h2>
+  <p class="sr-only" aria-live="polite" aria-atomic="true">{{ reorderAnnouncement() }}</p>
+
+  @if (profile()) {
+    <app-form-field
+      controlId="profile-name"
+      i18n-label="@@recipes.profileFormModal.template.labelProfileName"
+      label="Profile Name"
+      [required]="true"
+    >
+      <input
+        type="text"
+        id="profile-name"
+        class="input w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
+        i18n-placeholder="@@recipes.profileFormModal.template.placeholderEGDefaultBulkParty"
+        placeholder="e.g. Default, Bulk, Party..."
+        [disabled]="saving()"
+        [ngModel]="profileName()"
+        (ngModelChange)="profileName.set($event)"
+      />
+    </app-form-field>
+
+    <app-form-field
+      controlId="profile-servings"
+      i18n-label="@@recipes.profileFormModal.template.labelServings"
+      label="Servings"
+      [required]="true"
+    >
+      <app-number-input
+        controlId="profile-servings"
+        i18n-label="@@recipes.profileFormModal.template.labelServings"
+        label="Servings"
+        [fullWidth]="true"
+        [value]="profileServings()"
+        (valueChange)="profileServings.set($event)"
+        [disabled]="saving()"
+      />
+    </app-form-field>
+
+    @if (!neededItems().length && !atHomeItems().length) {
+      <p
+        class="app-inset mb-4 p-3 text-sm text-base-content/75"
+        i18n="@@recipes.profileGroceriesModal.template.thisProfileHasNoGroceryProductsYet"
+      >
+        This profile has no grocery products yet. Add one below to use it when planning meals.
+      </p>
+      @if (ingredients().length) {
+        <button
+          type="button"
+          class="btn btn-secondary mb-4"
+          [disabled]="saving()"
+          (click)="initializeFromIngredients()"
+          i18n="@@recipes.profileGroceriesModal.template.initializeFromRecipeIngredients"
+        >
+          Initialize from recipe ingredients
+        </button>
+      }
+    }
+
+    <h3 class="app-subsection-title mb-3" i18n="@@groceries.needed">Needed</h3>
+    <div
+      cdkDropList
+      id="needed-profile-products"
+      [cdkDropListData]="neededItems()"
+      [cdkDropListConnectedTo]="['at-home-profile-products']"
+      [cdkDropListDisabled]="saving()"
+      class="flex min-h-14 flex-col divide-y divide-base-300"
+      (cdkDropListDropped)="dropItem($event, false)"
+    >
+      @for (item of neededItems(); track item.id) {
+        <app-product-row
+          cdkDrag
+          [item]="item"
+          [disabled]="saving()"
+          (moveRequested)="moveItemWithKeyboard(item, $event)"
+          (removed)="removeNeededItem($index)"
+          (saved)="updateNeededItem($index, $event)"
+        />
+      } @empty {
+        <p class="self-center py-2 text-sm text-base-content/75" i18n="@@groceries.dropHint">
+          Add or move groceries here
+        </p>
+      }
+    </div>
+    <div class="mt-3">
+      <button
+        class="btn btn-ghost btn-sm min-h-11"
+        type="button"
+        [disabled]="saving()"
+        i18n-aria-label="@@groceries.addNeededItem"
+        aria-label="Add item to Needed"
+        (click)="startAddItem('needed')"
+      >
+        <app-icon name="add" class="size-5" />
+        <ng-container i18n="@@common.addItem">Add item</ng-container>
+      </button>
+    </div>
+
+    <div class="divider"></div>
+
+    <h3 class="app-subsection-title mb-3 mt-4">
+      <ng-container i18n="@@groceries.usuallyAtHome">Usually at home</ng-container>
+    </h3>
+    <div
+      cdkDropList
+      id="at-home-profile-products"
+      [cdkDropListData]="atHomeItems()"
+      [cdkDropListConnectedTo]="['needed-profile-products']"
+      [cdkDropListDisabled]="saving()"
+      class="flex min-h-14 flex-col divide-y divide-base-300"
+      (cdkDropListDropped)="dropItem($event, true)"
+    >
+      @for (item of atHomeItems(); track item.id) {
+        <app-product-row
+          cdkDrag
+          [item]="item"
+          [disabled]="saving()"
+          (moveRequested)="moveItemWithKeyboard(item, $event)"
+          (removed)="removeAtHomeItem($index)"
+          (saved)="updateAtHomeItem($index, $event)"
+        />
+      } @empty {
+        <p class="self-center py-2 text-sm text-base-content/75" i18n="@@groceries.dropHint">
+          Add or move groceries here
+        </p>
+      }
+    </div>
+    <div class="mt-3">
+      <button
+        class="btn btn-ghost btn-sm min-h-11"
+        type="button"
+        [disabled]="saving()"
+        i18n-aria-label="@@groceries.addAtHomeItem"
+        aria-label="Add item to Usually at home"
+        (click)="startAddItem('atHome')"
+      >
+        <app-icon name="add" class="size-5" />
+        <ng-container i18n="@@common.addItem">Add item</ng-container>
+      </button>
+    </div>
+  }
+
+  @if (error()) {
+    <div class="alert alert-error alert-soft" role="alert">{{ error() }}</div>
+  }
+  <div modal-actions>
+    <button class="btn btn-primary" [disabled]="!profile() || saving()" (click)="confirm()">
+      @if (saving()) {
+        <ng-container i18n="@@common.saving">Saving…</ng-container>
+      } @else if (editingProfile()) {
+        <ng-container i18n="@@common.save">Save</ng-container>
+      } @else {
+        <ng-container i18n="@@common.add">Add</ng-container>
+      }
+    </button>
+  </div>
+</app-modal>
+
+<app-grocery-edit-modal
+  #itemEditor
+  [disabled]="saving()"
+  [context]="addingItemTo() === 'atHome' ? atHomeLabel : neededLabel"
+  (saved)="addItem($event, addingItemTo() === 'atHome')"
+  (closed)="addingItemTo.set(null)"
+/>

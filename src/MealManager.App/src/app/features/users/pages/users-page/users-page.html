@@ -1,0 +1,77 @@
+<div class="mb-3 flex min-h-11 items-center justify-between gap-3">
+  <h2 id="settings-users-heading" class="app-section-title" i18n="@@settings.users">Users</h2>
+  <button
+    class="btn btn-ghost btn-square size-11"
+    type="button"
+    (click)="form.open()"
+    aria-label="Add user"
+    i18n-aria-label="@@users.addUser"
+  >
+    <app-icon name="add" class="size-5" />
+  </button>
+</div>
+
+@if (loading()) {
+  <app-loading-indicator
+    i18n-message="@@users.usersPage.template.messageLoadingUsers"
+    message="Loading users"
+  />
+} @else if (error()) {
+  <app-empty-state
+    i18n-title="@@users.usersPage.template.titleUsersCouldNotBeLoaded"
+    title="Users could not be loaded"
+    [description]="error()"
+    icon="error"
+  >
+    <button
+      class="btn btn-secondary"
+      empty-state-action
+      type="button"
+      (click)="load()"
+      i18n="@@users.usersPage.template.tryAgain"
+    >
+      Try again
+    </button>
+  </app-empty-state>
+} @else {
+  <ul class="divide-y divide-base-300">
+    @for (user of store.users(); track user.id) {
+      <li class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-4 min-h-19">
+        <div class="min-w-0">
+          <div class="flex min-w-0 flex-wrap items-center gap-2">
+            <span class="min-w-0 break-words font-medium [overflow-wrap:anywhere]">{{
+              user.displayName
+            }}</span>
+            @if (user.id === auth.currentUser()?.id) {
+              <span class="text-xs text-base-content/75" i18n="@@users.usersPage.template.you"
+                >(you)</span
+              >
+            }
+          </div>
+          <p class="mt-1 break-all text-sm text-base-content/75">{{ user.email }}</p>
+          <p class="mt-2 text-xs text-base-content/75">
+            @if (user.isAdmin) {
+              <span class="badge badge-secondary badge-sm" i18n="@@users.admin">Admin</span>
+            } @else {
+              <ng-container i18n="@@users.member">Member</ng-container>
+            }
+          </p>
+        </div>
+        <div class="flex shrink-0 items-center gap-1">
+          <button
+            class="btn btn-ghost btn-square size-11 min-h-11"
+            type="button"
+            (click)="form.open(user)"
+            aria-label="Edit"
+            i18n-aria-label="@@users.usersPage.template.edit"
+          >
+            <app-icon name="edit" class="size-5" />
+          </button>
+        </div>
+      </li>
+    }
+  </ul>
+}
+
+<app-user-form-modal #form (saved)="onSaved($event)" (removed)="deleteUser($event)" />
+<app-confirmation-modal #confirmation />

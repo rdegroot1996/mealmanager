@@ -1,0 +1,124 @@
+<app-modal #modal (closed)="endSession()">
+  <h2 modal-title>
+    @if (isEdit()) {
+      <ng-container i18n="@@users.editUser">Edit user</ng-container>
+    } @else {
+      <ng-container i18n="@@users.addUser">Add user</ng-container>
+    }
+  </h2>
+
+  <div class="space-y-4">
+    <app-form-field
+      controlId="user-display-name"
+      i18n-label="@@common.displayName"
+      label="Display name"
+      [required]="true"
+    >
+      <input
+        id="user-display-name"
+        class="input w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
+        autocomplete="name"
+        [disabled]="saving()"
+        [ngModel]="displayName()"
+        (ngModelChange)="displayName.set($event)"
+      />
+    </app-form-field>
+
+    <app-form-field
+      controlId="user-email"
+      i18n-label="@@common.email"
+      label="Email"
+      [hint]="isEdit() ? emailCannotChange : ''"
+      [required]="!isEdit()"
+    >
+      <input
+        id="user-email"
+        [attr.aria-describedby]="isEdit() ? 'user-email-hint' : null"
+        type="email"
+        class="input w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
+        autocomplete="username"
+        [disabled]="isEdit() || saving()"
+        [ngModel]="email()"
+        (ngModelChange)="email.set($event)"
+      />
+    </app-form-field>
+
+    @if (!isEdit()) {
+      <app-form-field
+        controlId="user-password"
+        i18n-label="@@users.userFormModal.template.labelTemporaryPassword"
+        label="Temporary password"
+        i18n-hint="@@users.passwordHint"
+        hint="At least 6 characters."
+        [required]="true"
+      >
+        <input
+          id="user-password"
+          aria-describedby="user-password-hint"
+          type="password"
+          class="input w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
+          minlength="6"
+          autocomplete="new-password"
+          [disabled]="saving()"
+          [ngModel]="password()"
+          (ngModelChange)="password.set($event)"
+        />
+      </app-form-field>
+    }
+
+    <label class="app-inset mt-3 flex cursor-pointer items-center gap-3 p-3">
+      <input
+        type="checkbox"
+        class="checkbox checkbox-sm checkbox-primary max-[799px]:text-base"
+        [disabled]="saving() || isCurrentUser()"
+        [checked]="isAdmin()"
+        (change)="isAdmin.set($any($event.target).checked)"
+      />
+      <span>
+        <span class="block font-medium" i18n="@@users.userFormModal.template.administrator"
+          >Administrator</span
+        >
+        <span
+          class="text-sm text-base-content/75"
+          i18n="@@users.userFormModal.template.canCreateEditAndRemoveUsers"
+          >Can create, edit, and remove users.</span
+        >
+        @if (isCurrentUser()) {
+          <span
+            class="mt-1 block text-sm text-base-content/75"
+            i18n="@@users.userFormModal.template.youCannotRemoveYourOwnAdministratorRole"
+          >
+            You cannot remove your own administrator role.
+          </span>
+        }
+      </span>
+    </label>
+  </div>
+
+  @if (error()) {
+    <p class="mt-4 text-sm text-error" role="alert">{{ error() }}</p>
+  }
+
+  @if (isEdit() && !isCurrentUser()) {
+    <button
+      class="btn btn-outline h-auto min-h-12 w-full btn-error py-[11px] whitespace-normal mt-4"
+      type="button"
+      [disabled]="saving()"
+      (click)="requestRemoval()"
+    >
+      <app-icon name="delete" class="size-5" />
+      <ng-container i18n="@@users.removeUser">Remove user</ng-container>
+    </button>
+  }
+  <div modal-actions>
+    <button class="btn btn-primary" type="button" [disabled]="saving()" (click)="save()">
+      @if (saving()) {
+        <ng-container i18n="@@common.saving">Saving…</ng-container>
+      } @else if (isEdit()) {
+        <ng-container i18n="@@common.saveChanges">Save changes</ng-container>
+      } @else {
+        <ng-container i18n="@@users.createUser">Create user</ng-container>
+      }
+    </button>
+  </div>
+</app-modal>

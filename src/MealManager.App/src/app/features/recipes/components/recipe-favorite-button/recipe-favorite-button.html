@@ -1,0 +1,21 @@
+<button
+  class="btn btn-circle btn-ghost group size-8 min-h-8 border-0 hover:bg-transparent [@media(pointer:coarse)]:size-11 [@media(pointer:coarse)]:min-h-11"
+  type="button"
+  [class.text-accent-content]="recipe().isFavorite"
+  [attr.aria-label]="actionLabel()"
+  [attr.aria-pressed]="recipe().isFavorite"
+  [disabled]="pending()"
+  [class.btn-disabled]="pending()"
+  [title]="actionLabel()"
+  (click)="toggle()"
+>
+  <span
+    class="flex size-8 shrink-0 items-center justify-center rounded-full bg-base-100/90 ring-1 ring-base-content/10 group-hover:bg-base-100"
+  >
+    @if (recipe().isFavorite) {
+      <app-icon name="favorite" class="block size-[18px]" [filled]="true" />
+    } @else {
+      <app-icon name="favorite_border" class="block size-[18px]" />
+    }
+  </span>
+</button>

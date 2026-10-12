@@ -1,0 +1,21 @@
+<app-modal #modal [showClose]="false" (closed)="onClosed()">
+  <h2 modal-title>{{ title() }}</h2>
+  <p>{{ message() }}</p>
+  <div modal-actions class="flex min-w-0 flex-wrap items-center gap-2">
+    <button class="btn btn-outline" type="button" (click)="decide(false)">
+      {{ cancelLabel() }}
+    </button>
+    <button
+      class="btn"
+      [class.btn-error]="destructive()"
+      [class.btn-primary]="!destructive()"
+      type="button"
+      (click)="decide(true)"
+    >
+      @if (destructive()) {
+        <app-icon name="delete" class="size-5" />
+      }
+      {{ confirmLabel() }}
+    </button>
+  </div>
+</app-modal>

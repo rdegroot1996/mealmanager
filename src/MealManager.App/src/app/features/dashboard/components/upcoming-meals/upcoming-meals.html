@@ -1,0 +1,104 @@
+@if (
+  state.upcomingLoading() ||
+  state.upcomingError() ||
+  upcomingMeals().length > 0 ||
+  previewDays().length > 0
+) {
+  <section class="min-w-0 py-1">
+    <div class="mb-3 flex min-w-0 items-center gap-2.5">
+      <h2
+        class="app-section-title min-w-0 flex-1"
+        i18n="@@dashboard.upcomingMeals.template.upcomingMeals"
+      >
+        Coming up
+      </h2>
+      <a
+        class="text-sm font-medium text-secondary-content hover:underline"
+        routerLink="/planning"
+        i18n="@@dashboard.upcomingMeals.seePlanner"
+        >See planner</a
+      >
+    </div>
+
+    @if (state.upcomingLoading()) {
+      <div class="flex flex-col gap-2.5" role="status" data-testid="upcoming-meals-skeleton">
+        <span class="sr-only" i18n="@@dashboard.upcomingMeals.template.loadingUpcomingMeals"
+          >Loading upcoming meals…</span
+        >
+        @for (placeholder of [0, 1]; track placeholder) {
+          <div class="flex items-center gap-3 border-b border-base-300 py-4">
+            <div class="skeleton size-[54px] shrink-0"></div>
+            <div class="min-w-0 flex-1">
+              <div class="skeleton h-4 w-2/3"></div>
+              <div class="skeleton mt-2 h-3 w-1/2"></div>
+            </div>
+          </div>
+        }
+      </div>
+    } @else if (state.upcomingError()) {
+      <p role="alert" class="text-sm text-error">{{ state.upcomingError() }}</p>
+    } @else {
+      @if (previewDays().length > 0) {
+        <div
+          class="flex gap-1.5"
+          [class.mb-3]="upcomingMeals().length > 0"
+          aria-hidden="true"
+          data-testid="upcoming-calendar"
+        >
+          @for (day of previewDays(); track day.date) {
+            <div
+              class="flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-xl px-1 py-2.5"
+              [class.bg-secondary]="day.date === state.today()"
+              data-testid="upcoming-day-preview"
+            >
+              <span class="text-xs text-base-content/75">{{ day.weekday }}</span>
+              <span class="text-sm font-semibold">{{ day.dayNumber }}</span>
+              <span
+                class="h-1.5 w-1.5 rounded-full"
+                [class.bg-primary]="day.hasMeal"
+                [class.bg-transparent]="!day.hasMeal"
+                data-testid="upcoming-day-status"
+              ></span>
+            </div>
+          }
+        </div>
+      }
+
+      @if (upcomingMeals().length > 0) {
+        <div class="flex flex-col gap-2.5">
+          @for (meal of upcomingMeals(); track meal.id) {
+            <a
+              class="flex min-w-0 items-center gap-3 border-b border-base-300 py-4 transition-colors hover:bg-base-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              [routerLink]="['/recipes', meal.recipe.id]"
+              [attr.aria-label]="viewRecipeLabel(meal.recipe.name)"
+            >
+              <app-recipe-summary
+                [profile]="meal.kind === 'Meal' ? meal.recipeProfile : null"
+                class="min-w-0 flex-1"
+                [name]="meal.recipe.name"
+                [imageUrl]="meal.recipe.imageUrl"
+                imageSize="sm"
+              >
+                <span summary-eyebrow
+                  >{{ mealWeekday(meal.date) }} · {{ upcomingMonth(meal.date) }}</span
+                >
+                @if (meal.kind === 'Leftover') {
+                  <app-leftover-badge />
+                }
+              </app-recipe-summary>
+            </a>
+          }
+        </div>
+      }
+
+      @if (upcomingMeals().length === 0) {
+        <p
+          class="mt-2.5 text-sm leading-[21px] text-base-content/75"
+          i18n="@@dashboard.upcomingMeals.empty"
+        >
+          No meals coming up yet.
+        </p>
+      }
+    }
+  </section>
+}

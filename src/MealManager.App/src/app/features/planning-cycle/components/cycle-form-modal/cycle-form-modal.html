@@ -1,0 +1,76 @@
+<app-modal #modal (closed)="endSession()">
+  <h2 modal-title>
+    @if (isEdit()) {
+      <ng-container i18n="@@planningCycle.editCycle">Edit cycle</ng-container>
+    } @else {
+      <ng-container i18n="@@planningCycle.startNewCycle">Start new cycle</ng-container>
+    }
+  </h2>
+
+  <app-form-field
+    controlId="cycle-start-date"
+    i18n-label="@@planning-cycle.cycleFormModal.template.labelStartDate"
+    label="Start date"
+    [required]="true"
+  >
+    <input
+      type="date"
+      id="cycle-start-date"
+      class="input w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
+      [min]="minimumNewStartDate()"
+      [ngModel]="startDate()"
+      (ngModelChange)="startDate.set($event)"
+    />
+  </app-form-field>
+
+  <app-form-field
+    controlId="cycle-planning-days"
+    i18n-label="@@planning-cycle.cycleFormModal.template.labelPlanningDays"
+    label="Planning days"
+    [required]="true"
+  >
+    <app-number-input
+      controlId="cycle-planning-days"
+      i18n-label="@@planning-cycle.cycleFormModal.template.labelPlanningDays"
+      label="Planning days"
+      [fullWidth]="true"
+      [value]="days()"
+      (valueChange)="days.set($event)"
+      [disabled]="saving()"
+    />
+  </app-form-field>
+
+  <div class="app-inset mb-6 mt-6 p-4 font-semibold">
+    <div class="flex items-center">
+      <app-icon name="date_range" class="mr-4 size-5" />
+      {{ dateRange() }}
+    </div>
+  </div>
+
+  @if (error()) {
+    <p class="text-sm text-error" role="alert">{{ error() }}</p>
+  }
+
+  @if (isEdit()) {
+    <button
+      type="button"
+      class="btn btn-outline h-auto min-h-12 w-full btn-error py-[11px] whitespace-normal mt-4"
+      [disabled]="saving()"
+      (click)="remove()"
+    >
+      <app-icon name="delete" class="size-5" />
+      {{ deleteLabel }}
+    </button>
+  }
+  <div modal-actions>
+    <button class="btn btn-primary" type="button" [disabled]="saving()" (click)="save()">
+      @if (saving()) {
+        <ng-container i18n="@@common.saving">Saving…</ng-container>
+      } @else if (isEdit()) {
+        <ng-container i18n="@@common.save">Save</ng-container>
+      } @else {
+        <ng-container i18n="@@planningCycle.startCycle">Start cycle</ng-container>
+      }
+    </button>
+  </div>
+</app-modal>

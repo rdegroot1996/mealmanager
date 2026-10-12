@@ -1,0 +1,71 @@
+@import '@fontsource/lora/latin-500.css';
+@import '@fontsource/lora/latin-600.css';
+@import '@fontsource/lora/latin-700.css';
+@import '@fontsource/dm-sans/latin-400.css';
+@import '@fontsource/dm-sans/latin-500.css';
+@import '@fontsource/dm-sans/latin-600.css';
+@import '@fontsource/dm-sans/latin-700.css';
+@import 'tailwindcss';
+@plugin "daisyui" {
+  themes: light --default;
+}
+
+@theme {
+  --font-sans: 'DM Sans', ui-sans-serif, sans-serif;
+  --font-display: 'Lora', ui-serif, Georgia, serif;
+}
+
+/* Cozy Café: semantic tokens shared by DaisyUI and the application surfaces. */
+@plugin "daisyui/theme" {
+  name: 'light';
+  default: true;
+  prefersdark: false;
+  color-scheme: 'light';
+  --color-base-100: #ffffff;
+  --color-base-200: #fffaf3;
+  --color-base-300: #eee7dd;
+  --color-base-content: #45352c;
+  --color-primary: #875536;
+  --color-primary-content: #ffffff;
+  --color-secondary: #f1e4d4;
+  --color-secondary-content: #875536;
+  --color-accent: #f7e5df;
+  --color-accent-content: #784b3d;
+  --color-neutral: #eee7dd;
+  --color-neutral-content: #62554b;
+  --color-info: #dde8f8;
+  --color-info-content: #324f79;
+  --color-success: #d5e8c6;
+  --color-success-content: #335a26;
+  --color-warning: #f7e3b1;
+  --color-warning-content: #654812;
+  --color-error: #bc4242;
+  --color-error-content: #ffffff;
+  --radius-selector: 0.25rem;
+  --radius-field: 0.75rem;
+  --radius-box: 1rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 2px;
+  --depth: 0;
+  --noise: 0;
+}
+
+@utility app-surface {
+  @apply rounded-box border border-base-300 bg-base-100;
+}
+@utility app-inset {
+  @apply rounded-field border border-base-300 bg-base-200;
+}
+@utility app-section-title {
+  @apply font-display text-xl font-medium;
+}
+@utility app-subsection-title {
+  @apply text-sm font-medium;
+}
+@utility app-recipe-title {
+  @apply text-sm leading-5 font-medium;
+}
+@utility app-recipe-placeholder {
+  @apply bg-secondary text-secondary-content;
+}

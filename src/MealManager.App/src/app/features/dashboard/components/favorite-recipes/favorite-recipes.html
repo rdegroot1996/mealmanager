@@ -1,0 +1,138 @@
+<section class="min-w-0 py-1">
+  <div class="mb-3 flex min-w-0 items-center gap-2.5">
+    <h2
+      class="min-w-0 flex-1 app-section-title"
+      i18n="@@dashboard.favoriteRecipes.template.favoriteRecipes"
+    >
+      Household favorites
+    </h2>
+    <a
+      class="shrink-0 text-sm font-medium text-secondary-content hover:underline"
+      routerLink="/recipes"
+      i18n="@@dashboard.favoriteRecipes.allRecipes"
+      >All recipes</a
+    >
+  </div>
+
+  @if (loading()) {
+    <div
+      class="grid grid-cols-2 items-stretch gap-3"
+      role="status"
+      data-testid="favorite-recipes-skeleton"
+    >
+      <span class="sr-only" i18n="@@common.loadingRecipes">Loading recipes…</span>
+      @for (placeholder of [0, 1, 2, 3]; track placeholder) {
+        <div class="app-surface min-w-0 overflow-hidden">
+          <div class="skeleton aspect-[16/10] max-h-[180px] rounded-none"></div>
+          <div class="p-3">
+            <div class="skeleton h-4 w-3/4"></div>
+            <div class="skeleton mt-2 h-3 w-1/2"></div>
+          </div>
+        </div>
+      }
+    </div>
+  } @else if (error()) {
+    <p role="alert" class="text-sm text-error">{{ error() }}</p>
+    <button
+      type="button"
+      class="btn btn-secondary btn-sm mt-2"
+      (click)="load()"
+      i18n="@@common.retry"
+    >
+      Retry
+    </button>
+  } @else if (favoriteRecipes().length === 0) {
+    <p class="text-sm leading-[21px] text-base-content/75" i18n="@@dashboard.favoriteRecipes.empty">
+      No favourites yet.
+    </p>
+  } @else {
+    <div class="relative">
+      <div
+        #carousel
+        class="flex w-full max-w-full gap-4 snap-x snap-mandatory overflow-x-auto scroll-smooth motion-reduce:scroll-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        (scroll)="updateCurrentPage()"
+        data-testid="favorite-carousel"
+        i18n-aria-label="@@dashboard.favoriteRecipes.carousel"
+        aria-label="Favorite recipes"
+      >
+        @for (recipePage of recipePages(); track $index) {
+          <div
+            class="grid w-full max-w-full flex-none snap-start snap-always self-start auto-rows-max grid-cols-2 content-start items-stretch gap-3"
+            data-testid="favorite-page"
+          >
+            @for (recipe of recipePage; track recipe.id) {
+              <article
+                class="app-surface relative min-w-0 transition-colors hover:border-primary/40 focus-within:border-primary"
+              >
+                <a
+                  class="flex h-full min-w-0 flex-col overflow-hidden rounded-box focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
+                  [routerLink]="['/recipes', recipe.id]"
+                  [attr.aria-label]="openRecipeLabel(recipe.name)"
+                >
+                  <div
+                    class="flex aspect-[16/10] max-h-[180px] w-full shrink-0 overflow-hidden items-center justify-center"
+                    [class.app-recipe-placeholder]="!recipe.imageUrl"
+                    data-testid="favorite-recipe-image"
+                  >
+                    @if (recipe.imageUrl) {
+                      <img
+                        class="h-full w-full min-w-0 max-w-full object-cover"
+                        [src]="recipe.imageUrl"
+                        alt=""
+                        loading="lazy"
+                      />
+                    } @else {
+                      <app-icon name="restaurant" class="size-8" />
+                    }
+                  </div>
+                  <div class="min-w-0 flex-1 overflow-hidden p-3">
+                    <p
+                      class="app-recipe-title line-clamp-2 overflow-hidden text-ellipsis break-words"
+                    >
+                      {{ recipe.name }}
+                    </p>
+                  </div>
+                </a>
+                <app-recipe-favorite-button [recipe]="recipe" />
+              </article>
+            }
+          </div>
+        }
+      </div>
+
+      @if (pageCount() > 1) {
+        <div class="mt-3 flex items-center justify-center gap-3">
+          <button
+            type="button"
+            class="btn btn-circle btn-ghost size-11 min-h-11"
+            [disabled]="currentPage() === 0"
+            (click)="goToPage(currentPage() - 1)"
+            i18n-aria-label="@@dashboard.favoriteRecipes.previousPage"
+            aria-label="Previous favorites"
+          >
+            <app-icon name="chevron_left" class="size-4" />
+          </button>
+          <div class="flex gap-2" aria-hidden="true">
+            @for (page of pages(); track page) {
+              <span
+                class="size-2 rounded-full transition-colors"
+                [class.bg-primary]="page === currentPage()"
+                [class.bg-base-300]="page !== currentPage()"
+              ></span>
+            }
+          </div>
+          <button
+            type="button"
+            class="btn btn-circle btn-ghost size-11 min-h-11"
+            [disabled]="currentPage() === pageCount() - 1"
+            (click)="goToPage(currentPage() + 1)"
+            i18n-aria-label="@@dashboard.favoriteRecipes.nextPage"
+            aria-label="Next favorites"
+          >
+            <app-icon name="chevron_right" class="size-4" />
+          </button>
+        </div>
+      }
+    </div>
+  }
+</section>

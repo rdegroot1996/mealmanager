@@ -1,0 +1,425 @@
+<section
+  class="flex max-w-full flex-col items-end gap-2"
+  aria-label="Export groceries to supermarket"
+  i18n-aria-label="@@supermarkets.sendRegion"
+>
+  <button
+    class="btn btn-primary w-full"
+    type="button"
+    [disabled]="loading() || disabled() || (!hasGroceries() && !pending())"
+    [attr.aria-describedby]="!hasGroceries() ? 'supermarket-empty-' + cycleId() : null"
+    (click)="openReview()"
+    i18n="@@supermarkets.send"
+  >
+    Export
+  </button>
+  @if (!hasGroceries()) {
+    <p class="sr-only" [id]="'supermarket-empty-' + cycleId()" i18n="@@supermarkets.emptyList">
+      There are no list items to export.
+    </p>
+  }
+</section>
+
+<app-modal
+  #reviewDialog
+  size="wide"
+  [labelledBy]="reviewDialog.titleId + '-heading'"
+  (closed)="onClosed()"
+>
+  <div modal-title>
+    <h2
+      [id]="reviewDialog.titleId + '-heading'"
+      class="font-display text-2xl font-medium sm:text-3xl"
+    >
+      {{ title() }}
+    </h2>
+    @if (accountLabel() && view() !== 'destination' && view() !== 'unavailable') {
+      <p class="mt-1 break-all text-sm leading-5 font-normal text-base-content/75">
+        {{ accountLabel() }}
+      </p>
+    }
+  </div>
+  @if (error()) {
+    <p class="mb-4 text-sm text-error" role="alert">{{ error() }}</p>
+  }
+
+  @if (view() === 'destination') {
+    <h3 class="font-semibold" i18n="@@supermarkets.chooseDestination">
+      Which supermarket would you like to export to?
+    </h3>
+    <ul class="mt-4 flex flex-col gap-2">
+      @for (connection of providers(); track connection.provider) {
+        <li>
+          <button
+            class="btn btn-secondary h-auto min-h-14 w-full justify-start whitespace-normal p-3 text-left"
+            type="button"
+            [disabled]="connection.status !== 'Connected'"
+            (click)="chooseProvider(connection.provider)"
+          >
+            <span class="min-w-0 flex-1"
+              ><span class="block">{{ connection.name }}</span
+              ><span class="block break-all font-sans text-sm font-normal text-base-content/75">{{
+                connection.accountLabel
+              }}</span>
+              @if (connection.status !== 'Connected') {
+                <span class="block font-sans text-sm font-normal" i18n="@@supermarkets.notConnected"
+                  >Not connected</span
+                >
+              }</span
+            ><app-icon name="chevron_right" class="size-5 shrink-0" />
+          </button>
+        </li>
+      }
+    </ul>
+  } @else if (view() === 'unavailable') {
+    <p i18n="@@supermarkets.noConnection">No supermarket is connected.</p>
+  } @else if (view() === 'loading') {
+    <app-loading-indicator
+      i18n-message="@@supermarkets.loadingReview"
+      [compact]="true"
+      message="Loading groceries and product choices…"
+    />
+  } @else if (view() === 'products') {
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h3 class="app-subsection-title" i18n="@@supermarkets.whichGroceries">
+        Which list items are included?
+      </h3>
+      @if (connected().length > 1) {
+        <button
+          class="btn btn-ghost btn-sm"
+          type="button"
+          (click)="backToDestination()"
+          i18n="@@design.changeDestination"
+        >
+          Change supermarket
+        </button>
+      }
+    </div>
+    <p class="mt-1 text-sm leading-5 text-base-content/75" i18n="@@supermarkets.packHint">
+      Choose how many packs of each product to add.
+    </p>
+    @if (review()!.unreviewedMeals) {
+      <p
+        class="alert alert-warning mt-3 text-sm"
+        role="status"
+        data-testid="export-unreviewed-meals"
+      >
+        @if (review()!.unreviewedMeals === 1) {
+          <span i18n="@@supermarkets.unreviewedOne"
+            >1 meal has not been reviewed for groceries yet.</span
+          >
+        } @else {
+          <span i18n="@@supermarkets.unreviewedCount">
+            {{ review()!.unreviewedMeals }} meals have not been reviewed for groceries yet.
+          </span>
+        }
+      </p>
+    }
+    <div
+      class="min-[800px]:grid min-[800px]:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_160px] min-[800px]:gap-6 hidden border-b border-base-300 py-3 text-xs text-base-content/75"
+    >
+      <span i18n="@@design.exportSource">On your list</span>
+      <span i18n="@@design.exportProduct">Supermarket product</span>
+      <span i18n="@@design.exportPacks">Packs to buy</span>
+    </div>
+    <div class="flex flex-col [&>[data-review-row]:last-child]:border-b-0">
+      @for (row of uncheckedRows(); track row.groceryItemId) {
+        <ng-container
+          [ngTemplateOutlet]="groceryRow"
+          [ngTemplateOutletContext]="{ $implicit: row }"
+        />
+      }
+    </div>
+    @if (checkedRows().length) {
+      <details
+        class="mt-4"
+        [open]="checkedExpanded()"
+        (toggle)="checkedExpanded.set($any($event.target).open)"
+      >
+        <summary class="py-2 text-sm" i18n="@@supermarkets.alreadyChecked">
+          Already checked ({{ checkedRows().length }})
+        </summary>
+        <div class="flex flex-col gap-3 [&>[data-review-row]:last-child]:border-b-0">
+          @for (row of checkedRows(); track row.groceryItemId) {
+            <ng-container
+              [ngTemplateOutlet]="groceryRow"
+              [ngTemplateOutletContext]="{ $implicit: row }"
+            />
+          }
+        </div>
+      </details>
+    }
+    @for (total of totals(); track total.product.id) {
+      @if (total.sources.length > 1 && total.quantity > maxQuantity(total.product)) {
+        <p class="mt-3 text-sm text-error" role="alert" i18n="@@supermarkets.combinedQuantityLimit">
+          {{ total.product.name }}: combined quantity exceeds
+          {{ maxQuantity(total.product) }} packs.
+        </p>
+      }
+    }
+    @if (mappingConflict()) {
+      <p class="mt-3 text-sm text-error" role="alert" i18n="@@supermarkets.mappingConflict">
+        Choose one product to remember for each recipe product.
+      </p>
+    }
+  } @else if (view() === 'sending') {
+    <app-loading-indicator
+      i18n-message="@@supermarkets.sending"
+      [compact]="true"
+      message="Exporting products…"
+      i18n-description="@@supermarkets.closeWhileSending"
+      description="You can close this window. Adding continues."
+    />
+  } @else if (view() === 'results') {
+    <h3 class="font-semibold" i18n="@@supermarkets.sendResults">Supermarket results</h3>
+    @if (failure()) {
+      <p class="mt-3" role="status" i18n="@@supermarkets.exportFailed">
+        Export failed. Close this window to review your list and export again.
+      </p>
+    } @else {
+      @if (counts().failed) {
+        <p class="mt-3" role="status" i18n="@@supermarkets.simpleResultCounts">
+          {{ counts().added }} added; {{ counts().failed }} failed.
+        </p>
+        <p class="mt-2 text-sm text-base-content/75" i18n="@@supermarkets.newRound">
+          Failed items stay unchecked. Close this window to export them in a new round.
+        </p>
+      } @else if (counts().added === 1) {
+        <p class="alert alert-success mt-3" role="status" i18n="@@supermarkets.addedOne">
+          1 product added.
+        </p>
+      } @else {
+        <p class="alert alert-success mt-3" role="status" i18n="@@supermarkets.addedCount">
+          {{ counts().added }} products added.
+        </p>
+      }
+      @if (failedLines().length) {
+        <ul class="mt-4 flex flex-col gap-3">
+          @for (line of failedLines(); track $index) {
+            <li class="app-surface p-4">
+              <div class="flex flex-wrap justify-between gap-2">
+                <span class="min-w-0 break-words font-medium"
+                  >{{ line.productName }} &middot; {{ line.pack }} &times; {{ line.quantity }}</span
+                >
+                <span class="badge badge-error badge-soft badge-sm">{{
+                  status(line.outcome)
+                }}</span>
+              </div>
+              @if (line.reason) {
+                <p class="mt-2 text-sm">{{ reason(line.reason, line.outcome) }}</p>
+              }
+            </li>
+          }
+        </ul>
+      }
+      @for (line of addedLines(); track $index) {
+        @if (line.localWarning) {
+          <p class="app-inset mt-4 p-4 text-sm text-warning-content" role="alert">
+            <span class="font-medium">{{ line.productName }}: </span>{{ reason(line.localWarning) }}
+          </p>
+        }
+      }
+      @if (addedLines().length) {
+        <details class="app-surface mt-4 p-4">
+          <summary
+            class="cursor-pointer text-sm font-medium text-success-content"
+            i18n="@@supermarkets.addedDetails"
+          >
+            Added products ({{ addedLines().length }})
+          </summary>
+          <ul class="mt-3 divide-y divide-base-300 text-sm">
+            @for (line of addedLines(); track $index) {
+              <li class="flex min-w-0 items-center gap-3 py-3">
+                <app-icon name="check" class="size-5 shrink-0 text-success-content" />
+                <span class="min-w-0 flex-1"
+                  ><span class="block break-words font-medium">{{ line.productName }}</span
+                  ><span class="mt-1 block text-xs text-base-content/75">{{
+                    line.pack
+                  }}</span></span
+                >
+                <span class="shrink-0 text-xs tabular-nums text-base-content/75"
+                  >{{ line.quantity }}×</span
+                >
+              </li>
+            }
+          </ul>
+        </details>
+      }
+    }
+    <p
+      class="app-inset mt-4 p-4 text-sm leading-relaxed text-base-content/75"
+      i18n="@@supermarkets.handoff"
+    >
+      After sending, make changes in your supermarket app. Changes in MealManager do not update that
+      cart.
+    </p>
+  }
+
+  @if (view() === 'products') {
+    <p
+      modal-note
+      class="w-full text-xs leading-5 text-base-content/75"
+      i18n="@@supermarkets.addExplanation"
+    >
+      Adds the selected products to your cart. This does not place an order.
+    </p>
+  }
+  <div modal-actions>
+    @if (view() === 'products') {
+      <button
+        class="btn btn-primary"
+        type="button"
+        [disabled]="!valid() || pending()"
+        (click)="confirm()"
+      >
+        <span i18n="@@supermarkets.exportToCart">Add to {{ destinationName() }}</span>
+        @if (estimatedTotal(); as total) {
+          <span class="ml-auto pl-4 tabular-nums">{{
+            total.cents / 100 | currency: total.currency
+          }}</span>
+        }
+      </button>
+    } @else if (view() === 'error') {
+      <button
+        class="btn btn-primary"
+        type="button"
+        [disabled]="pending()"
+        (click)="startNewReview()"
+        i18n="@@common.retry"
+      >
+        Retry
+      </button>
+    }
+  </div>
+</app-modal>
+
+<app-modal
+  #pickerDialog
+  [labelledBy]="pickerDialog.titleId + '-heading'"
+  (closed)="onPickerClosed()"
+>
+  <div modal-title>
+    <h2
+      [id]="pickerDialog.titleId + '-heading'"
+      class="font-display text-2xl font-medium"
+      i18n="@@supermarkets.productFor"
+    >
+      Product for {{ choosingRow()?.name }}
+    </h2>
+  </div>
+  @if (choosingRow(); as row) {
+    <app-supermarket-product-picker
+      [row]="row"
+      [provider]="review()!.provider"
+      [originalProductId]="originalProductId(row)"
+      [originalProductName]="originalProduct(row)?.name ?? ''"
+      (selected)="select($event)"
+    />
+  }
+</app-modal>
+
+<ng-template #groceryRow let-row>
+  <div
+    class="grid min-w-0 grid-cols-1 gap-3 border-b border-base-300 py-5 min-[800px]:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_160px] min-[800px]:items-center min-[800px]:gap-6"
+    [attr.data-review-row]="row.groceryItemId"
+  >
+    <label class="flex min-w-0 items-start gap-3">
+      <input
+        class="checkbox checkbox-sm checkbox-primary mt-0.5 shrink-0 max-[799px]:text-base"
+        type="checkbox"
+        [ngModel]="row.selected"
+        (ngModelChange)="changeRow(row.groceryItemId, { selected: $event })"
+        [disabled]="blocked(row.groceryItemId)"
+      />
+      <span class="min-w-0" [class.line-through]="!row.selected" [class.opacity-60]="!row.selected">
+        <span class="block break-words text-sm font-medium">{{ row.name }}</span>
+        <span class="mt-1 block text-xs text-base-content/75" i18n="@@supermarkets.sourceQuantity"
+          >{{ row.quantity }} on list</span
+        >
+        @if (row.profileProductId) {
+          <span class="block break-words text-xs text-base-content/75">{{ row.group }}</span>
+        }
+      </span>
+    </label>
+    <div class="min-w-0">
+      <button
+        class="flex min-w-0 items-center gap-3 text-left w-full rounded-field py-1 focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-60"
+        type="button"
+        [attr.data-grocery-id]="row.groceryItemId"
+        [attr.aria-label]="productChoiceLabel(row)"
+        [disabled]="!row.selected || blocked(row.groceryItemId)"
+        [class.line-through]="!row.selected"
+        (click)="choose(row.groceryItemId)"
+      >
+        @if (row.product; as product) {
+          <app-supermarket-product-summary class="min-w-0 flex-1" [product]="product" />
+        } @else {
+          <app-supermarket-product-image size="large" />
+          <span class="min-w-0 flex-1">
+            <span
+              class="block text-sm text-secondary-content"
+              i18n="@@supermarkets.noProductSelected"
+              >No product selected</span
+            >
+            <span
+              class="mt-1 block text-xs text-base-content/75"
+              i18n="@@supermarkets.selectProviderProduct"
+              >Select a {{ destinationName() }} product</span
+            >
+          </span>
+        }
+        <app-icon name="chevron_right" class="size-4 shrink-0 text-primary" />
+      </button>
+      @if (
+        row.product &&
+        row.profileProductId &&
+        row.remember &&
+        originalProductId(row) &&
+        row.product.id !== originalProductId(row)
+      ) {
+        <p class="mt-2 text-xs text-base-content/75" i18n="@@supermarkets.replacementRemembered">
+          This replacement will be remembered after exporting.
+        </p>
+      }
+    </div>
+    <div
+      class="w-full min-w-0 [&_.fieldset]:grid [&_.fieldset]:grid-cols-[minmax(0,1fr)_144px] [&_.fieldset]:items-center [&_.fieldset]:gap-x-3 [&_.fieldset]:gap-y-1 [&_.fieldset]:p-0 [&_.fieldset-legend]:py-0 [&_.label]:col-span-2 [&_.label]:whitespace-normal min-[800px]:w-40 min-[800px]:[&_.fieldset]:grid-cols-1 min-[800px]:[&_.fieldset-legend]:sr-only min-[800px]:[&_.label]:col-span-1"
+    >
+      @if (row.product; as product) {
+        <app-form-field
+          [controlId]="'packs-' + row.groceryItemId"
+          [label]="packsLabel"
+          [error]="
+            row.selected && product.availability === 'Available'
+              ? quantityError(product, row.buyQuantity)
+              : null
+          "
+        >
+          <app-number-input
+            [fullWidth]="true"
+            [controlId]="'packs-' + row.groceryItemId"
+            [label]="row.name + ': ' + packsLabel"
+            [value]="row.buyQuantity"
+            [maximum]="maxQuantity(product)"
+            [disabled]="
+              !row.selected || product.availability !== 'Available' || blocked(row.groceryItemId)
+            "
+            [invalid]="
+              row.selected &&
+              product.availability === 'Available' &&
+              !!quantityError(product, row.buyQuantity)
+            "
+            [describedBy]="
+              row.selected && quantityError(product, row.buyQuantity)
+                ? 'packs-' + row.groceryItemId + '-error'
+                : null
+            "
+            (valueChange)="changeRow(row.groceryItemId, { buyQuantity: $event })"
+          />
+        </app-form-field>
+      } @else {
+        <span class="hidden text-base-content/50 min-[800px]:block" aria-hidden="true">—</span>
+      }
+    </div>
+  </div>
+</ng-template>

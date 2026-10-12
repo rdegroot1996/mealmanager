@@ -1,0 +1,122 @@
+<div class="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_2.75rem] items-center gap-2">
+  <app-recipe-summary
+    [profile]="meal().kind === 'Meal' ? meal().recipeProfile : null"
+    class="block min-w-0"
+    [name]="meal().recipe.name"
+    [imageUrl]="meal().recipe.imageUrl"
+    [recipeLink]="['/recipes', meal().recipe.id]"
+    imageSize="thumbnail"
+  >
+    @if (readOnly() && meal().kind === 'Meal') {
+      <span
+        class="badge badge-sm h-auto min-h-7 py-1 whitespace-normal"
+        [class.badge-success]="meal().hasGroceriesAdded"
+        [class.badge-secondary]="!meal().hasGroceriesAdded"
+        data-testid="meal-status"
+      >
+        @if (meal().hasGroceriesAdded) {
+          <ng-container i18n="@@planning.planningMealRow.groceriesAdded">Reviewed</ng-container>
+        } @else {
+          <ng-container i18n="@@planning.planningMealRow.notReviewed">Not reviewed</ng-container>
+        }
+      </span>
+    }
+    @if (meal().kind === 'Leftover') {
+      <app-leftover-badge [originalWeekday]="originalWeekday()" />
+    }
+  </app-recipe-summary>
+  @if (!readOnly()) {
+    <div class="planning-meal-actions flex flex-col items-center gap-1">
+      <div class="flex shrink-0 items-center justify-center" data-testid="meal-menu">
+        <app-action-dialog
+          title="Meal options"
+          i18n-title="@@planning.mealOptions"
+          [label]="moreActionsForItemLabel(meal().recipe.name)"
+          [disabled]="disabled()"
+          [compact]="true"
+          triggerIcon="more_horiz"
+        >
+          <app-recipe-summary
+            action-context
+            [name]="meal().recipe.name"
+            [imageUrl]="meal().recipe.imageUrl"
+            [profile]="meal().kind === 'Meal' ? meal().recipeProfile : null"
+            imageSize="sm"
+          />
+          @if (meal().kind === 'Meal') {
+            <li>
+              <button class="btn btn-ghost h-auto" type="button" (click)="profileRequested.emit()">
+                <app-icon name="edit" class="size-5" />
+                <ng-container i18n="@@planning.planningMealRow.changeProfile"
+                  >Change profile</ng-container
+                >
+              </button>
+            </li>
+            <li>
+              <button
+                class="btn btn-ghost h-auto"
+                type="button"
+                (click)="leftoversRequested.emit()"
+              >
+                <app-icon name="sync" class="size-5" />
+                <ng-container i18n="@@planning.planningMealRow.planLeftovers"
+                  >Plan leftovers</ng-container
+                >
+              </button>
+            </li>
+          }
+          <li>
+            <button class="btn btn-ghost h-auto" type="button" (click)="moveRequested.emit()">
+              <app-icon name="date_range" class="size-5" />
+              <ng-container i18n="@@planning.moveToAnotherDay">Move to another day</ng-container>
+            </button>
+          </li>
+          <li>
+            <button
+              class="btn btn-outline h-auto min-h-12 w-full btn-error py-[11px] whitespace-normal mt-3"
+              type="button"
+              [disabled]="disabled()"
+              (click)="removeRequested.emit()"
+            >
+              <app-icon name="delete" class="size-5" />
+              @if (meal().kind === 'Leftover') {
+                <ng-container i18n="@@planning.removeLeftover">Remove leftovers</ng-container>
+              } @else {
+                <ng-container i18n="@@planning.planningMealRow.removeMeal"
+                  >Remove meal</ng-container
+                >
+              }
+            </button>
+          </li>
+        </app-action-dialog>
+      </div>
+      @if (meal().kind === 'Meal') {
+        <div class="flex min-h-7 min-w-0 items-center" data-testid="meal-status">
+          <button
+            type="button"
+            class="btn btn-square p-0 size-11 min-h-11 shrink-0 items-center justify-center rounded-xl min-[800px]:size-9 min-[800px]:min-h-9 [@media(pointer:coarse)]:size-11 [@media(pointer:coarse)]:min-h-11"
+            [class.btn-success]="meal().hasGroceriesAdded"
+            [class.btn-secondary]="!meal().hasGroceriesAdded"
+            [disabled]="disabled()"
+            [attr.aria-label]="
+              meal().hasGroceriesAdded
+                ? editGroceriesForMealLabel(meal().recipe.name)
+                : addGroceriesForMealLabel(meal().recipe.name)
+            "
+            (click)="groceriesRequested.emit()"
+          >
+            <app-icon
+              [name]="meal().hasGroceriesAdded ? 'check' : 'shopping_cart'"
+              class="size-4 sm:size-5"
+            />
+            @if (meal().hasGroceriesAdded) {
+              <span class="sr-only" i18n="@@planning.planningMealRow.groceriesAdded">Reviewed</span>
+            } @else {
+              <span class="sr-only" i18n="@@planning.planningMealRow.addGroceries">Review</span>
+            }
+          </button>
+        </div>
+      }
+    </div>
+  }
+</div>

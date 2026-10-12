@@ -1,0 +1,54 @@
+<div class="relative flex min-w-0 items-center gap-2 sm:gap-3">
+  <div
+    class="flex shrink-0 items-center justify-center overflow-hidden rounded-box"
+    [class.app-recipe-placeholder]="!imageUrl()"
+    [class]="imageSize() === 'sm' ? 'size-[54px]' : ''"
+    [class.size-16]="imageSize() === 'thumbnail'"
+    [class.size-18]="imageSize() === 'md'"
+    [class.size-20]="imageSize() === 'lg'"
+  >
+    @if (imageUrl(); as url) {
+      <img [src]="url" alt="" class="h-full w-full object-cover" />
+    } @else {
+      <app-icon name="restaurant" class="size-6" data-testid="recipe-image-placeholder" />
+    }
+  </div>
+  <div class="min-w-0 flex-1">
+    <div class="min-w-0 flex-1">
+      <div class="mb-1 text-xs uppercase tracking-wider text-base-content/75 empty:hidden">
+        <ng-content select="[summary-eyebrow]" />
+      </div>
+      <span class="app-recipe-title block line-clamp-2 overflow-hidden text-ellipsis break-words">{{
+        name()
+      }}</span>
+      <div
+        class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-base-content/75 empty:hidden"
+      >
+        @if (category()) {
+          <span>{{ category() }}</span>
+        }
+        @if (profile(); as profile) {
+          <span
+            class="inline-flex min-w-0 flex-wrap items-center gap-1"
+            data-testid="recipe-meal-meta"
+          >
+            <span class="break-words">{{ profile.name }}</span
+            ><span aria-hidden="true">·</span
+            ><span
+              >{{ profile.servings }}
+              <ng-container i18n="@@common.servingsLowercase">servings</ng-container></span
+            >
+          </span>
+        }
+      </div>
+    </div>
+    <div class="relative z-10 mt-1.5 empty:hidden"><ng-content /></div>
+  </div>
+  @if (recipeLink(); as link) {
+    <a
+      class="absolute inset-0 rounded-box focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      [routerLink]="link"
+      [attr.aria-label]="viewRecipeLabel(name())"
+    ></a>
+  }
+</div>

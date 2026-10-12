@@ -1,0 +1,12 @@
+<Solution>
+    <Folder Name="/src/">
+        <Project Path="src/MealManager.Api/MealManager.Api.csproj"/>
+        <Project Path="src/MealManager.Application/MealManager.Application.csproj"/>
+        <Project Path="src/MealManager.Common/MealManager.Common.csproj"/>
+        <Project Path="src/MealManager.Domain/MealManager.Domain.csproj"/>
+        <Project Path="src/MealManager.Infrastructure/MealManager.Infrastructure.csproj"/>
+    </Folder>
+    <Folder Name="/tests/">
+        <Project Path="tests/MealManager.Tests.Integration/MealManager.Tests.Integration.csproj"/>
+    </Folder>
+</Solution>

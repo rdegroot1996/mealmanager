@@ -1,0 +1,82 @@
+@if (auth.isAuthenticated()) {
+  <div
+    class="grid min-h-dvh grid-cols-1 grid-rows-[4.5rem_1fr] bg-base-200 min-[800px]:h-dvh min-[800px]:grid-cols-[200px_minmax(0,1fr)] min-[800px]:grid-rows-[4.5rem_minmax(0,1fr)] min-[800px]:overflow-hidden"
+  >
+    <header
+      appMobileAppBar
+      class="max-[800px]:fixed max-[800px]:inset-x-0 max-[800px]:top-0 max-[800px]:h-18 max-[800px]:transition-transform max-[800px]:duration-180 max-[800px]:ease-out max-[800px]:motion-reduce:transition-none max-[800px]:motion-reduce:duration-0 z-20 flex items-center justify-between gap-4 border-b border-base-300 bg-base-100 px-6 max-[359px]:px-4 min-[800px]:col-span-2 min-[800px]:px-7"
+    >
+      <a
+        routerLink="/"
+        class="flex items-center gap-2 text-sm font-semibold"
+        aria-label="MealManager"
+      >
+        <app-icon name="restaurant" class="size-5 text-primary" />MealManager
+      </a>
+      <button
+        class="btn btn-ghost size-11 min-h-11 ml-auto flex items-center gap-2"
+        type="button"
+        aria-haspopup="dialog"
+        (click)="accountDialog.open()"
+        i18n-aria-label="@@app.html.app.template.ariaLabelOpenAccountMenu"
+        aria-label="Open account menu"
+      >
+        <app-icon name="account_circle" class="size-7" />
+      </button>
+      <app-modal #accountDialog [dismissOnBackdrop]="true">
+        <h2 modal-title i18n="@@app.householdTitle">Your household</h2>
+        <div class="mb-5 flex items-center gap-4 rounded-box bg-secondary/50 p-4">
+          <app-icon name="account_circle" class="size-10 shrink-0 text-primary" />
+          <div class="min-w-0">
+            <p class="break-words font-medium">{{ auth.currentUser()?.displayName }}</p>
+            <p class="mt-1 break-all text-sm text-base-content/75">
+              {{ auth.currentUser()?.email }}
+            </p>
+          </div>
+        </div>
+        <div class="grid gap-2">
+          @if (auth.currentUser()?.isAdmin) {
+            <a
+              class="btn btn-ghost h-auto min-h-12 w-full justify-start gap-3 px-3 py-3 font-normal whitespace-normal"
+              routerLink="/settings"
+              (click)="accountDialog.close()"
+            >
+              <app-icon name="settings" class="size-5 text-primary" />
+              <span i18n="@@settings.title">Settings</span>
+            </a>
+          }
+          <app-language-switcher class="px-3" />
+        </div>
+        <button
+          modal-actions
+          type="button"
+          class="btn btn-ghost w-full text-error hover:bg-error/5 font-normal"
+          (click)="accountDialog.close(); signOut()"
+          i18n="@@app.app.template.signOut"
+        >
+          Sign out
+        </button>
+      </app-modal>
+    </header>
+    <app-navigation [items]="menuItems" />
+    <main
+      class="col-start-1 row-start-2 min-w-0 scroll-pb-28 min-[800px]:col-start-2 min-[800px]:overflow-y-auto has-[app-edit-recipe-page]:scroll-pb-48"
+    >
+      <div
+        class="mx-auto w-full max-w-[1164px] px-6 pt-6 pb-28 max-[359px]:px-4 min-[600px]:px-8 min-[600px]:pt-8 min-[800px]:pb-12 min-[1100px]:pt-10"
+      >
+        @if (!pageOwnsHeading()) {
+          <header
+            class="mb-7 font-display text-[32px] min-[800px]:text-[34px] font-medium tracking-tight"
+          >
+            <h1>{{ pageTitle() }}</h1>
+          </header>
+        }
+        <router-outlet />
+      </div>
+    </main>
+  </div>
+  <app-toast-host />
+} @else {
+  <router-outlet />
+}

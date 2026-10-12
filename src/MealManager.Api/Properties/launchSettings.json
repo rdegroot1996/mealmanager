@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "MealManager.Api": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "api/scalar",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "PROXY_FRONTEND": "1"
+      },
+      "applicationUrl": "https://localhost:7111;http://localhost:5111",
+      "dotnetRunMessages": true
+    },
+    "Docker": {
+      "commandName": "Docker",
+      "launchBrowser": true,
+      "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}",
+      "publishAllPorts": true
+    }
+  }
+}

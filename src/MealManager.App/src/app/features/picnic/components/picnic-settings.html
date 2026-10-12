@@ -1,0 +1,191 @@
+@if (connection(); as provider) {
+  <div
+    class="flex min-w-0 items-center justify-between gap-3 border-b border-base-300 py-4 min-h-19"
+  >
+    <div class="min-w-0">
+      <h3 class="app-subsection-title">Picnic</h3>
+      <p class="mt-1 text-sm text-base-content/75">
+        {{ status(provider) }} · {{ provider.countryCode }}
+      </p>
+      @if (provider.accountLabel) {
+        <p class="mt-1 break-all text-xs text-base-content/75">{{ provider.accountLabel }}</p>
+      }
+    </div>
+    <button
+      class="btn btn-ghost min-h-11 shrink-0 px-2 font-normal text-primary"
+      type="button"
+      [disabled]="busy()"
+      (click)="manage()"
+    >
+      @if (provider.status === 'Disconnected') {
+        {{ connectLabel }}
+      } @else {
+        <ng-container i18n="@@supermarkets.manage">Manage</ng-container>
+      }
+    </button>
+  </div>
+  <app-modal #management (closed)="closeManagement()">
+    <h2 modal-title i18n="@@supermarkets.picnicConnection">Picnic connection</h2>
+    <p class="mb-4 text-sm text-base-content/75">
+      {{ status(provider) }} · {{ provider.countryCode }}
+    </p>
+    @if (error()) {
+      <p class="mb-4 text-sm text-error" role="alert">{{ error() }}</p>
+    }
+    @if (provider.status === 'VerificationRequired') {
+      <form
+        id="picnic-verification-form"
+        class="mt-4 flex max-w-md flex-col gap-3"
+        (ngSubmit)="verify()"
+      >
+        <app-form-field
+          controlId="picnic-code"
+          label="SMS verification code"
+          i18n-label="@@supermarkets.smsCode"
+          ><input
+            id="picnic-code"
+            class="input w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
+            name="code"
+            [(ngModel)]="code"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            required
+            [disabled]="busy()"
+        /></app-form-field>
+      </form>
+    } @else if (editing()) {
+      <form
+        id="picnic-connection-form"
+        class="mt-4 flex max-w-md flex-col gap-3"
+        (ngSubmit)="connect()"
+      >
+        <app-form-field
+          controlId="picnic-country"
+          label="Picnic country"
+          i18n-label="@@supermarkets.country"
+        >
+          <select
+            id="picnic-country"
+            class="select w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
+            name="country"
+            [(ngModel)]="countryCode"
+            [disabled]="busy()"
+          >
+            <option value="NL" i18n="@@supermarkets.countryNl">Netherlands</option>
+            <option value="DE" i18n="@@supermarkets.countryDe">Germany</option>
+            <option value="FR" i18n="@@supermarkets.countryFr">France</option>
+          </select>
+        </app-form-field>
+        @if (countryCode !== provider.countryCode) {
+          <label class="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm shrink-0 max-[799px]:text-base"
+              name="resetMappings"
+              [(ngModel)]="resetProductMappings"
+              [disabled]="busy()"
+            />
+            <span i18n="@@supermarkets.resetMappings"
+              >Changing country clears saved Picnic product choices. Reset these choices and connect
+              to the new country.</span
+            >
+          </label>
+        }
+        <app-form-field controlId="picnic-email" label="Email" i18n-label="@@common.email"
+          ><input
+            id="picnic-email"
+            class="input w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
+            type="email"
+            name="email"
+            [(ngModel)]="email"
+            autocomplete="username"
+            required
+            [disabled]="busy()"
+        /></app-form-field>
+        <app-form-field controlId="picnic-password" label="Password" i18n-label="@@common.password"
+          ><input
+            id="picnic-password"
+            class="input w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
+            type="password"
+            name="password"
+            [(ngModel)]="password"
+            autocomplete="current-password"
+            required
+            [disabled]="busy()"
+        /></app-form-field>
+      </form>
+    } @else {
+      @if (provider.accountLabel) {
+        <p class="break-all text-sm">{{ provider.accountLabel }}</p>
+      }
+      <p
+        class="mt-3 text-sm leading-6 text-base-content/75"
+        i18n="@@supermarkets.householdConnection"
+      >
+        This account is shared by everyone in your household.
+      </p>
+    }
+    <div modal-actions class="flex flex-wrap gap-2">
+      @if (provider.status === 'VerificationRequired') {
+        <button
+          class="btn btn-primary"
+          type="submit"
+          form="picnic-verification-form"
+          [disabled]="busy() || !code"
+          i18n="@@supermarkets.verify"
+        >
+          Verify connection
+        </button>
+        <button
+          class="btn btn-outline btn-primary"
+          type="button"
+          [disabled]="busy()"
+          (click)="resend()"
+          i18n="@@supermarkets.resend"
+        >
+          Resend code
+        </button>
+      } @else if (editing()) {
+        <button
+          class="btn btn-primary"
+          type="submit"
+          form="picnic-connection-form"
+          [disabled]="
+            busy() ||
+            !email ||
+            !password ||
+            (countryCode !== provider.countryCode && !resetProductMappings)
+          "
+        >
+          {{ connectLabel }}
+        </button>
+      } @else {
+        <button class="btn btn-primary" type="button" [disabled]="busy()" (click)="start()">
+          {{ reconnectLabel }}
+        </button>
+      }
+    </div>
+    @if (provider.status !== 'Disconnected' && !editing()) {
+      <button
+        class="btn btn-outline h-auto min-h-12 w-full btn-error py-[11px] whitespace-normal mt-4"
+        type="button"
+        [disabled]="busy()"
+        (click)="disconnect()"
+      >
+        <app-icon name="remove" class="size-5" />
+        <ng-container i18n="@@supermarkets.disconnect">Disconnect</ng-container>
+      </button>
+    }
+  </app-modal>
+} @else if (error()) {
+  <p class="mb-4 text-sm text-error" role="alert">{{ error() }}</p>
+  <button
+    type="button"
+    class="btn btn-outline btn-primary"
+    [disabled]="busy()"
+    (click)="disconnect()"
+    i18n="@@supermarkets.resetConnection"
+  >
+    Reset Picnic connection
+  </button>
+}

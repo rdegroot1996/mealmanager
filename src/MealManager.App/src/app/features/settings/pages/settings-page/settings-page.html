@@ -1,0 +1,23 @@
+<p class="-mt-4 mb-8 text-sm text-base-content/75" i18n="@@settings.householdSubtitle">
+  For everyone in your household.
+</p>
+<div class="grid grid-cols-1 items-start gap-8 min-[950px]:grid-cols-2 min-[950px]:gap-10">
+  <section class="min-w-0" aria-labelledby="settings-users-heading">
+    <app-users-page />
+  </section>
+
+  <section class="min-w-0" aria-labelledby="settings-supermarkets-heading">
+    <h2
+      id="settings-supermarkets-heading"
+      class="min-h-11 mb-3 flex items-center app-section-title"
+      i18n="@@settings.supermarkets"
+    >
+      Supermarket integrations
+    </h2>
+    <app-picnic-settings />
+    <p class="mt-4 text-xs leading-5 text-base-content/75" i18n="@@supermarkets.sharedAccount">
+      Connect one shared account per supermarket. Everyone in the household can send groceries. Your
+      password is not stored.
+    </p>
+  </section>
+</div>

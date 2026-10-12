@@ -1,0 +1,48 @@
+<app-modal #modal (closed)="endSession()">
+  <h2 modal-title i18n="@@planning.changeProfile">Change Profile</h2>
+
+  @if (meal(); as meal) {
+    <app-recipe-summary
+      [profile]="meal.recipeProfile"
+      class="mb-4"
+      [name]="meal.recipe.name"
+      [imageUrl]="meal.recipe.imageUrl"
+    />
+
+    @if (loading()) {
+      <app-loading-indicator
+        [compact]="true"
+        i18n-message="@@planning.changeProfileModal.template.messageLoadingProfiles"
+        message="Loading profiles…"
+      />
+    } @else {
+      <app-profile-select
+        [disabled]="saving()"
+        [profiles]="profiles()"
+        [(selectedProfileId)]="selectedProfileId"
+      />
+    }
+    @if (error()) {
+      <p class="mt-3 text-sm text-error" role="alert">{{ error() }}</p>
+    }
+  }
+
+  <div modal-actions>
+    <button
+      class="btn btn-primary"
+      [disabled]="
+        loading() ||
+        saving() ||
+        !selectedProfileId() ||
+        selectedProfileId() === meal()?.recipeProfile?.id
+      "
+      (click)="confirm()"
+    >
+      @if (saving()) {
+        <ng-container i18n="@@planning.changing">Changing…</ng-container>
+      } @else {
+        <ng-container i18n="@@planning.changeProfile">Change Profile</ng-container>
+      }
+    </button>
+  </div>
+</app-modal>

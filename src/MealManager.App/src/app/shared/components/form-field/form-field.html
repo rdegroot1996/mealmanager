@@ -1,0 +1,26 @@
+<div class="fieldset w-full">
+  <label class="fieldset-legend" [attr.for]="controlId()">
+    {{ label() }}
+    @if (required()) {
+      <span aria-hidden="true"> *</span>
+    }
+  </label>
+  <ng-content></ng-content>
+  @if (hint()) {
+    <p
+      [id]="controlId() + '-hint'"
+      class="label whitespace-normal break-words text-base-content/75"
+    >
+      {{ hint() }}
+    </p>
+  }
+  @if (error()) {
+    <p
+      [id]="controlId() + '-error'"
+      class="label whitespace-normal break-words text-error"
+      role="alert"
+    >
+      {{ error() }}
+    </p>
+  }
+</div>

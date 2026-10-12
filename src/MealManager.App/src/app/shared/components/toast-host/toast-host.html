@@ -1,0 +1,30 @@
+<div class="toast toast-end toast-top z-50 pointer-events-none w-[calc(100vw-2rem)] sm:w-auto">
+  @for (toast of toasts.messages(); track toast.id) {
+    <div
+      class="alert pointer-events-auto w-full sm:w-auto"
+      [class.alert-success]="toast.kind === 'success'"
+      [class.alert-error]="toast.kind === 'error'"
+      [class.alert-soft]="toast.kind === 'error'"
+      [class.alert-info]="toast.kind === 'info'"
+      [attr.role]="toast.kind === 'error' ? 'alert' : 'status'"
+      [attr.aria-live]="toast.kind === 'error' ? 'assertive' : 'polite'"
+      aria-atomic="true"
+    >
+      <app-icon
+        [name]="toast.kind === 'success' ? 'check' : toast.kind === 'error' ? 'error' : 'info'"
+        class="size-5 shrink-0"
+        aria-hidden="true"
+      />
+      <span class="flex-1">{{ toast.message }}</span>
+      <button
+        class="btn btn-ghost btn-sm justify-self-end"
+        type="button"
+        i18n-aria-label="@@shared.toastHost.template.ariaLabelDismissNotification"
+        aria-label="Dismiss notification"
+        (click)="toasts.dismiss(toast.id)"
+      >
+        ×
+      </button>
+    </div>
+  }
+</div>

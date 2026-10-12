@@ -1,0 +1,26 @@
+<button
+  type="button"
+  class="btn btn-ghost btn-square size-11 min-h-11"
+  [class]="
+    compact()
+      ? 'min-[800px]:size-8 min-[800px]:min-h-8 [@media(pointer:coarse)]:size-11 [@media(pointer:coarse)]:min-h-11'
+      : ''
+  "
+  [disabled]="disabled()"
+  [attr.aria-label]="label()"
+  [attr.title]="label()"
+  aria-haspopup="dialog"
+  (click)="open()"
+>
+  <app-icon [name]="triggerIcon()" class="size-5" />
+</button>
+<app-modal #modal [dismissOnBackdrop]="true">
+  <h2 modal-title>{{ title() || label() }}</h2>
+  <div class="mb-4 empty:hidden"><ng-content select="[action-context]" /></div>
+  <ul
+    #actions
+    class="flex w-full flex-col gap-1 [&>li>:is(button,a)]:flex [&>li>:is(button,a)]:h-auto [&>li>:is(button,a)]:min-h-13 [&>li>:is(button,a)]:min-w-0 [&>li>:is(button,a)]:w-full [&>li>:is(button,a)]:items-center [&>li>:is(button,a)]:justify-start [&>li>:is(button,a)]:gap-3 [&>li>:is(button,a)]:px-3 [&>li>:is(button,a)]:py-3 [&>li>:is(button,a)]:text-left [&>li>:is(button,a)]:text-sm [&>li>:is(button,a)]:font-normal [&>li>:is(button,a)]:leading-5 [&>li>:is(button,a)]:whitespace-normal [&>li>.btn-ghost]:rounded-none [&>li>.btn-ghost]:border-0 [&>li>.btn-ghost]:border-b [&>li>.btn-ghost]:border-base-300 [&>li:last-child>.btn-ghost]:border-b-0 [&_app-icon]:text-primary [&_button.btn-error_app-icon]:text-current"
+  >
+    <ng-content />
+  </ul>
+</app-modal>

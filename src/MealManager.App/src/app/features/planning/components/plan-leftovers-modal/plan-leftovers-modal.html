@@ -1,0 +1,49 @@
+<app-modal #modal (closed)="endSession()">
+  <h2 modal-title i18n="@@planning.planLeftovers">Plan Leftovers</h2>
+
+  @if (meal(); as meal) {
+    <app-recipe-summary
+      [profile]="meal.recipeProfile"
+      class="mb-4"
+      [name]="meal.recipe.name"
+      [imageUrl]="meal.recipe.imageUrl"
+    />
+
+    <p
+      class="mb-4 text-base-content/75 mt-4"
+      i18n="@@planning.planLeftoversModal.template.selectALaterDayToPlanLeftovers"
+    >
+      Select a later day to plan leftovers for this meal.
+    </p>
+
+    @if (days().length) {
+      <app-planning-day-select
+        [disabled]="saving()"
+        [days]="days()"
+        [(selectedDate)]="selectedDate"
+        i18n-placeholder="@@planning.selectDayPlaceholder"
+        placeholder="Select a day..."
+      />
+    } @else {
+      <p
+        class="app-inset p-3 text-sm text-base-content/75"
+        i18n="@@planning.planLeftoversModal.template.thereAreNoLaterAvailableDaysIn"
+      >
+        There are no later available days in this planning cycle.
+      </p>
+    }
+    @if (error()) {
+      <p class="mt-3 text-sm text-error" role="alert">{{ error() }}</p>
+    }
+  }
+
+  <div modal-actions>
+    <button class="btn btn-primary" [disabled]="!selectedDate() || saving()" (click)="confirm()">
+      @if (saving()) {
+        <ng-container i18n="@@planning.planningInProgress">Planning…</ng-container>
+      } @else {
+        <ng-container i18n="@@planning.planLeftovers">Plan Leftovers</ng-container>
+      }
+    </button>
+  </div>
+</app-modal>

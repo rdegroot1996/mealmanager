@@ -1,0 +1,101 @@
+<app-search-field
+  [label]="searchLabel"
+  [value]="query()"
+  (valueChange)="search($event, false)"
+  (searched)="search()"
+/>
+@if (row().profileProductId && !originalProductId()) {
+  <p class="mt-3 text-sm text-base-content/75" i18n="@@supermarkets.firstChoiceHint">
+    Your first choice is remembered for this recipe after a successful addition.
+  </p>
+}
+<div class="mt-4" aria-live="polite" [attr.aria-busy]="searching()">
+  @if (searching()) {
+    <app-loading-indicator
+      i18n-message="@@supermarkets.searchingProducts"
+      [compact]="true"
+      message="Searching products…"
+    />
+  } @else if (error()) {
+    <p class="text-error" role="alert">{{ error() }}</p>
+    <button
+      class="btn btn-secondary btn-sm mt-3"
+      type="button"
+      (click)="search()"
+      i18n="@@common.retry"
+    >
+      Retry
+    </button>
+  } @else {
+    <ul class="flex flex-col gap-2">
+      @for (product of products(); track product.id) {
+        <li>
+          <button
+            class="flex min-h-16 w-full items-center justify-start gap-2 rounded-box px-2 py-3 text-left whitespace-normal enabled:hover:bg-base-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50"
+            type="button"
+            [disabled]="product.availability !== 'Available'"
+            (click)="choose(product)"
+          >
+            <app-supermarket-product-summary class="flex-1" [product]="product" />
+            <app-icon name="add" class="size-5 shrink-0" />
+          </button>
+        </li>
+      } @empty {
+        @if (query().trim()) {
+          <li
+            class="py-3 text-sm leading-[21px] text-base-content/75"
+            i18n="@@supermarkets.noResultsHint"
+          >
+            No products found. Try another search term.
+          </li>
+        } @else {
+          <li
+            class="py-3 text-sm leading-[21px] text-base-content/75"
+            i18n="@@supermarkets.enterSearch"
+          >
+            Enter a product name to search.
+          </li>
+        }
+      }
+    </ul>
+  }
+</div>
+
+<app-modal #replacementDialog (closed)="replacement.set(null)">
+  <span modal-title i18n="@@supermarkets.replaceTitle">Use this product next time too?</span>
+  @if (replacement(); as product) {
+    <p i18n="@@supermarkets.replacePrompt">
+      Replace <strong>{{ originalProductName() }}</strong> with
+      <strong>{{ product.name }}</strong> for this recipe’s future exports?
+    </p>
+    <p class="mt-3 text-sm text-base-content/75" i18n="@@supermarkets.replaceAfterExport">
+      The saved choice changes only after a successful export.
+    </p>
+  }
+  <button
+    type="button"
+    class="btn btn-ghost mt-4"
+    (click)="replacementDialog.close()"
+    i18n="@@common.back"
+  >
+    Back
+  </button>
+  <button
+    modal-secondary-actions
+    type="button"
+    class="btn btn-secondary"
+    (click)="confirmReplacement(false)"
+    i18n="@@supermarkets.thisExportOnly"
+  >
+    This export only
+  </button>
+  <button
+    modal-actions
+    type="button"
+    class="btn btn-primary"
+    (click)="confirmReplacement(true)"
+    i18n="@@supermarkets.useNextTime"
+  >
+    Use next time too
+  </button>
+</app-modal>

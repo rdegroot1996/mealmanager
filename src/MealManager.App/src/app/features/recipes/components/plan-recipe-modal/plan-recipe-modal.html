@@ -1,0 +1,40 @@
+<app-modal #modal (closed)="endSession()">
+  <h2 modal-title i18n="@@recipes.addToPlanner">Add to Planner</h2>
+  <p class="mb-4" i18n="@@recipes.planRecipeModal.template.whenDoYouWantToAdd">
+    When do you want to add <strong>{{ recipe().name }}</strong
+    >?
+  </p>
+
+  @if (loading()) {
+    <app-loading-indicator
+      [compact]="true"
+      i18n-message="@@recipes.planRecipeModal.template.messageLoadingPlanningDays"
+      message="Loading planning days…"
+    />
+  } @else {
+    <app-planning-day-select
+      [disabled]="saving()"
+      [days]="days()"
+      [(selectedDate)]="selectedDate"
+      i18n-placeholder="@@planning.selectDayPlaceholder"
+      placeholder="Select a day..."
+    />
+  }
+  @if (error()) {
+    <p class="mt-3 text-sm text-error" role="alert">{{ error() }}</p>
+  }
+
+  <div modal-actions>
+    <button
+      class="btn btn-primary"
+      [disabled]="!selectedDate() || loading() || saving()"
+      (click)="planRecipe()"
+    >
+      @if (saving()) {
+        <ng-container i18n="@@common.adding">Adding…</ng-container>
+      } @else {
+        <ng-container i18n="@@recipes.addToPlanner">Add to Planner</ng-container>
+      }
+    </button>
+  </div>
+</app-modal>

@@ -1,0 +1,234 @@
+<header
+  [class.mb-4]="noCycle()"
+  [class.mb-7]="!noCycle()"
+  class="grid min-w-0 grid-cols-1 items-start gap-5 min-[800px]:grid-cols-[minmax(0,1fr)_280px] min-[800px]:gap-7"
+>
+  <h1 class="font-display text-[32px] font-medium tracking-tight min-[800px]:text-[34px]">
+    {{ title }}
+  </h1>
+  @if (!noCycle()) {
+    <app-planning-cycle-switcher
+      class="block min-w-0 w-full overflow-hidden rounded-field bg-secondary"
+      (cycleChanged)="onCycleChanged($event)"
+    />
+  }
+</header>
+<p class="sr-only" aria-live="polite" aria-atomic="true">{{ reorderAnnouncement() }}</p>
+
+@if (loading()) {
+  <app-loading-indicator
+    i18n-message="@@groceries.groceriesPage.template.messageLoadingGroceriesList"
+    message="Loading groceries list…"
+  />
+} @else if (noCycle()) {
+  <app-empty-state
+    icon="calendar_add_on"
+    i18n-title="@@groceries.groceriesPage.template.noPlanningCycleYet"
+    title="No planning cycle yet"
+    i18n-description="@@groceries.groceriesPage.template.createAPlanningCycleBeforeAddingGroceries"
+    description="Create a planning cycle before adding groceries."
+  />
+} @else if (loadError(); as error) {
+  <div class="alert alert-error alert-soft" role="alert">
+    {{ error }}
+    <button
+      class="btn btn-ghost"
+      type="button"
+      (click)="loadCurrentGroceries()"
+      i18n="@@common.retry"
+    >
+      Retry
+    </button>
+  </div>
+} @else {
+  <div class="grid grid-cols-1 items-start gap-7 min-[800px]:grid-cols-[minmax(0,1fr)_280px]">
+    <aside
+      class="app-shopping-aside app-surface flex min-w-0 flex-col gap-5 p-5 min-[800px]:col-start-2 min-[800px]:row-start-1 min-[800px]:sticky min-[800px]:top-6"
+    >
+      <div>
+        <p class="text-xs text-base-content/75" i18n="@@design.shoppingProgress">
+          {{ collectedCount() }} of {{ itemCount() }} collected
+        </p>
+        <progress
+          class="progress progress-success mt-3 h-1 w-full"
+          [value]="collectedCount()"
+          [max]="itemCount() || 1"
+          aria-label="Shopping progress"
+          i18n-aria-label="@@design.shoppingProgressLabel"
+        ></progress>
+      </div>
+      @if (unconfirmedMealCount() > 0) {
+        <div
+          class="alert alert-warning rounded-field p-3 flex flex-wrap items-center gap-2 text-sm"
+          role="status"
+        >
+          <app-icon name="warning" class="size-5 shrink-0" />
+          <span class="min-w-0 leading-5">{{
+            unconfirmedMealsMessage(unconfirmedMealCount())
+          }}</span>
+          <a
+            class="btn btn-outline btn-sm h-auto min-h-11 w-full btn-primary whitespace-normal"
+            routerLink="/planning"
+            i18n="@@groceries.groceriesPage.template.reviewPlanner"
+            >Review planner</a
+          >
+        </div>
+      }
+
+      @if (cycleStore.currentCycle(); as cycle) {
+        <div class="w-full">
+          <app-supermarket-send
+            class="block w-full"
+            [cycleId]="cycle.id"
+            [hasGroceries]="hasGroceries()"
+            [disabled]="loading() || !!loadError()"
+            (changed)="groceriesStore.loadForCycle(cycle.id).subscribe()"
+          />
+        </div>
+      }
+    </aside>
+    <div class="min-w-0 min-[800px]:col-start-1 min-[800px]:row-start-1">
+      <h2 class="app-section-title" i18n="@@groceries.groceriesPage.template.fromYourPlannedMeals">
+        From your planned meals
+      </h2>
+
+      <div class="mt-5 flex flex-col gap-7">
+        @if (mealGroceries().length === 0) {
+          <p
+            class="text-sm leading-[21px] text-base-content/75"
+            i18n="@@groceries.groceriesPage.template.noMealGroceriesHaveBeenAddedYet"
+          >
+            No meal groceries have been added yet.
+          </p>
+        }
+        @for (group of mealGroceries(); track group.planningMeal.id) {
+          <section class="app-grocery-group min-w-0 text-sm">
+            <div class="flex min-w-0 items-center gap-3">
+              <a
+                class="min-w-0 flex-1"
+                [routerLink]="['/recipes', group.planningMeal.recipeId]"
+                [attr.aria-label]="viewRecipeLabel(group.planningMeal.recipeName)"
+              >
+                <app-recipe-summary
+                  [profile]="{
+                    name: group.planningMeal.profileName,
+                    servings: group.planningMeal.profileServings,
+                  }"
+                  [name]="group.planningMeal.recipeName"
+                  [imageUrl]="group.planningMeal.recipeImageUrl"
+                  imageSize="sm"
+                />
+              </a>
+              @if (group.groceries.length > 0) {
+                <span class="badge badge-secondary badge-sm ml-auto shrink-0">{{
+                  itemCountLabel(group.groceries.length)
+                }}</span>
+              }
+            </div>
+            <div
+              cdkDropList
+              [cdkDropListData]="group.groceries"
+              [cdkDropListDisabled]="reordering()"
+              class="mt-3 flex flex-col divide-y divide-base-300"
+              (cdkDropListDropped)="reorderItems($event, group.planningMeal.id)"
+            >
+              @if (group.groceries.length === 0) {
+                <p
+                  class="text-sm leading-[21px] text-base-content/75"
+                  i18n="@@groceries.groceriesPage.template.noGroceriesNeededForThisMeal"
+                >
+                  No groceries needed for this meal.
+                </p>
+              }
+              @for (item of group.groceries; track item.id) {
+                <app-grocery-item-row
+                  cdkDrag
+                  [cdkDragData]="item"
+                  [item]="item"
+                  [pending]="reordering() || pendingItemIds().has(item.id)"
+                  (moveRequested)="moveItemWithKeyboard(item, $event, group.planningMeal.id)"
+                  (toggled)="toggleChecked($event)"
+                  (updated)="updateItem($event)"
+                  (removed)="removeItem($event)"
+                />
+              }
+            </div>
+            <div class="mt-3">
+              <button
+                class="btn btn-ghost btn-sm min-h-11"
+                type="button"
+                [disabled]="addingItem()"
+                (click)="startAddMealItem(group.planningMeal.id)"
+                aria-label="Add item to meal"
+                i18n-aria-label="@@groceries.groceriesPage.addItemToMeal"
+              >
+                <app-icon name="add" class="size-5" />
+                <ng-container i18n="@@common.addItem">Add item</ng-container>
+              </button>
+            </div>
+          </section>
+        }
+      </div>
+
+      <section class="app-grocery-group mt-8 min-w-0 text-sm">
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <h2 class="app-section-title">{{ otherItemsLabel }}</h2>
+        </div>
+        <div
+          cdkDropList
+          [cdkDropListData]="manualItems()"
+          [cdkDropListDisabled]="reordering()"
+          class="flex flex-col divide-y divide-base-300"
+          (cdkDropListDropped)="reorderItems($event, null)"
+        >
+          @if (manualItems().length === 0) {
+            <p
+              class="text-sm leading-[21px] text-base-content/75"
+              i18n="@@groceries.groceriesPage.template.noOtherItemsYet"
+            >
+              No other items yet.
+            </p>
+          }
+          @for (item of manualItems(); track item.id) {
+            <app-grocery-item-row
+              cdkDrag
+              [cdkDragData]="item"
+              [item]="item"
+              [pending]="reordering() || pendingItemIds().has(item.id)"
+              (moveRequested)="moveItemWithKeyboard(item, $event, null)"
+              (toggled)="toggleChecked($event)"
+              (updated)="updateItem($event)"
+              (removed)="removeItem($event)"
+            />
+          }
+        </div>
+        <div class="mt-3">
+          <button
+            class="btn btn-ghost btn-sm min-h-11"
+            type="button"
+            [disabled]="addingItem()"
+            (click)="startAddManualItem()"
+          >
+            <app-icon name="add" class="size-5" />
+            <ng-container i18n="@@common.addItem">Add item</ng-container>
+          </button>
+        </div>
+      </section>
+    </div>
+  </div>
+}
+
+<app-grocery-edit-modal
+  #itemEditor
+  [disabled]="addingItem()"
+  [context]="itemEditorContext()"
+  [closeOnSave]="false"
+  [saveError]="itemSaveError()"
+  [suggestions]="nameSuggestions()"
+  [suggestionsEnabled]="true"
+  [suggestionsLoading]="nameSuggestionsLoading()"
+  [suggestionsError]="nameSuggestionsError()"
+  (nameQueryChanged)="suggestNames($event)"
+  (saved)="addItem($event)"
+  (closed)="endItemEditor()"
+/>

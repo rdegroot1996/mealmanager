@@ -1,0 +1,2 @@
+# Use LF for text files on every platform.
+* text=auto eol=lf

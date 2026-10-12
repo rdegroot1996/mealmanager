@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120">
+  <path fill="#ad4a31" d="M20 8h60l-4 104H24z"/>
+  <path fill="#d8b57c" d="M20 8h60v7H20zm4 96h52v8H24z"/>
+  <ellipse cx="50" cy="60" rx="22" ry="26" fill="#e8c878"/>
+  <path fill="none" stroke="#b98a42" stroke-width="3" d="M35 43q30 2 0 10t30 10q-30 4 0 10M37 48q26 4 0 10t24 12"/>
+  <text x="50" y="30" text-anchor="middle" fill="#fff" font-family="sans-serif" font-size="9">NOEDELS</text>
+  <text x="50" y="95" text-anchor="middle" fill="#fff" font-family="sans-serif" font-size="8">250 g</text>
+</svg>

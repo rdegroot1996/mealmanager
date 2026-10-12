@@ -1,0 +1,49 @@
+@if (cycleStore.currentCycle(); as cycle) {
+  <div class="flex min-h-16 min-w-0 items-center gap-1 p-2" role="group" [attr.aria-label]="title">
+    <button
+      type="button"
+      class="btn btn-ghost btn-square size-11 min-h-11 shrink-0"
+      [disabled]="disabled() || pending() || !cycle.previousPlanningCycleId"
+      (click)="previous()"
+      aria-label="Previous cycle"
+      i18n-aria-label="@@planningCycle.previous"
+    >
+      <app-icon name="chevron_left" class="size-5" />
+    </button>
+    <div class="min-w-0 flex-1 text-center" aria-live="polite" aria-atomic="true">
+      <p class="text-sm font-medium">{{ range() }}</p>
+      <p class="mt-1 text-xs text-base-content/75">
+        {{ cycle.nextPlanningCycleId ? historicalLabel : activeLabel }}
+      </p>
+    </div>
+    <button
+      type="button"
+      class="btn btn-ghost btn-square size-11 min-h-11 shrink-0"
+      [disabled]="disabled() || pending() || !cycle.nextPlanningCycleId"
+      (click)="next()"
+      aria-label="Next cycle"
+      i18n-aria-label="@@planningCycle.next"
+    >
+      <app-icon name="chevron_right" class="size-5" />
+    </button>
+  </div>
+}
+@if (pending()) {
+  <p class="px-3 pb-3 text-xs text-base-content/75" role="status" i18n="@@common.loading">
+    Loading…
+  </p>
+}
+@if (error()) {
+  <div class="px-3 pb-3 text-sm">
+    <p role="alert" class="text-error">{{ error() }}</p>
+    <button
+      type="button"
+      class="btn btn-ghost btn-sm mt-1"
+      [disabled]="disabled() || pending()"
+      (click)="retry()"
+      i18n="@@common.retry"
+    >
+      Retry
+    </button>
+  </div>
+}

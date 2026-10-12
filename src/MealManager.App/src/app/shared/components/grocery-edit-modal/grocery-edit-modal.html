@@ -1,0 +1,128 @@
+<app-modal #modal (closed)="closed.emit()">
+  <h2 modal-title>
+    @if (creating()) {
+      <ng-container i18n="@@groceries.addItemTitle">Add grocery item</ng-container>
+    } @else {
+      <ng-container i18n="@@groceries.editItem">Edit grocery item</ng-container>
+    }
+  </h2>
+  <form [id]="formId" class="flex flex-col gap-4" (ngSubmit)="save()">
+    @if (context()) {
+      <p class="text-sm text-base-content/75">{{ context() }}</p>
+    }
+    <app-form-field
+      [controlId]="nameId"
+      label="Item name"
+      i18n-label="@@shared.inlineGroceryEditor.template.ariaLabelItemName"
+      [required]="true"
+    >
+      <div
+        #nameControl
+        (focusout)="onNameFocusOut($event, nameControl)"
+        (keydown)="onNameKeydown($event)"
+      >
+        <input
+          #nameInput
+          [id]="nameId"
+          class="input h-11 w-full border-base-300 bg-base-100 text-base"
+          type="text"
+          name="itemName"
+          maxlength="200"
+          [ngModel]="draftName()"
+          (ngModelChange)="changeName($event)"
+          (focus)="suggestionsOpen.set(true)"
+          [disabled]="disabled()"
+        />
+        @if (suggestionsEnabled() && suggestionsOpen() && draftName().trim()) {
+          <div
+            #suggestionList
+            class="mt-2 max-h-40 overflow-y-auto rounded-field border border-base-300 bg-base-100 p-1"
+            role="group"
+            aria-label="Item suggestions"
+            i18n-aria-label="@@groceries.itemSuggestions"
+          >
+            @if (suggestionsLoading()) {
+              <p
+                role="status"
+                class="p-2 text-sm leading-[21px] text-base-content/75"
+                i18n="@@groceries.searchingNames"
+              >
+                Searching…
+              </p>
+            } @else if (suggestionsError()) {
+              <p
+                role="status"
+                class="p-2 text-sm leading-[21px] text-base-content/75"
+                i18n="@@groceries.suggestionsFailed"
+              >
+                Suggestions could not be loaded. You can still enter an item name.
+              </p>
+            } @else if (!suggestions().length) {
+              <p
+                role="status"
+                class="p-2 text-sm leading-[21px] text-base-content/75"
+                i18n="@@groceries.noSuggestions"
+              >
+                No results.
+              </p>
+            } @else {
+              @for (suggestion of suggestions(); track suggestion) {
+                <button
+                  class="btn btn-ghost min-h-11 h-auto w-full justify-start py-2 text-left font-normal whitespace-normal"
+                  type="button"
+                  [disabled]="disabled()"
+                  (click)="selectSuggestion(suggestion)"
+                >
+                  {{ suggestion }}
+                </button>
+              }
+            }
+          </div>
+        }
+      </div>
+    </app-form-field>
+    <app-form-field
+      [controlId]="quantityId"
+      label="Quantity"
+      i18n-label="@@common.quantity"
+      [required]="true"
+    >
+      <app-number-input
+        [fullWidth]="true"
+        [controlId]="quantityId"
+        label="Quantity"
+        i18n-label="@@common.quantity"
+        [value]="draftQuantity()"
+        (valueChange)="draftQuantity.set($event)"
+        [disabled]="disabled()"
+      />
+    </app-form-field>
+    @if (error() || saveError()) {
+      <p role="alert" class="text-sm text-error">{{ error() || saveError() }}</p>
+    }
+  </form>
+  @if (!creating()) {
+    <button
+      type="button"
+      class="btn btn-outline h-auto min-h-12 w-full btn-error py-[11px] whitespace-normal mt-4"
+      [disabled]="disabled()"
+      (click)="remove()"
+    >
+      <app-icon name="delete" class="size-5" />
+      <ng-container i18n="@@common.removeItem">Remove item</ng-container>
+    </button>
+  }
+  <button
+    modal-actions
+    type="submit"
+    [attr.form]="formId"
+    class="btn btn-primary"
+    [disabled]="disabled()"
+  >
+    @if (creating()) {
+      <ng-container i18n="@@common.add">Add</ng-container>
+    } @else {
+      <ng-container i18n="@@common.save">Save</ng-container>
+    }
+  </button>
+</app-modal>

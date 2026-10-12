@@ -1,0 +1,17 @@
+<label class="fieldset w-full">
+  <span class="fieldset-legend">{{ label() }}</span>
+  <select
+    class="select w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
+    [disabled]="disabled()"
+    [attr.aria-label]="label()"
+    [ngModel]="selectedDate()"
+    (ngModelChange)="selectedDate.set($event)"
+  >
+    @if (placeholder()) {
+      <option value="">{{ placeholder() }}</option>
+    }
+    @for (day of days(); track day.date) {
+      <option [value]="day.date">{{ day.weekday }} {{ day.shortDate }}</option>
+    }
+  </select>
+</label>

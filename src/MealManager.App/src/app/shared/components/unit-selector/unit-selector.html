@@ -1,0 +1,39 @@
+<div class="input h-11 w-full gap-0 border-base-300 bg-base-100 px-0">
+  <input
+    type="text"
+    [id]="controlId()"
+    class="h-full min-w-0 flex-1 bg-transparent pl-3 max-[799px]:text-base"
+    [ngModel]="displayUnit(unit())"
+    (ngModelChange)="unit.set($event)"
+    i18n-aria-label="@@shared.unitSelector.template.ariaLabelIngredientUnit"
+    aria-label="Ingredient unit"
+    autocomplete="off"
+  />
+  <div class="dropdown dropdown-end shrink-0">
+    <button
+      class="btn btn-ghost h-11 min-h-11 w-11 shrink-0 p-0"
+      type="button"
+      tabindex="0"
+      i18n-aria-label="@@shared.unitSelector.template.ariaLabelChooseACommonUnit"
+      aria-label="Choose a common unit"
+    >
+      <app-icon name="arrow_drop_down" class="size-5" />
+    </button>
+    <ul
+      tabindex="0"
+      class="menu dropdown-content rounded-box border border-base-300 bg-base-100 shadow-lg z-20 mt-1 max-h-56 w-28 flex-nowrap overflow-x-hidden overflow-y-auto p-2"
+    >
+      @for (option of units; track option) {
+        <li class="whitespace-nowrap">
+          <button
+            type="button"
+            class="justify-start whitespace-nowrap"
+            (click)="selectUnit(option)"
+          >
+            {{ displayUnit(option) }}
+          </button>
+        </li>
+      }
+    </ul>
+  </div>
+</div>

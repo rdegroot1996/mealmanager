@@ -1,0 +1,56 @@
+<app-modal #modal (closed)="endSession()">
+  <h2 modal-title>
+    @if (editingNoteId()) {
+      <ng-container i18n="@@planning.editNote">Edit Note</ng-container>
+    } @else {
+      <ng-container i18n="@@planning.addNote">Add Note</ng-container>
+    }
+  </h2>
+
+  <app-form-field
+    controlId="planning-note"
+    i18n-label="@@planning.addNoteModal.template.labelNote"
+    label="Note"
+    [required]="true"
+  >
+    <textarea
+      class="textarea w-full max-[799px]:text-base border-base-300 bg-base-100"
+      id="planning-note"
+      rows="3"
+      i18n-placeholder="@@planning.addNoteModal.template.placeholderEnterYourNote"
+      placeholder="Enter your note..."
+      [ngModel]="noteText()"
+      (ngModelChange)="noteText.set($event)"
+    ></textarea>
+  </app-form-field>
+  @if (error()) {
+    <p class="mt-3 text-sm text-error" role="alert">{{ error() }}</p>
+  }
+
+  @if (editingNoteId()) {
+    <button
+      type="button"
+      class="btn btn-outline h-auto min-h-12 w-full btn-error py-[11px] whitespace-normal mt-4"
+      [disabled]="saving()"
+      (click)="remove()"
+    >
+      <app-icon name="delete" class="size-5" />
+      <ng-container i18n="@@planning.planningTimelinePage.removeNote">Remove note</ng-container>
+    </button>
+  }
+  <div modal-actions>
+    <button class="btn btn-primary" [disabled]="!noteText().trim() || saving()" (click)="confirm()">
+      @if (saving()) {
+        @if (editingNoteId()) {
+          <ng-container i18n="@@common.saving">Saving…</ng-container>
+        } @else {
+          <ng-container i18n="@@common.adding">Adding…</ng-container>
+        }
+      } @else if (editingNoteId()) {
+        <ng-container i18n="@@common.save">Save</ng-container>
+      } @else {
+        <ng-container i18n="@@planning.addNote">Add Note</ng-container>
+      }
+    </button>
+  </div>
+</app-modal>

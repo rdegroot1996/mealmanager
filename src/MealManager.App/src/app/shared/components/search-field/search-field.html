@@ -1,0 +1,22 @@
+<div class="input flex w-full items-center gap-2 border-base-300 bg-base-100 h-11" role="search">
+  <app-icon name="search" class="size-5 text-base-content/75" />
+  <input
+    type="search"
+    class="grow [&::-webkit-search-cancel-button]:appearance-none max-[799px]:text-base"
+    [attr.aria-label]="label()"
+    [placeholder]="placeholder()"
+    [value]="value()"
+    (input)="value.set($any($event.target).value)"
+    (keyup.enter)="searched.emit()"
+  />
+  @if (value()) {
+    <button
+      class="btn btn-ghost btn-xs"
+      type="button"
+      [attr.aria-label]="clearSearchLabel(label())"
+      (click)="value.set(''); searched.emit()"
+    >
+      <app-icon name="close" class="size-4" />
+    </button>
+  }
+</div>

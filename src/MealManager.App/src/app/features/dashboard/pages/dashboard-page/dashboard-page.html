@@ -1,0 +1,14 @@
+<div class="mb-8 grid min-w-0 grid-cols-1 items-start gap-6">
+  <header>
+    <p class="mb-2 text-xs uppercase tracking-wider text-base-content/75">{{ todayLabel() }}</p>
+    <h1 class="font-display text-[32px] min-[800px]:text-[34px] font-medium tracking-tight">
+      {{ title }}
+    </h1>
+    <p class="mt-2 text-sm text-base-content/75">{{ greeting }}</p>
+  </header>
+  <app-active-planning class="block min-w-0" />
+</div>
+<div class="grid min-w-0 grid-cols-1 items-start gap-8 min-[950px]:grid-cols-2">
+  <app-upcoming-meals class="min-w-0" />
+  <app-favorite-recipes class="min-w-0" />
+</div>

@@ -1,0 +1,78 @@
+<div class="space-y-5">
+  <label class="block">
+    <span class="mb-2 block text-xs text-base-content/75">{{ categoryHeading }}</span>
+    <select
+      class="select w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
+      [attr.aria-label]="categoryHeading"
+      [value]="category()"
+      (change)="category.set($any($event.target).value)"
+    >
+      @for (option of categories; track option) {
+        <option [value]="option">{{ allCategoriesLabel(option) }}</option>
+      }
+    </select>
+  </label>
+
+  <fieldset>
+    <label class="mb-2 block font-medium" [for]="tagSearchId">{{ labelsHeading }}</label>
+    <div class="input flex w-full items-center gap-2 border-base-300 bg-base-100 h-11">
+      <app-icon name="search" class="size-5 text-base-content/75" />
+      <input
+        class="min-w-0 grow max-[799px]:text-base"
+        type="search"
+        [id]="tagSearchId"
+        [placeholder]="searchLabelsPlaceholder"
+        [value]="tagSearch()"
+        (input)="tagSearch.set($any($event.target).value)"
+      />
+    </div>
+
+    @if (selectedTags().length) {
+      <div class="mt-2 flex flex-wrap gap-2" [attr.aria-label]="selectedLabelsLabel">
+        @for (tag of selectedTags(); track tag) {
+          <button
+            type="button"
+            class="badge badge-accent border-secondary/25 text-accent-content gap-1 py-3"
+            (click)="toggleTag(tag)"
+          >
+            <span>{{ tag }}</span>
+            <app-icon name="close" class="size-3" />
+          </button>
+        }
+      </div>
+    }
+
+    <div
+      class="mt-2 flex max-h-40 flex-col overflow-y-auto rounded-field bg-base-100 p-1"
+      role="group"
+      [attr.aria-label]="availableLabelsLabel"
+    >
+      @for (tag of visibleTags(); track tag) {
+        <label
+          class="flex min-h-10 w-full cursor-pointer items-center gap-3 rounded-field px-2 py-1.5 hover:bg-base-300/30 has-checked:bg-primary/10"
+        >
+          <input
+            type="checkbox"
+            class="checkbox checkbox-sm max-[799px]:text-base"
+            [checked]="selectedTags().includes(tag)"
+            (change)="toggleTag(tag)"
+          />
+          <span>{{ tag }}</span>
+        </label>
+      } @empty {
+        <p class="p-2 text-sm leading-[21px] text-base-content/75">{{ noMatchingLabels }}</p>
+      }
+    </div>
+  </fieldset>
+
+  <label class="flex min-h-11 cursor-pointer items-center gap-3">
+    <app-icon name="favorite_border" class="size-5" />
+    <span class="flex-1">{{ favoriteOnlyLabel }}</span>
+    <input
+      type="checkbox"
+      class="toggle toggle-primary max-[799px]:text-base"
+      [checked]="favoriteOnly()"
+      (change)="favoriteOnly.set($any($event.target).checked)"
+    />
+  </label>
+</div>

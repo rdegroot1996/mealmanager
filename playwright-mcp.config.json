@@ -1,0 +1,6 @@
+{
+  "browser": {
+    "browserName": "chromium"
+  },
+  "capabilities": ["core", "vision", "testing", "devtools"]
+}

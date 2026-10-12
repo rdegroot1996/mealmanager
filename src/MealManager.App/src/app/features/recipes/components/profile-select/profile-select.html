@@ -1,0 +1,21 @@
+<label class="fieldset w-full">
+  @if (showLabel()) {
+    <span class="fieldset-legend">{{ label() }}</span>
+  }
+  <select
+    class="select w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
+    [disabled]="disabled()"
+    [attr.aria-label]="label()"
+    [ngModel]="selectedProfileId()"
+    (ngModelChange)="selectedProfileId.set($event)"
+  >
+    @if (placeholder()) {
+      <option value="">{{ placeholder() }}</option>
+    }
+    @for (profile of profiles(); track profile.id) {
+      <option [value]="profile.id" i18n="@@recipes.profileSelect.template.servings">
+        {{ profile.name }} ({{ profile.servings }} servings)
+      </option>
+    }
+  </select>
+</label>

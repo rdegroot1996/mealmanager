@@ -1,0 +1,489 @@
+@if (loading()) {
+  <app-loading-indicator i18n-message="@@common.loadingRecipe" message="Loading recipe…" />
+} @else if (notFound()) {
+  <app-empty-state
+    i18n-title="@@recipes.notFound"
+    title="Recipe not found"
+    i18n-description="@@recipes.notFoundDescription"
+    description="It may have been removed or the link may be out of date."
+    icon="search_off"
+  >
+    <a class="btn btn-secondary" routerLink="/recipes" i18n="@@recipes.backToRecipes"
+      >Back to recipes</a
+    >
+  </app-empty-state>
+} @else if (loadError()) {
+  <div class="alert alert-error alert-soft" role="alert">
+    <span>{{ loadError() }}</span>
+    <button class="btn btn-ghost" type="button" (click)="loadRecipe()" i18n="@@common.retry">
+      Retry
+    </button>
+  </div>
+} @else if (recipe(); as recipe) {
+  <app-page-header>
+    <a
+      page-content
+      class="flex items-center gap-1"
+      [routerLink]="recipe.id ? ['/recipes', recipe.id] : ['/recipes']"
+    >
+      <app-icon name="chevron_left" class="size-5" />
+      <span class="text-sm">
+        @if (recipe.id) {
+          <ng-container i18n="@@recipes.backToRecipe">Back to recipe</ng-container>
+        } @else {
+          <ng-container i18n="@@recipes.backToRecipes">Back to recipes</ng-container>
+        }
+      </span>
+    </a>
+    <button
+      class="btn btn-primary"
+      page-actions
+      type="button"
+      [disabled]="saving() || imagesPending()"
+      (click)="saveRecipe()"
+    >
+      @if (saving()) {
+        <ng-container i18n="@@common.saving">Saving…</ng-container>
+      } @else {
+        <ng-container i18n="@@common.save">Save</ng-container>
+      }
+    </button>
+    @if (uploadStatus()) {
+      <span page-actions class="text-sm text-base-content/75" role="status">
+        <span class="loading loading-spinner loading-sm" aria-hidden="true"></span>
+        {{ uploadStatus() }}
+      </span>
+    }
+  </app-page-header>
+
+  <div
+    class="grid grid-cols-1 items-start gap-9 min-[950px]:grid-cols-[minmax(0,.85fr)_minmax(0,1.15fr)]"
+  >
+    <div class="min-w-0">
+      <div class="card-body gap-5 p-0">
+        <h2 class="app-section-title" i18n="@@recipes.editRecipePage.template.recipeDetails">
+          Recipe Details
+        </h2>
+        @if (saveError()) {
+          <div class="alert alert-error alert-soft" role="alert">
+            {{ saveError() }}
+          </div>
+        }
+        @if (validationErrors().length > 0) {
+          <div class="alert alert-error alert-soft" role="alert">
+            <ul>
+              @for (error of validationErrors(); track error) {
+                <li>{{ error }}</li>
+              }
+            </ul>
+          </div>
+        }
+        <div class="grid grid-cols-1 min-[600px]:grid-cols-2 gap-4 mb-4">
+          <label class="fieldset w-full min-[600px]:col-span-2">
+            <span class="fieldset-legend" i18n="@@recipes.editRecipePage.template.recipeName"
+              >Recipe Name</span
+            >
+            <input
+              id="recipe-name"
+              type="text"
+              class="input w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
+              i18n-aria-label="@@recipes.editRecipePage.template.ariaLabelRecipeName"
+              aria-label="Recipe name"
+              [(ngModel)]="recipe.name"
+            />
+          </label>
+          <app-form-field
+            controlId="recipe-base-servings"
+            label="Base servings"
+            i18n-label="@@recipes.editRecipePage.template.baseServings"
+          >
+            <app-number-input
+              controlId="recipe-base-servings"
+              [fullWidth]="true"
+              label="Base servings"
+              i18n-label="@@recipes.editRecipePage.template.baseServings"
+              [value]="recipe.baseServings"
+              (valueChange)="recipe.baseServings = $event"
+            />
+          </app-form-field>
+          <label class="fieldset w-full">
+            <span class="fieldset-legend" i18n="@@recipes.editRecipePage.template.category"
+              >Category</span
+            >
+            <select
+              class="select w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
+              i18n-aria-label="@@recipes.editRecipePage.template.category"
+              aria-label="Category"
+              [(ngModel)]="recipe.category"
+            >
+              @for (category of categories; track category) {
+                <option [value]="category">{{ categoryLabel(category) }}</option>
+              }
+            </select>
+          </label>
+          <label class="fieldset min-[600px]:col-span-2">
+            <span class="fieldset-legend" i18n="@@recipes.notes">Notes</span>
+            <textarea
+              class="textarea w-full min-h-24 max-[799px]:text-base border-base-300 bg-base-100"
+              name="notes"
+              maxlength="4000"
+              i18n-aria-label="@@recipes.notes"
+              aria-label="Notes"
+              i18n-placeholder="@@recipes.notesPlaceholder"
+              placeholder="Source, tips, or adaptations…"
+              [(ngModel)]="recipe.notes"
+            ></textarea>
+          </label>
+          <fieldset class="fieldset w-full min-[600px]:col-span-2">
+            <legend class="fieldset-legend" i18n="@@recipes.editRecipePage.template.tags">
+              Tags
+            </legend>
+            <div
+              class="flex flex-wrap gap-2"
+              i18n-aria-label="@@recipes.editRecipePage.template.ariaLabelSelectedTags"
+              aria-label="Selected tags"
+            >
+              @for (tag of recipe.tags; track tag.name) {
+                <span class="badge badge-secondary badge-lg gap-1">
+                  {{ tag.name }}
+                  <button
+                    type="button"
+                    class="btn btn-ghost btn-circle btn-xs"
+                    [attr.aria-label]="removeTagLabel(tag.name)"
+                    (click)="removeTag(tag.name)"
+                  >
+                    ×
+                  </button>
+                </span>
+              }
+            </div>
+            <div class="mt-2 flex gap-2">
+              <input
+                type="search"
+                class="input w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
+                i18n-aria-label="@@recipes.editRecipePage.template.ariaLabelSearchOrAddATag"
+                aria-label="Search or add a tag"
+                i18n-placeholder="@@recipes.editRecipePage.template.ariaLabelSearchOrAddATag"
+                placeholder="Search or add a tag"
+                [ngModel]="tagQuery()"
+                (focus)="loadTagSuggestions()"
+                (ngModelChange)="tagQuery.set($event); loadTagSuggestions()"
+                (keydown.enter)="$event.preventDefault(); addTag()"
+              />
+              <button
+                class="btn btn-secondary"
+                type="button"
+                [disabled]="!tagQuery().trim()"
+                (click)="addTag()"
+                i18n="@@recipes.editRecipePage.template.add"
+              >
+                Add
+              </button>
+            </div>
+            @if (tagSuggestions().length) {
+              <div
+                class="mt-2 flex flex-wrap gap-2"
+                i18n-aria-label="@@recipes.editRecipePage.template.ariaLabelTagSuggestions"
+                aria-label="Tag suggestions"
+              >
+                @for (tag of tagSuggestions(); track tag) {
+                  <button type="button" class="btn btn-sm btn-ghost" (click)="addTag(tag)">
+                    {{ tag }}
+                  </button>
+                }
+              </div>
+            }
+          </fieldset>
+          <div class="flex flex-col gap-2 min-[600px]:col-span-2">
+            <h3 class="app-subsection-title" i18n="@@recipes.editRecipePage.template.photos">
+              Photos
+            </h3>
+            @if (!recipe.id) {
+              <p
+                class="text-sm text-base-content/75"
+                i18n="@@recipes.editRecipePage.template.saveTheRecipeFirstThenAddPhotos"
+              >
+                Save the recipe first, then add photos.
+              </p>
+            }
+            @if (imageError()) {
+              <div class="alert alert-error alert-soft" role="alert">
+                {{ imageError() }}
+              </div>
+            }
+            <div class="grid grid-cols-[repeat(auto-fill,minmax(144px,1fr))] gap-3">
+              @for (image of photoItems(); track image.id) {
+                <div class="min-w-0" data-testid="recipe-photo">
+                  <div class="relative">
+                    <img
+                      [src]="image.url"
+                      [alt]="photoAlt(recipe.name, $index + 1)"
+                      class="aspect-[1.25] w-full rounded-box object-cover"
+                    />
+                    @if ($index === 0) {
+                      <span
+                        class="badge badge-primary absolute left-2 top-2"
+                        i18n="@@recipes.editRecipePage.template.primary"
+                        >Primary</span
+                      >
+                    }
+                  </div>
+                  <div class="mt-1 flex justify-between gap-1">
+                    <button
+                      type="button"
+                      class="btn btn-ghost btn-square size-11 min-h-11"
+                      [disabled]="$first || imagesPending() || saving()"
+                      [attr.aria-label]="movePhotoLabel($index + 1, -1)"
+                      (click)="moveImage($index, $index - 1)"
+                    >
+                      <app-icon name="chevron_left" class="size-4" />
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-ghost btn-square size-11 min-h-11 text-error"
+                      [disabled]="imagesPending() || saving()"
+                      [attr.aria-label]="removePhotoLabel($index + 1)"
+                      (click)="deleteImage(image.id)"
+                    >
+                      <app-icon name="delete" class="size-4" />
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-ghost btn-square size-11 min-h-11"
+                      [disabled]="$last || imagesPending() || saving()"
+                      [attr.aria-label]="movePhotoLabel($index + 1, 1)"
+                      (click)="moveImage($index, $index + 1)"
+                    >
+                      <app-icon name="chevron_right" class="size-4" />
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+            <button
+              type="button"
+              class="btn btn-secondary self-start"
+              [disabled]="!recipe.id || imagesPending() || saving()"
+              (click)="triggerImageSelection()"
+            >
+              <app-icon name="add_photo_alternate" class="size-5" /><span
+                i18n="@@recipes.editRecipePage.addImage"
+                >Add image</span
+              >
+            </button>
+            <input
+              #imageInput
+              type="file"
+              class="hidden max-[799px]:text-base"
+              accept="image/*"
+              multiple
+              (change)="uploadImage($event)"
+            />
+            <span
+              class="text-sm text-base-content/75"
+              i18n="@@recipes.editRecipePage.template.jpegPNGWebPGIFHEICOrHEIF"
+            >
+              JPEG, PNG, WebP, GIF, HEIC or HEIF. Maximum 10 MB.
+            </span>
+            @if (imageUploading()) {
+              <p class="text-sm text-base-content/75">{{ uploadStatus() }}</p>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="min-w-0 grid grid-cols-1 gap-8">
+      <div class="min-w-0">
+        <div class="card-body gap-5 p-0">
+          <h2 class="app-section-title mb-3">
+            <ng-container i18n="@@recipes.ingredients">Ingredients</ng-container>
+          </h2>
+          <div
+            cdkDropList
+            class="flex flex-col gap-3"
+            (cdkDropListDropped)="dropIngredient($event)"
+          >
+            @for (ingredient of recipe.ingredients; track ingredient.id) {
+              <div class="relative border-b border-base-300 py-3" cdkDrag>
+                <div class="flex items-start gap-2">
+                  <button
+                    cdkDragHandle
+                    type="button"
+                    class="btn btn-ghost btn-square size-11 min-h-11 shrink-0"
+                    [attr.aria-label]="reorderIngredientLabel(ingredient.name)"
+                    [id]="'ingredient-handle-' + ingredient.id"
+                    (keydown.arrowup)="
+                      $event.preventDefault(); moveIngredient($index, $index - 1, true)
+                    "
+                    (keydown.arrowdown)="
+                      $event.preventDefault(); moveIngredient($index, $index + 1, true)
+                    "
+                  >
+                    <app-icon name="drag_indicator" class="size-5" />
+                  </button>
+                  <div class="grid min-w-0 max-w-xl flex-1 grid-cols-2 gap-2 sm:gap-3">
+                    <app-form-field
+                      class="col-span-2"
+                      controlId="ingredient-name-{{ $index }}"
+                      i18n-label="@@recipes.editRecipePage.template.labelIngredientName"
+                      label="Ingredient name"
+                    >
+                      <input
+                        id="ingredient-name-{{ $index }}"
+                        type="text"
+                        class="input h-11 w-full max-[799px]:text-base border-base-300 bg-base-100"
+                        [(ngModel)]="ingredient.name"
+                      />
+                    </app-form-field>
+                    <app-form-field
+                      controlId="ingredient-quantity-{{ $index }}"
+                      i18n-label="@@common.quantity"
+                      label="Quantity"
+                    >
+                      <input
+                        id="ingredient-quantity-{{ $index }}"
+                        type="text"
+                        inputmode="decimal"
+                        class="input h-11 w-full max-[799px]:text-base border-base-300 bg-base-100"
+                        [ngModel]="quantityDraft(ingredient)"
+                        (ngModelChange)="updateQuantity(ingredient, $event)"
+                        [attr.aria-invalid]="!isFiniteQuantity(ingredient.quantity)"
+                      />
+                    </app-form-field>
+                    <app-form-field
+                      controlId="ingredient-unit-{{ $index }}"
+                      i18n-label="@@recipes.editRecipePage.template.labelUnit"
+                      label="Unit"
+                    >
+                      <app-unit-selector
+                        [controlId]="'ingredient-unit-' + $index"
+                        [(unit)]="ingredient.unit"
+                      />
+                    </app-form-field>
+                  </div>
+                  <button
+                    type="button"
+                    class="btn btn-ghost btn-square size-11 min-h-11 shrink-0 text-error"
+                    [attr.aria-label]="removeIngredientLabel(ingredient.name)"
+                    (click)="removeIngredient($index)"
+                  >
+                    <app-icon name="delete" class="size-5" />
+                  </button>
+                </div>
+              </div>
+            } @empty {
+              <p
+                class="text-sm leading-[21px] text-base-content/75"
+                i18n="@@recipes.editRecipePage.template.noIngredientsHaveBeenAddedYet"
+              >
+                No ingredients have been added yet.
+              </p>
+            }
+          </div>
+          <button
+            class="btn btn-outline btn-primary mt-4 self-start"
+            (click)="addIngredient()"
+            i18n="@@recipes.editRecipePage.template.addIngredient"
+          >
+            Add Ingredient
+          </button>
+        </div>
+      </div>
+      <div class="min-w-0 border-t border-base-300 pt-6">
+        <div class="card-body gap-5 p-0">
+          <h2 class="app-section-title mb-3">
+            <ng-container i18n="@@recipes.steps">Steps</ng-container>
+          </h2>
+          <div cdkDropList class="flex flex-col gap-3" (cdkDropListDropped)="dropStep($event)">
+            @for (step of recipe.steps; track step.id) {
+              <div class="border-b border-base-300 py-3" cdkDrag>
+                <div class="mb-2 flex items-center gap-2">
+                  <button
+                    cdkDragHandle
+                    type="button"
+                    class="btn btn-ghost btn-square size-11 min-h-11"
+                    [attr.aria-label]="reorderStepLabel($index + 1)"
+                    [id]="'step-handle-' + step.id"
+                    (keydown.arrowup)="$event.preventDefault(); moveStep($index, $index - 1, true)"
+                    (keydown.arrowdown)="
+                      $event.preventDefault(); moveStep($index, $index + 1, true)
+                    "
+                  >
+                    <app-icon name="drag_indicator" class="size-5" />
+                  </button>
+                  <label
+                    class="font-medium"
+                    for="step-description-{{ $index }}"
+                    i18n="@@recipes.editRecipePage.template.step"
+                    >Step {{ $index + 1 }}</label
+                  >
+                  <button
+                    type="button"
+                    class="btn btn-ghost btn-square size-11 min-h-11 ml-auto text-error"
+                    [attr.aria-label]="removeStepLabel($index + 1)"
+                    (click)="removeStep($index)"
+                  >
+                    <app-icon name="delete" class="size-5" />
+                  </button>
+                </div>
+                <textarea
+                  id="step-description-{{ $index }}"
+                  class="textarea min-h-24 w-full max-[799px]:text-base border-base-300 bg-base-100"
+                  [(ngModel)]="step.description"
+                ></textarea>
+              </div>
+            } @empty {
+              <p
+                class="text-sm leading-[21px] text-base-content/75"
+                i18n="@@recipes.editRecipePage.template.noPreparationStepsHaveBeenAddedYet"
+              >
+                No preparation steps have been added yet.
+              </p>
+            }
+          </div>
+          <button
+            class="btn btn-outline btn-primary mt-4 self-start"
+            (click)="addStep()"
+            i18n="@@recipes.editRecipePage.template.addStep"
+          >
+            Add Step
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div
+    class="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-20 mt-6 flex flex-wrap items-center justify-end gap-2 rounded-box border border-base-300 bg-base-200/95 p-3 shadow-sm backdrop-blur-sm min-[800px]:bottom-0"
+  >
+    @if (uploadStatus()) {
+      <span class="self-center text-sm text-base-content/75">{{ uploadStatus() }}</span>
+    }
+    <button
+      class="btn btn-outline btn-primary"
+      type="button"
+      [disabled]="saving() || imagesPending()"
+      (click)="saveRecipe(true)"
+    >
+      @if (saving()) {
+        <ng-container i18n="@@common.saving">Saving…</ng-container>
+      } @else {
+        <ng-container i18n="@@recipes.saveAndAddAnother">Save and add another</ng-container>
+      }
+    </button>
+    <button
+      class="btn btn-primary"
+      type="button"
+      [disabled]="saving() || imagesPending()"
+      (click)="saveRecipe()"
+    >
+      @if (saving()) {
+        <ng-container i18n="@@common.saving">Saving…</ng-container>
+      } @else {
+        <ng-container i18n="@@common.save">Save</ng-container>
+      }
+    </button>
+  </div>
+}
+<app-confirmation-modal #discardChangesModal />

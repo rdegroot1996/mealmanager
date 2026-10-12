@@ -1,0 +1,27 @@
+<button
+  type="button"
+  class="btn btn-ghost min-h-11 flex w-full"
+  aria-haspopup="dialog"
+  (click)="open()"
+>
+  <app-icon name="filter_alt" class="size-5" />
+  <span>{{ filterLabel }}</span>
+  @if (activeFilterCount()) {
+    <span class="badge badge-primary badge-sm">{{ activeFilterCount() }}</span>
+  }
+</button>
+<app-modal #modal [dismissOnBackdrop]="true">
+  <div modal-title>
+    <h2 class="font-display text-2xl font-medium leading-tight">{{ filterLabel }}</h2>
+    <p class="mt-1 text-sm font-normal text-base-content/75">{{ filterSubtitle }}</p>
+  </div>
+  <app-recipe-catalog-filter-form #form [availableTags]="availableTags()" />
+  <div class="mt-3 flex justify-end">
+    <button type="button" class="btn btn-ghost min-h-11" (click)="form.reset()">
+      {{ resetLabel }}
+    </button>
+  </div>
+  <button modal-actions type="button" class="btn btn-primary" (click)="apply()">
+    {{ applyLabel }}
+  </button>
+</app-modal>

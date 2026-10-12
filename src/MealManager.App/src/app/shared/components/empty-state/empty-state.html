@@ -1,0 +1,17 @@
+<div
+  class="flex min-w-0 flex-col items-center gap-3 rounded-box text-center"
+  [class.app-surface]="!embedded()"
+  [class.p-8]="!embedded()"
+  [class.bg-transparent]="embedded()"
+  [class.p-4]="embedded()"
+  data-testid="empty-state"
+>
+  <app-icon [name]="icon()" class="size-8 text-base-content/45" />
+  <div>
+    <p class="font-semibold">{{ title() }}</p>
+    @if (description()) {
+      <p class="mt-1 text-sm leading-[21px] text-base-content/75">{{ description() }}</p>
+    }
+  </div>
+  <div class="mt-4 empty:hidden"><ng-content></ng-content></div>
+</div>

@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+        <PackageReference Include="FluentValidation.DependencyInjectionExtensions"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\MealManager.Domain\MealManager.Domain.csproj"/>
+        <ProjectReference Include="..\MealManager.Infrastructure\MealManager.Infrastructure.csproj"/>
+    </ItemGroup>
+
+</Project>

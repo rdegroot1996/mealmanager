@@ -1,0 +1,65 @@
+<app-auth-shell
+  i18n-title="@@app.name"
+  title="MealManager"
+  i18n-description="@@authentication.loginPage.template.descriptionSignInToManageYourMeals"
+  description="Sign in to manage your meals."
+>
+  <form class="flex flex-col gap-5" (ngSubmit)="submit()">
+    @if (error()) {
+      <div class="alert alert-error alert-soft" role="alert">
+        {{ error() }}
+      </div>
+    }
+
+    <app-form-field
+      controlId="login-email"
+      i18n-label="@@common.email"
+      label="Email"
+      [required]="true"
+    >
+      <input
+        class="input w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
+        id="login-email"
+        type="email"
+        name="email"
+        i18n-aria-label="@@common.email"
+        aria-label="Email"
+        [(ngModel)]="email"
+        required
+        autocomplete="email"
+      />
+    </app-form-field>
+
+    <app-form-field
+      controlId="login-password"
+      i18n-label="@@common.password"
+      label="Password"
+      [required]="true"
+    >
+      <input
+        class="input w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
+        id="login-password"
+        type="password"
+        name="password"
+        i18n-aria-label="@@common.password"
+        aria-label="Password"
+        [(ngModel)]="password"
+        required
+        autocomplete="current-password"
+      />
+    </app-form-field>
+
+    <button
+      class="btn btn-primary mt-2"
+      type="submit"
+      [disabled]="loading()"
+      [attr.aria-busy]="loading()"
+    >
+      @if (loading()) {
+        <ng-container i18n="@@authentication.loginPage.signingIn">Signing in...</ng-container>
+      } @else {
+        <ng-container i18n="@@authentication.signIn">Sign in</ng-container>
+      }
+    </button>
+  </form>
+</app-auth-shell>

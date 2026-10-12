@@ -1,0 +1,15 @@
+services:
+  mealmanager:
+    build:
+      context: ../..
+      dockerfile: src/MealManager.Api/Dockerfile
+    ports:
+      - "8081:8080"
+    environment:
+      Authentication__AllowInsecureHttp: "true"
+      Supermarkets__Picnic__UseMock: "true"
+    volumes:
+      - mealmanager-data:/app/data
+
+volumes:
+  mealmanager-data:

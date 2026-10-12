@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <UserSecretsId>5391d466-3b5c-47ee-843a-0608e024134a</UserSecretsId>
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Hellang.Middleware.ProblemDetails"/>
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi"/>
+        <PackageReference Include="Microsoft.AspNetCore.SpaServices.Extensions"/>
+        <PackageReference Include="ModelContextProtocol.AspNetCore"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets"/>
+        <PackageReference Include="Scalar.AspNetCore"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\MealManager.Application\MealManager.Application.csproj"/>
+        <ProjectReference Include="..\MealManager.Infrastructure\MealManager.Infrastructure.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Folder Include="data\"/>
+        <Folder Include="wwwroot\"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Include="Mcp/Instructions.md" LogicalName="MealManager.Api.Mcp.Instructions.md"/>
+    </ItemGroup>
+
+</Project>

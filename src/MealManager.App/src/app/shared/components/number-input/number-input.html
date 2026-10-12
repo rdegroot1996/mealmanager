@@ -1,0 +1,39 @@
+<div
+  class="input h-11 w-full gap-0 px-0 bg-base-100"
+  [class.input-error]="invalid()"
+  [class.border-base-300]="!invalid()"
+  [class.border-error]="invalid()"
+>
+  <button
+    type="button"
+    class="btn btn-ghost h-full min-h-0 w-11 shrink-0 p-0"
+    [disabled]="disabled() || !whole() || value() <= minimum()"
+    [attr.aria-label]="decreaseLabel()"
+    (click)="valueChange.emit(value() - 1)"
+  >
+    <app-icon name="remove" class="size-4" />
+  </button>
+  <input
+    class="h-full min-w-0 flex-1 bg-transparent text-center tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none max-[799px]:text-base"
+    type="number"
+    [id]="controlId()"
+    [min]="minimum()"
+    [attr.max]="maximum()"
+    step="1"
+    [disabled]="disabled()"
+    [attr.aria-label]="label()"
+    [attr.aria-invalid]="invalid()"
+    [attr.aria-describedby]="describedBy()"
+    [value]="displayValue()"
+    (input)="change($event)"
+  />
+  <button
+    type="button"
+    class="btn btn-ghost h-full min-h-0 w-11 shrink-0 p-0"
+    [disabled]="disabled() || !whole() || (maximum() !== null && value() >= maximum()!)"
+    [attr.aria-label]="increaseLabel()"
+    (click)="valueChange.emit(value() + 1)"
+  >
+    <app-icon name="add" class="size-4" />
+  </button>
+</div>

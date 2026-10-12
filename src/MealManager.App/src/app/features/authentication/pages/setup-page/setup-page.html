@@ -1,0 +1,102 @@
+<app-auth-shell
+  i18n-title="@@app.name"
+  title="MealManager"
+  i18n-description="
+    @@authentication.setupPage.template.descriptionCreateTheFirstLocalAdministratorAccount"
+  description="Create the first local administrator account."
+>
+  <form class="flex flex-col gap-5" (ngSubmit)="submit()">
+    @if (error()) {
+      <div class="alert alert-error alert-soft" role="alert">
+        {{ error() }}
+      </div>
+    }
+
+    <app-form-field
+      controlId="setup-display-name"
+      i18n-label="@@common.displayName"
+      label="Display name"
+      [required]="true"
+    >
+      <input
+        class="input w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
+        id="setup-display-name"
+        name="displayName"
+        i18n-aria-label="@@common.displayName"
+        aria-label="Display name"
+        [(ngModel)]="displayName"
+        required
+        autocomplete="name"
+      />
+    </app-form-field>
+    <app-form-field
+      controlId="setup-email"
+      i18n-label="@@common.email"
+      label="Email"
+      [required]="true"
+    >
+      <input
+        class="input w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
+        id="setup-email"
+        type="email"
+        name="email"
+        i18n-aria-label="@@common.email"
+        aria-label="Email"
+        [(ngModel)]="email"
+        required
+        autocomplete="email"
+      />
+    </app-form-field>
+    <app-form-field
+      controlId="setup-password"
+      i18n-label="@@common.password"
+      label="Password"
+      [required]="true"
+    >
+      <input
+        class="input w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
+        id="setup-password"
+        type="password"
+        name="password"
+        i18n-aria-label="@@common.password"
+        aria-label="Password"
+        [(ngModel)]="password"
+        required
+        minlength="6"
+        autocomplete="new-password"
+      />
+    </app-form-field>
+    <app-form-field
+      controlId="setup-confirm-password"
+      i18n-label="@@common.confirmPassword"
+      label="Confirm password"
+      [required]="true"
+    >
+      <input
+        class="input w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
+        id="setup-confirm-password"
+        type="password"
+        name="confirmPassword"
+        i18n-aria-label="@@common.confirmPassword"
+        aria-label="Confirm password"
+        [(ngModel)]="confirmPassword"
+        required
+        autocomplete="new-password"
+      />
+    </app-form-field>
+    <button
+      class="btn btn-primary mt-2"
+      type="submit"
+      [disabled]="loading()"
+      [attr.aria-busy]="loading()"
+    >
+      @if (loading()) {
+        <ng-container i18n="@@authentication.setupPage.settingUp">Setting up...</ng-container>
+      } @else {
+        <ng-container i18n="@@authentication.setupPage.createAdministrator"
+          >Create administrator</ng-container
+        >
+      }
+    </button>
+  </form>
+</app-auth-shell>

@@ -1,0 +1,31 @@
+services:
+  mealmanager:
+    image: ${MEALMANAGER_IMAGE:-ghcr.io/rdegroot1996/mealmanager:latest}
+    restart: unless-stopped
+    volumes:
+      - mealmanager-data:/app/data
+      # Alternatively, use a host directory:
+      # - ./data:/app/data
+    # Optional settings; replace the empty mapping with the applicable entry.
+    # environment:
+    #   # Enable when TLS terminates at a reverse proxy. Keep port 8080 private
+    #   # to that proxy because this trusts forwarded headers.
+    #   ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+    #
+    #   # Enable only for deliberate direct HTTP access on a trusted network.
+    #   # Do not enable this when TLS terminates at a reverse proxy.
+    #   Authentication__AllowInsecureHttp: "true"
+    #
+    #   # Optional MCP endpoint. Use a random secret of at least 32 characters;
+    #   # clients send it as a Bearer token. See docs/mcp-clients.md.
+    #   Mcp__Enabled: "true"
+    #   Mcp__AccessToken: "replace-with-a-long-random-secret"
+    environment: {}
+
+    # For deliberate direct HTTP access, uncomment this and the matching
+    # Authentication__AllowInsecureHttp setting above.
+    # ports:
+    #   - "8080:8080"
+
+volumes:
+  mealmanager-data:

@@ -1,0 +1,52 @@
+<dialog
+  #dialog
+  class="modal modal-bottom min-[600px]:modal-middle"
+  [attr.aria-labelledby]="labelledBy() || titleId"
+  (click)="onBackdropClick($event)"
+  (close)="onClosed()"
+>
+  <div
+    class="modal-box flex max-h-[calc(100dvh-1rem)] w-full flex-col overflow-hidden rounded-t-[1.5rem] bg-base-200 p-6 pb-[max(1rem,env(safe-area-inset-bottom))] max-[359px]:px-4 min-[600px]:max-h-[calc(100dvh-3rem)] min-[600px]:rounded-[1.25rem]"
+    [class]="
+      size() === 'wide'
+        ? 'min-[600px]:w-[calc(100%-3rem)] min-[600px]:max-w-[1100px]'
+        : 'max-w-[580px]'
+    "
+  >
+    <div class="mb-4 flex shrink-0 items-start gap-3">
+      <div [id]="titleId" class="min-w-0 flex-1 font-display text-2xl font-medium" tabindex="-1">
+        <ng-content select="[modal-title]"></ng-content>
+      </div>
+      @if (showClose()) {
+        <button
+          class="btn btn-ghost btn-square size-11 shrink-0"
+          type="button"
+          (click)="close()"
+          aria-label="Close"
+          i18n-aria-label="@@common.close"
+        >
+          <app-icon name="close" class="size-5" />
+        </button>
+      }
+    </div>
+    <div
+      #body
+      class="app-dialog-body min-h-0 flex-1 overflow-y-auto overscroll-contain [overflow-anchor:none]"
+      [class.p-1]="size() !== 'wide'"
+    >
+      <ng-content></ng-content>
+    </div>
+    <div
+      class="app-dialog-footer mt-4 flex shrink-0 flex-col items-stretch gap-2 border-t border-base-300 pt-3 [&:not(:has(button,a))]:hidden [&_:is(button,a)]:w-full [&_:is(button,a)]:max-w-full [&_:is(button,a)]:h-auto [&_:is(button,a)]:min-h-12 [&_:is(button,a)]:font-medium [&_:is(button,a)]:text-sm [&_:is(button,a)]:whitespace-normal [&_:is(button,a)]:py-3"
+      [class.px-1]="size() !== 'wide'"
+    >
+      <div class="flex w-full min-w-0 flex-col gap-2 [&>div]:w-full">
+        <ng-content select="[modal-actions]" />
+      </div>
+      <ng-content select="[modal-note]" />
+      <div class="flex w-full min-w-0 flex-col gap-2 empty:hidden">
+        <ng-content select="[modal-secondary-actions]" />
+      </div>
+    </div>
+  </div>
+</dialog>
