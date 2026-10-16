@@ -24,19 +24,19 @@ async function seedPlanner(page: Page) {
     startDate: '2099-08-20',
     endDate: '2099-08-23',
   });
-  const planning = await (await page.request.get(`/api/planning/cycle/${cycle.id}`)).json();
-  const meal = await post('/api/planning-meals', {
-    planningId: planning.id,
+  const mealPlan = await (await page.request.get(`/api/meal-plans/cycle/${cycle.id}`)).json();
+  const meal = await post('/api/planned-meals', {
+    mealPlanId: mealPlan.id,
     date: '2099-08-20',
     recipeId: recipe.id,
     recipeProfileId: recipe.profiles[0].id,
   });
-  const leftover = await post(`/api/planning-meals/${meal.id}/leftovers`, { date: '2099-08-23' });
-  await navigateTo(page, 'Planning');
+  const leftover = await post(`/api/planned-meals/${meal.id}/leftovers`, { date: '2099-08-23' });
+  await navigateTo(page, 'Planner');
   await expect(
     page.getByRole('button', { name: 'More actions for Dialog pasta', exact: true }).first(),
   ).toBeVisible();
-  return { post, cycle, meal, leftover, planningId: planning.id };
+  return { post, cycle, meal, leftover, mealPlanId: mealPlan.id };
 }
 
 test('mobile app bar follows scroll direction, focus, navigation and reduced motion', async ({
@@ -60,7 +60,7 @@ test('mobile app bar follows scroll direction, focus, navigation and reduced mot
   await expect(bar).not.toHaveClass(/max-\[800px\]:-translate-y-full/);
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
   await page.goBack();
-  await expect(page.locator('app-planning-timeline-page')).toBeVisible();
+  await expect(page.locator('app-planner-page')).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(180);
   await expect(bar).not.toHaveClass(/max-\[800px\]:-translate-y-full/);
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -75,7 +75,7 @@ test('removing leftovers from meal options preserves the original meal and its g
   page,
 }) => {
   const { post, meal, leftover } = await seedPlanner(page);
-  await post(`/api/planning-meals/${meal.id}/groceries`, {
+  await post(`/api/planned-meals/${meal.id}/groceries`, {
     groceries: [{ name: 'Pasta', quantity: 2 }],
   });
   await page.reload();
@@ -89,7 +89,7 @@ test('removing leftovers from meal options preserves the original meal and its g
   await expect(entry).toHaveCount(0);
   await expect(page.locator(`[data-planning-entry="${meal.id}"]`)).toBeVisible();
   await expect(
-    page.getByRole('button', { name: 'Edit groceries for Dialog pasta', exact: true }),
+    page.getByRole('button', { name: 'Edit grocery selection for Dialog pasta', exact: true }),
   ).toBeVisible();
 });
 
@@ -112,7 +112,7 @@ for (const viewport of [
     page,
   }) => {
     await page.setViewportSize(viewport);
-    const { meal, post, planningId } = await seedPlanner(page);
+    const { meal, post, mealPlanId } = await seedPlanner(page);
     const companionRecipe = await post('/api/recipes', {
       name: 'Companion pasta',
       category: 'Meals',
@@ -121,8 +121,8 @@ for (const viewport of [
       ingredients: [],
       steps: [],
     });
-    const companion = await post('/api/planning-meals', {
-      planningId,
+    const companion = await post('/api/planned-meals', {
+      mealPlanId,
       date: '2099-08-21',
       recipeId: companionRecipe.id,
       recipeProfileId: companionRecipe.profiles[0].id,
@@ -137,7 +137,7 @@ for (const viewport of [
     await options.click();
     await expectDialogFocus(page);
     await page.getByRole('button', { name: 'Change profile', exact: true }).click();
-    await expect(page.getByRole('dialog', { name: 'Change Profile', exact: true })).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Change profile', exact: true })).toBeVisible();
     await expectDialogFocus(page);
     await page.keyboard.press('Escape');
     await expect(page.locator('dialog[open]')).toHaveCount(0);
@@ -182,7 +182,7 @@ for (const viewport of [
     const saturday = page.getByRole('region', { name: /Saturday 22 Aug/ });
     await expect(saturday.locator(`[data-planning-entry="${meal.id}"]`)).toBeVisible();
     await expect(options).toBeFocused();
-    await expect(page.locator('app-planning-timeline-page > [aria-live="polite"]')).toContainText(
+    await expect(page.locator('app-planner-page > [aria-live="polite"]')).toContainText(
       'moved to Saturday',
     );
     await page.reload();
@@ -197,15 +197,18 @@ test('cycle choices, note editing, and cycle-delete handoff preserve historical 
   await page.getByRole('button', { name: 'Add note', exact: true }).first().click();
   await expect(page.getByRole('textbox', { name: /^Note/ })).toBeFocused();
   await page.getByRole('textbox', { name: /^Note/ }).fill('Family dinner');
-  await page.getByRole('button', { name: 'Add Note', exact: true }).click();
+  await page
+    .getByRole('dialog', { name: 'Add note', exact: true })
+    .getByRole('button', { name: 'Add note', exact: true })
+    .click();
   await expect(page.getByText('Family dinner', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Edit note', exact: true }).click();
   await expect(page.getByRole('textbox', { name: /^Note/ })).not.toBeFocused();
   await expect(
-    page.getByRole('dialog', { name: 'Edit Note', exact: true }).locator('[tabindex="-1"]'),
+    page.getByRole('dialog', { name: 'Edit note', exact: true }).locator('[tabindex="-1"]'),
   ).toBeFocused();
   await expectAlignedDialogActions(
-    page.getByRole('dialog', { name: 'Edit Note', exact: true }),
+    page.getByRole('dialog', { name: 'Edit note', exact: true }),
     'Remove note',
   );
   await page.getByRole('textbox', { name: /^Note/ }).fill('Dinner together');
@@ -225,9 +228,9 @@ test('cycle choices, note editing, and cycle-delete handoff preserve historical 
   const cycleNavigation = page.getByRole('group', { name: 'Planning cycles', exact: true });
   await expect(cycleNavigation).toContainText('Historical cycle');
   await expect(page.getByRole('button', { name: 'Previous cycle', exact: true })).toBeDisabled();
-  await navigateTo(page, 'Groceries');
+  await navigateTo(page, 'Shopping list');
   await expect(cycleNavigation).toContainText('Historical cycle');
-  await navigateTo(page, 'Planning');
+  await navigateTo(page, 'Planner');
   await page.getByRole('button', { name: 'Next cycle', exact: true }).click();
   await expect(cycleNavigation).toContainText('Active cycle');
   await page.getByRole('button', { name: 'Edit range', exact: true }).click();

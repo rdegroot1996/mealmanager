@@ -54,7 +54,7 @@ public sealed partial class McpServerTests(CustomWebApplicationFactory factory) 
             .EnumerateArray().ToDictionary(tool => tool.GetProperty("name").GetString()!);
 
         Assert.Contains("search_recipes", advertised.Keys);
-        Assert.Contains("remove_grocery_item", advertised.Keys);
+        Assert.Contains("remove_shopping_list_item", advertised.Keys);
         Assert.DoesNotContain("list_ingredients", advertised.Keys);
         Assert.False(advertised["search_recipes"].GetProperty("inputSchema").GetProperty("properties").TryGetProperty("availableIngredients", out _));
         Assert.Contains("expectedRecipeVersion", advertised["update_recipe"].GetProperty("inputSchema").GetProperty("required").EnumerateArray().Select(value => value.GetString()));
@@ -65,12 +65,12 @@ public sealed partial class McpServerTests(CustomWebApplicationFactory factory) 
         Assert.Contains("list_recipe_catalog", advertised.Keys);
         Assert.Contains("list_recipe_tags", advertised.Keys);
         Assert.Contains("update_recipe", advertised.Keys);
-        Assert.Contains("apply_planning", advertised.Keys);
+        Assert.Contains("apply_meal_plan", advertised.Keys);
         Assert.True(advertised["list_recipe_catalog"].GetProperty("annotations").GetProperty("readOnlyHint").GetBoolean());
-        Assert.True(advertised["apply_planning"].GetProperty("annotations").GetProperty("destructiveHint").GetBoolean());
+        Assert.True(advertised["apply_meal_plan"].GetProperty("annotations").GetProperty("destructiveHint").GetBoolean());
         Assert.True(advertised["update_recipe"].GetProperty("annotations").GetProperty("destructiveHint").GetBoolean());
         Assert.Contains("explicitly confirmed", advertised["create_recipe"].GetProperty("description").GetString());
-        Assert.Contains("expectedPlanningVersion", advertised["apply_planning"].GetProperty("inputSchema")
+        Assert.Contains("expectedMealPlanVersion", advertised["apply_meal_plan"].GetProperty("inputSchema")
             .GetProperty("required").EnumerateArray().Select(value => value.GetString()));
         Assert.True(advertised["search_recipes"].GetProperty("annotations")
             .GetProperty("readOnlyHint").GetBoolean());
@@ -143,23 +143,23 @@ public sealed partial class McpServerTests(CustomWebApplicationFactory factory) 
             date = today,
         });
         var meal = planned.RootElement.GetProperty("result").GetProperty("structuredContent");
-        Assert.False(meal.GetProperty("hasGroceriesAdded").GetBoolean());
+        Assert.False(meal.GetProperty("hasReviewedGroceries").GetBoolean());
 
-        var active = await CallTool(client, "get_active_planning", new { });
+        var active = await CallTool(client, "get_active_meal_plan", new { });
         var entry = active.RootElement.GetProperty("result").GetProperty("structuredContent")
-            .GetProperty("planning").GetProperty("entries")[0];
+            .GetProperty("mealPlan").GetProperty("entries")[0];
         Assert.Equal(recipeId, entry.GetProperty("recipe").GetProperty("id").GetGuid());
-        Assert.False(entry.GetProperty("hasGroceriesAdded").GetBoolean());
+        Assert.False(entry.GetProperty("hasReviewedGroceries").GetBoolean());
 
         await CallTool(client, "review_meal_groceries", new
         {
-            planningMealId = meal.GetProperty("id").GetGuid(),
+            plannedMealId = meal.GetProperty("id").GetGuid(),
             groceries = Array.Empty<object>(),
         });
-        var reviewed = await CallTool(client, "get_active_planning", new { });
+        var reviewed = await CallTool(client, "get_active_meal_plan", new { });
         Assert.True(reviewed.RootElement.GetProperty("result").GetProperty("structuredContent")
-            .GetProperty("planning").GetProperty("entries")[0]
-            .GetProperty("hasGroceriesAdded").GetBoolean());
+            .GetProperty("mealPlan").GetProperty("entries")[0]
+            .GetProperty("hasReviewedGroceries").GetBoolean());
     }
 
     [Fact]
@@ -177,16 +177,16 @@ public sealed partial class McpServerTests(CustomWebApplicationFactory factory) 
         var cycleId = cycle.RootElement.GetProperty("result")
             .GetProperty("structuredContent").GetProperty("id").GetGuid();
 
-        var added = await CallTool(client, "add_grocery_item", new { name = "Milk", quantity = 2 });
+        var added = await CallTool(client, "add_shopping_list_item", new { name = "Milk", quantity = 2 });
         var item = added.RootElement.GetProperty("result").GetProperty("structuredContent");
         var itemId = item.GetProperty("id").GetGuid();
         Assert.Equal("Milk", item.GetProperty("name").GetString());
         Assert.Equal(2, item.GetProperty("quantity").GetInt32());
 
-        await CallTool(client, "add_grocery_item", new { name = "Bread", quantity = 1, cycleId });
-        var list = await CallTool(client, "get_grocery_list", new { });
+        await CallTool(client, "add_shopping_list_item", new { name = "Bread", quantity = 1, cycleId });
+        var list = await CallTool(client, "get_shopping_list", new { });
         var groceries = list.RootElement.GetProperty("result")
-            .GetProperty("structuredContent").GetProperty("groceries").EnumerateArray().ToArray();
+            .GetProperty("structuredContent").GetProperty("items").EnumerateArray().ToArray();
         Assert.Equal(2, groceries.Length);
         Assert.Contains(groceries, grocery => grocery.GetProperty("id").GetGuid() == itemId &&
             grocery.GetProperty("name").GetString() == "Milk" &&

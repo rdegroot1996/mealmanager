@@ -4,7 +4,7 @@
       class="min-w-0 flex-1 app-section-title"
       i18n="@@dashboard.favoriteRecipes.template.favoriteRecipes"
     >
-      Household favorites
+      Favorites
     </h2>
     <a
       class="shrink-0 text-sm font-medium text-secondary-content hover:underline"
@@ -43,7 +43,7 @@
     </button>
   } @else if (favoriteRecipes().length === 0) {
     <p class="text-sm leading-[21px] text-base-content/75" i18n="@@dashboard.favoriteRecipes.empty">
-      No favourites yet.
+      No favorites yet.
     </p>
   } @else {
     <div class="relative">

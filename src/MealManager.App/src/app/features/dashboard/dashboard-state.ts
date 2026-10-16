@@ -1,24 +1,24 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { map, Subscription, switchMap } from 'rxjs';
 import { PlanningCycleStore } from '../planning-cycle/state/planning-cycle.store';
-import { PlanningStore } from '../planning/state/planning.store';
+import { MealPlanStore } from '../planner/state/meal-plan.store';
 import { ApiPlanningCycle } from '../../api/models/api-planning-cycle';
-import { ApiPlanning } from '../../api/models/api-planning';
-import { ApiUpcomingPlanning } from '../../api/models/api-upcoming-planning';
+import { ApiMealPlan } from '../../api/models/api-meal-plan';
+import { ApiUpcomingMealPlan } from '../../api/models/api-upcoming-meal-plan';
 import { DateTime } from 'luxon';
 
 /** Owned by the dashboard page; never changes the planner/shopping browsing selection. */
 @Injectable()
 export class DashboardState {
   private cycles = inject(PlanningCycleStore);
-  private plannings = inject(PlanningStore);
+  private mealPlans = inject(MealPlanStore);
   private request?: Subscription;
   cycle = signal<ApiPlanningCycle | null>(null);
-  planning = signal<ApiPlanning | null>(null);
+  mealPlan = signal<ApiMealPlan | null>(null);
   loading = signal(false);
   noCycle = signal(false);
   error = signal('');
-  upcoming = signal<ApiUpcomingPlanning | null>(null);
+  upcoming = signal<ApiUpcomingMealPlan | null>(null);
   upcomingLoading = signal(false);
   upcomingError = signal('');
   today = signal(DateTime.local().toISODate()!);
@@ -30,7 +30,7 @@ export class DashboardState {
     this.upcoming.set(null);
     this.upcomingLoading.set(true);
     this.upcomingError.set('');
-    this.upcomingRequest = this.plannings.fetchUpcomingPlanning(this.today()).subscribe({
+    this.upcomingRequest = this.mealPlans.fetchUpcomingMealPlan(this.today()).subscribe({
       next: (upcoming) => {
         this.upcoming.set(upcoming);
         this.upcomingLoading.set(false);
@@ -57,7 +57,7 @@ export class DashboardState {
       }, 30_000);
     this.request?.unsubscribe();
     this.cycle.set(null);
-    this.planning.set(null);
+    this.mealPlan.set(null);
     this.loading.set(true);
     this.noCycle.set(false);
     this.error.set('');
@@ -65,13 +65,13 @@ export class DashboardState {
       .fetchActiveCycle()
       .pipe(
         switchMap((cycle) =>
-          this.plannings.fetchPlanning(cycle.id).pipe(map((planning) => ({ cycle, planning }))),
+          this.mealPlans.fetchMealPlan(cycle.id).pipe(map((mealPlan) => ({ cycle, mealPlan }))),
         ),
       )
       .subscribe({
-        next: ({ cycle, planning }) => {
+        next: ({ cycle, mealPlan }) => {
           this.cycle.set(cycle);
-          this.planning.set(planning);
+          this.mealPlan.set(mealPlan);
           this.loading.set(false);
         },
         error: (error: { status?: number }) => {
@@ -79,7 +79,7 @@ export class DashboardState {
           if (error.status === 404) this.noCycle.set(true);
           else
             this.error.set(
-              $localize`:@@dashboard.dashboardState.activePlanningCouldNotBeLoadedPlease:Active planning could not be loaded. Please retry.`,
+              $localize`:@@dashboard.dashboardState.activeMealPlanCouldNotBeLoadedPlease:Active cycle could not be loaded. Please retry.`,
             );
         },
       });

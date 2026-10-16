@@ -4,8 +4,8 @@ namespace MealManager.Application.DTO;
 
 public record SupermarketReviewItemDto
 {
-    public required Guid GroceryItemId { get; init; }
-    public required Guid? ProfileProductId { get; init; }
+    public required Guid ShoppingListItemId { get; init; }
+    public required Guid? RecipeProfileGroceryItemId { get; init; }
     public required string Name { get; init; }
     public required int Quantity { get; init; }
     public required bool Checked { get; init; }

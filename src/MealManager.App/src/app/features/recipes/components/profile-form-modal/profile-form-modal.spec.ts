@@ -1,10 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { ProductRow } from '../../../../shared/components/product-row/product-row';
+import { GroceryRow } from '../../../../shared/components/grocery-row/grocery-row';
 import { Subject, of, throwError } from 'rxjs';
 import { ProfileFormModal } from './profile-form-modal';
 import { CdkDragDrop } from '@angular/cdk/drag-drop';
-import { ApiRecipeProduct, ApiRecipeProfile } from '../../../../api/models/api-recipe';
+import { ApiRecipeProfileGroceryItem, ApiRecipeProfile } from '../../../../api/models/api-recipe';
 
 describe('ProfileFormModal', () => {
   let component: ProfileFormModal;
@@ -16,7 +16,7 @@ describe('ProfileFormModal', () => {
     component = fixture.componentInstance;
   });
 
-  it('adds new products directly to the chosen section', () => {
+  it('adds new groceries directly to the chosen section', () => {
     component.addItem({ name: 'Pasta sauce', quantity: 2 }, false);
     component.addItem({ name: 'Salt', quantity: 1 }, true);
 
@@ -34,7 +34,35 @@ describe('ProfileFormModal', () => {
     return component.open(existing);
   }
 
-  it('saves servings and groceries together while keeping product identities and order', () => {
+  it('keeps changed profile groceries and servings until discard is confirmed', async () => {
+    openEditor(profile('profile-1', 'Pasta'));
+    const close = vi.spyOn(component.modal()!, 'close').mockImplementation(() => {});
+    expect(component.hasUnsavedChanges()).toBe(false);
+    component.profileServings.set(6);
+    component.updateNeededItem(0, { name: 'Rice', quantity: 2 });
+    const decision = vi.spyOn(component.discardModal(), 'open').mockResolvedValue(false);
+    await component.modal()!.cancel();
+    expect(close).not.toHaveBeenCalled();
+    expect(component.neededItems()[0].name).toBe('Rice');
+    expect(component.profileServings()).toBe(6);
+    decision.mockResolvedValue(true);
+    await component.modal()!.cancel();
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it('does not ask to discard an unchanged profile or a successfully saved profile', async () => {
+    openEditor(profile('profile-1', 'Pasta'));
+    const decision = vi.spyOn(component.discardModal(), 'open');
+    expect(await component.beforeDismiss()).toBe(true);
+    component.profileName.set('Family');
+    component.onSave = (updated) => of(updated);
+    vi.spyOn(component.modal()!, 'close').mockImplementation(() => {});
+    component.confirm();
+    expect(component.hasUnsavedChanges()).toBe(false);
+    expect(decision).not.toHaveBeenCalled();
+  });
+
+  it('saves servings and groceries together while keeping item identities and order', () => {
     const existing = profile('profile-1', 'Pasta');
     openEditor(existing);
     component.profileName.set('Family');
@@ -49,8 +77,8 @@ describe('ProfileFormModal', () => {
       id: existing.id,
       name: 'Family',
       servings: 6,
-      products: [
-        { ...existing.products[0], quantity: 3, order: 0 },
+      groceries: [
+        { ...existing.groceries[0], quantity: 3, order: 0 },
         expect.objectContaining({ name: 'Salt', quantity: 1, atHome: true, order: 1 }),
       ],
     });
@@ -111,9 +139,9 @@ describe('ProfileFormModal', () => {
     expect(component.neededItems()[0].name).toBe('Rice');
   });
 
-  it('does not accept product changes while groceries are saving', () => {
+  it('does not accept item changes while groceries are saving', () => {
     component.neededItems.set([
-      { id: 'product-1', name: 'Pasta', quantity: 1, atHome: false, order: 0 },
+      { id: 'item-1', name: 'Pasta', quantity: 1, atHome: false, order: 0 },
     ]);
     component.saving.set(true);
 
@@ -122,25 +150,25 @@ describe('ProfileFormModal', () => {
     component.removeNeededItem(0);
 
     expect(component.neededItems()).toEqual([
-      { id: 'product-1', name: 'Pasta', quantity: 1, atHome: false, order: 0 },
+      { id: 'item-1', name: 'Pasta', quantity: 1, atHome: false, order: 0 },
     ]);
   });
 
-  it('moves products between sections with the keyboard', () => {
-    const product = { id: 'product-1', name: 'Pasta', quantity: 1, atHome: false, order: 0 };
-    component.neededItems.set([product]);
+  it('moves groceries between sections with the keyboard', () => {
+    const item = { id: 'item-1', name: 'Pasta', quantity: 1, atHome: false, order: 0 };
+    component.neededItems.set([item]);
 
-    component.moveItemWithKeyboard(product, 1);
+    component.moveItemWithKeyboard(item, 1);
 
     expect(component.neededItems()).toEqual([]);
     expect(component.atHomeItems()[0]).toEqual(
-      expect.objectContaining({ id: product.id, atHome: true }),
+      expect.objectContaining({ id: item.id, atHome: true }),
     );
     expect(component.reorderAnnouncement()).toContain('position 1');
   });
 
   it('shows a scoped add action for each grocery section', () => {
-    component.profile.set({ id: 'profile-1', name: 'Default', servings: 4, products: [] });
+    component.profile.set({ id: 'profile-1', name: 'Default', servings: 4, groceries: [] });
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('[aria-label="Add item to Needed"]')).not.toBeNull();
@@ -149,22 +177,18 @@ describe('ProfileFormModal', () => {
     ).not.toBeNull();
   });
 
-  it('shows empty-profile guidance only while an editor draft exists', () => {
-    component.profile.set({ id: 'profile-1', name: 'Default', servings: 4, products: [] });
+  it('shows concise profile groceries only while an editor draft exists', () => {
+    component.profile.set({ id: 'profile-1', name: 'Default', servings: 4, groceries: [] });
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain(
-      'This profile has no grocery products yet.',
-    );
+    expect(fixture.nativeElement.textContent).toContain('Groceries for this profile');
     component.profile.set(null);
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).not.toContain(
-      'This profile has no grocery products yet.',
-    );
+    expect(fixture.nativeElement.textContent).not.toContain('Groceries for this profile');
   });
 
-  it('keeps both drop zones visible and moves a product between them', () => {
-    const pasta = { id: 'product-1', name: 'Pasta', quantity: 1, atHome: false, order: 0 };
-    component.profile.set({ id: 'profile-1', name: 'Default', servings: 4, products: [pasta] });
+  it('keeps both drop zones visible and moves a item between them', () => {
+    const pasta = { id: 'item-1', name: 'Pasta', quantity: 1, atHome: false, order: 0 };
+    component.profile.set({ id: 'profile-1', name: 'Default', servings: 4, groceries: [pasta] });
     component.neededItems.set([pasta]);
     component.atHomeItems.set([]);
     fixture.detectChanges();
@@ -176,7 +200,7 @@ describe('ProfileFormModal', () => {
         container: { data: component.atHomeItems() },
         previousIndex: 0,
         currentIndex: 0,
-      } as CdkDragDrop<ApiRecipeProduct[]>,
+      } as CdkDragDrop<ApiRecipeProfileGroceryItem[]>,
       true,
     );
 
@@ -184,14 +208,14 @@ describe('ProfileFormModal', () => {
     expect(component.atHomeItems()).toEqual([{ ...pasta, atHome: true }]);
   });
 
-  it('keeps editing state attached to a product after reordering', () => {
+  it('keeps editing state attached to a item after reordering', () => {
     const first = { id: 'a', name: 'A', quantity: 1, atHome: false };
     const second = { id: 'b', name: 'B', quantity: 1, atHome: false };
     component.profile.set(profile('p', 'P'));
     component.neededItems.set([first, second]);
     fixture.detectChanges();
-    const row = fixture.debugElement.queryAll(By.directive(ProductRow))[0]
-      .componentInstance as ProductRow;
+    const row = fixture.debugElement.queryAll(By.directive(GroceryRow))[0]
+      .componentInstance as GroceryRow;
     const dialog = row.editor().modal().dialog().nativeElement;
     dialog.showModal = vi.fn(() => {
       dialog.open = true;
@@ -199,19 +223,19 @@ describe('ProfileFormModal', () => {
     row.startEditing();
     component.neededItems.set([second, first]);
     fixture.detectChanges();
-    const reordered = fixture.debugElement.queryAll(By.directive(ProductRow));
+    const reordered = fixture.debugElement.queryAll(By.directive(GroceryRow));
     expect(reordered[1].componentInstance).toBe(row);
     expect(row.item().id).toBe('a');
     expect(row.editor().modal().dialog().nativeElement.open).toBe(true);
     expect(reordered[0].componentInstance.editor().modal().dialog().nativeElement.open).toBe(false);
   });
 
-  function profile(id: string, productName: string): ApiRecipeProfile {
+  function profile(id: string, itemName: string): ApiRecipeProfile {
     return {
       id,
       name: id,
       servings: 4,
-      products: [{ id: `${id}-product`, name: productName, quantity: 1, atHome: false }],
+      groceries: [{ id: `${id}-item`, name: itemName, quantity: 1, atHome: false }],
     };
   }
 });

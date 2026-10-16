@@ -1,12 +1,12 @@
-import { ApiGroceryList } from '../../app/api/models/api-groceries';
+import { ApiShoppingList } from '../../app/api/models/api-shopping-list';
 
-export const groceries: Record<string, ApiGroceryList> = {
+export const groceries: Record<string, ApiShoppingList> = {
   c1: {
     id: 'gl-c1',
     planningCycleId: 'c1',
-    planningMealGroceries: [
+    mealGroups: [
       {
-        planningMeal: {
+        meal: {
           id: 'm-prev-1',
           date: '2026-05-12',
           recipeId: 'r4',
@@ -15,14 +15,14 @@ export const groceries: Record<string, ApiGroceryList> = {
           profileName: 'Default',
           profileServings: 4,
         },
-        groceries: [
+        items: [
           {
             id: 'gi-p1',
             name: 'Flour (1kg)',
             quantity: 1,
             order: 0,
             checked: true,
-            planningMealId: 'm-prev-1',
+            plannedMealId: 'm-prev-1',
           },
           {
             id: 'gi-p2',
@@ -30,7 +30,7 @@ export const groceries: Record<string, ApiGroceryList> = {
             quantity: 1,
             order: 1,
             checked: true,
-            planningMealId: 'm-prev-1',
+            plannedMealId: 'm-prev-1',
           },
           {
             id: 'gi-p3',
@@ -38,19 +38,19 @@ export const groceries: Record<string, ApiGroceryList> = {
             quantity: 1,
             order: 2,
             checked: true,
-            planningMealId: 'm-prev-1',
+            plannedMealId: 'm-prev-1',
           },
         ],
       },
     ],
-    groceries: [],
+    items: [],
   },
   c2: {
     id: 'gl-c2',
     planningCycleId: 'c2',
-    planningMealGroceries: [
+    mealGroups: [
       {
-        planningMeal: {
+        meal: {
           id: 'm1',
           date: '2026-05-18',
           recipeId: 'r4',
@@ -59,14 +59,14 @@ export const groceries: Record<string, ApiGroceryList> = {
           profileName: 'Default',
           profileServings: 4,
         },
-        groceries: [
+        items: [
           {
             id: 'gi1',
             name: 'Flour (1kg)',
             quantity: 1,
             order: 0,
             checked: false,
-            planningMealId: 'm1',
+            plannedMealId: 'm1',
           },
           {
             id: 'gi2',
@@ -74,7 +74,7 @@ export const groceries: Record<string, ApiGroceryList> = {
             quantity: 1,
             order: 1,
             checked: false,
-            planningMealId: 'm1',
+            plannedMealId: 'm1',
           },
           {
             id: 'gi3',
@@ -82,7 +82,7 @@ export const groceries: Record<string, ApiGroceryList> = {
             quantity: 1,
             order: 2,
             checked: false,
-            planningMealId: 'm1',
+            plannedMealId: 'm1',
           },
           {
             id: 'gi4',
@@ -90,12 +90,12 @@ export const groceries: Record<string, ApiGroceryList> = {
             quantity: 1,
             order: 3,
             checked: false,
-            planningMealId: 'm1',
+            plannedMealId: 'm1',
           },
         ],
       },
       {
-        planningMeal: {
+        meal: {
           id: 'm2',
           date: '2026-05-19',
           recipeId: 'r1',
@@ -104,14 +104,14 @@ export const groceries: Record<string, ApiGroceryList> = {
           profileName: 'Bulk',
           profileServings: 8,
         },
-        groceries: [
+        items: [
           {
             id: 'gi5',
             name: 'Spaghetti (500g)',
             quantity: 2,
             order: 0,
             checked: true,
-            planningMealId: 'm2',
+            plannedMealId: 'm2',
           },
           {
             id: 'gi6',
@@ -119,7 +119,7 @@ export const groceries: Record<string, ApiGroceryList> = {
             quantity: 2,
             order: 1,
             checked: false,
-            planningMealId: 'm2',
+            plannedMealId: 'm2',
           },
           {
             id: 'gi7',
@@ -127,14 +127,14 @@ export const groceries: Record<string, ApiGroceryList> = {
             quantity: 2,
             order: 2,
             checked: false,
-            planningMealId: 'm2',
+            plannedMealId: 'm2',
           },
-          { id: 'gi8', name: 'Onion', quantity: 2, order: 3, checked: true, planningMealId: 'm2' },
-          { id: 'gi9', name: 'Garlic', quantity: 2, order: 4, checked: true, planningMealId: 'm2' },
+          { id: 'gi8', name: 'Onion', quantity: 2, order: 3, checked: true, plannedMealId: 'm2' },
+          { id: 'gi9', name: 'Garlic', quantity: 2, order: 4, checked: true, plannedMealId: 'm2' },
         ],
       },
       {
-        planningMeal: {
+        meal: {
           id: 'm4',
           date: '2026-05-20',
           recipeId: 'r3',
@@ -143,14 +143,14 @@ export const groceries: Record<string, ApiGroceryList> = {
           profileName: 'Default',
           profileServings: 2,
         },
-        groceries: [
+        items: [
           {
             id: 'gi10',
             name: 'Cucumber',
             quantity: 1,
             order: 0,
             checked: false,
-            planningMealId: 'm4',
+            plannedMealId: 'm4',
           },
           {
             id: 'gi11',
@@ -158,7 +158,7 @@ export const groceries: Record<string, ApiGroceryList> = {
             quantity: 4,
             order: 1,
             checked: false,
-            planningMealId: 'm4',
+            plannedMealId: 'm4',
           },
           {
             id: 'gi12',
@@ -166,7 +166,7 @@ export const groceries: Record<string, ApiGroceryList> = {
             quantity: 1,
             order: 2,
             checked: false,
-            planningMealId: 'm4',
+            plannedMealId: 'm4',
           },
           {
             id: 'gi13',
@@ -174,12 +174,12 @@ export const groceries: Record<string, ApiGroceryList> = {
             quantity: 1,
             order: 3,
             checked: false,
-            planningMealId: 'm4',
+            plannedMealId: 'm4',
           },
         ],
       },
       {
-        planningMeal: {
+        meal: {
           id: 'm5',
           date: '2026-05-21',
           recipeId: 'r2',
@@ -188,14 +188,14 @@ export const groceries: Record<string, ApiGroceryList> = {
           profileName: 'Default',
           profileServings: 3,
         },
-        groceries: [
+        items: [
           {
             id: 'gi14',
             name: 'Chicken Breast (500g)',
             quantity: 1,
             order: 0,
             checked: false,
-            planningMealId: 'm5',
+            plannedMealId: 'm5',
           },
           {
             id: 'gi15',
@@ -203,7 +203,7 @@ export const groceries: Record<string, ApiGroceryList> = {
             quantity: 2,
             order: 1,
             checked: false,
-            planningMealId: 'm5',
+            plannedMealId: 'm5',
           },
           {
             id: 'gi16',
@@ -211,7 +211,7 @@ export const groceries: Record<string, ApiGroceryList> = {
             quantity: 1,
             order: 2,
             checked: false,
-            planningMealId: 'm5',
+            plannedMealId: 'm5',
           },
           {
             id: 'gi17',
@@ -219,12 +219,12 @@ export const groceries: Record<string, ApiGroceryList> = {
             quantity: 1,
             order: 3,
             checked: false,
-            planningMealId: 'm5',
+            plannedMealId: 'm5',
           },
         ],
       },
       {
-        planningMeal: {
+        meal: {
           id: 'm6',
           date: '2026-05-23',
           recipeId: 'r5',
@@ -233,14 +233,14 @@ export const groceries: Record<string, ApiGroceryList> = {
           profileName: 'Default',
           profileServings: 4,
         },
-        groceries: [
+        items: [
           {
             id: 'gi18',
             name: 'Ground Beef (400g)',
             quantity: 1,
             order: 0,
             checked: false,
-            planningMealId: 'm6',
+            plannedMealId: 'm6',
           },
           {
             id: 'gi19',
@@ -248,7 +248,7 @@ export const groceries: Record<string, ApiGroceryList> = {
             quantity: 1,
             order: 1,
             checked: false,
-            planningMealId: 'm6',
+            plannedMealId: 'm6',
           },
           {
             id: 'gi20',
@@ -256,7 +256,7 @@ export const groceries: Record<string, ApiGroceryList> = {
             quantity: 1,
             order: 2,
             checked: false,
-            planningMealId: 'm6',
+            plannedMealId: 'm6',
           },
           {
             id: 'gi21',
@@ -264,27 +264,27 @@ export const groceries: Record<string, ApiGroceryList> = {
             quantity: 1,
             order: 3,
             checked: false,
-            planningMealId: 'm6',
+            plannedMealId: 'm6',
           },
         ],
       },
     ],
-    groceries: [
+    items: [
       {
         id: 'gi22',
         name: 'Kitchen Paper',
         quantity: 2,
         order: 0,
         checked: false,
-        planningMealId: null,
+        plannedMealId: null,
       },
-      { id: 'gi23', name: 'Dish Soap', quantity: 1, order: 1, checked: true, planningMealId: null },
+      { id: 'gi23', name: 'Dish Soap', quantity: 1, order: 1, checked: true, plannedMealId: null },
     ],
   },
   c3: {
     id: 'gl-c3',
     planningCycleId: 'c3',
-    planningMealGroceries: [],
-    groceries: [],
+    mealGroups: [],
+    items: [],
   },
 };

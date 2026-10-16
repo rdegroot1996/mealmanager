@@ -20,8 +20,8 @@ describe('focused supermarket product search', () => {
     component = fixture.componentInstance;
     fixture.componentRef.setInput('provider', 'picnic');
     fixture.componentRef.setInput('row', {
-      groceryItemId: 'a',
-      profileProductId: 'slot',
+      shoppingListItemId: 'a',
+      recipeProfileGroceryItemId: 'slot',
       name: 'Noodles',
       quantity: 1,
       checked: false,
@@ -179,7 +179,7 @@ describe('focused supermarket product search', () => {
   });
 
   it('selects manual groceries immediately without remembering a choice', async () => {
-    fixture.componentRef.setInput('row', { ...component.row(), profileProductId: null });
+    fixture.componentRef.setInput('row', { ...component.row(), recipeProfileGroceryItemId: null });
     fixture.componentRef.setInput('originalProductId', 's1001');
     await fixture.whenStable();
     const emit = vi.spyOn(component.selected, 'emit');

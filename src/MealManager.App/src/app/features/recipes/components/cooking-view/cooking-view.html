@@ -1,0 +1,88 @@
+<div class="mx-auto max-w-4xl" data-testid="cooking-view">
+  <button
+    type="button"
+    class="mb-4 inline-flex min-h-11 items-center gap-1 text-sm"
+    (click)="closed.emit()"
+  >
+    <app-icon name="chevron_left" class="size-5" /><span i18n="@@recipes.backToRecipe"
+      >Back to recipe</span
+    >
+  </button>
+  <header>
+    <p class="mb-2 text-sm font-medium text-secondary-content">
+      <span i18n="@@cooking.mode">Cooking mode</span>
+    </p>
+    <h1 tabindex="-1" class="scroll-mt-24 font-display text-3xl font-medium break-words">
+      {{ recipe().name }}
+    </h1>
+    <p class="mt-2 text-sm text-base-content/75">
+      {{ profile().name }} ·
+      <span i18n="@@cooking.servings">{{ profile().servings }} servings</span>
+    </p>
+  </header>
+  <div
+    class="mt-3 flex items-start gap-3 rounded-field px-4 py-3 text-sm leading-[21px]"
+    [class]="
+      screen.state() === 'paused' || screen.state() === 'unavailable'
+        ? 'alert alert-warning border-0'
+        : 'bg-secondary text-secondary-content'
+    "
+    role="status"
+  >
+    <app-icon
+      [name]="
+        screen.state() === 'paused' || screen.state() === 'unavailable' ? 'warning' : 'restaurant'
+      "
+      class="mt-0.5 size-5 shrink-0"
+    />
+    <p>
+      {{ status() }}
+      @if (screen.reason()) {
+        <span>{{ screen.reason() }}</span>
+      }
+    </p>
+  </div>
+  <div
+    class="mt-8 grid gap-8"
+    [class]="
+      recipe().steps.length && ingredients().length
+        ? 'min-[800px]:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]'
+        : ''
+    "
+  >
+    @if (ingredients().length) {
+      <section>
+        <h2 class="app-section-title" i18n="@@recipes.ingredients">Ingredients</h2>
+        <ul class="mt-4 divide-y divide-base-300">
+          @for (item of ingredients(); track item.id) {
+            <li class="flex justify-between gap-4 py-3 text-base leading-6">
+              <span class="min-w-0 break-words">{{ item.name }}</span>
+              <span class="shrink-0"
+                >{{ item.quantity | number: '1.0-2' : locale }} {{ unit(item.unit) }}</span
+              >
+            </li>
+          }
+        </ul>
+      </section>
+    }
+    @if (recipe().steps.length) {
+      <section>
+        <h2 class="app-section-title" i18n="@@recipes.steps">Steps</h2>
+        <ol class="mt-4 flex flex-col gap-6">
+          @for (step of recipe().steps; track step.id) {
+            <li class="flex items-start gap-3 text-base leading-6">
+              <span
+                class="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary"
+                >{{ $index + 1 }}</span
+              >
+              <p
+                class="min-w-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere] pt-1"
+                [textContent]="step.description"
+              ></p>
+            </li>
+          }
+        </ol>
+      </section>
+    }
+  </div>
+</div>

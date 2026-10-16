@@ -39,23 +39,23 @@ function localizedProblemCode(code: string): string | null {
     case 'CannotDeleteSelf':
       return $localize`:@@apiError.cannotDeleteSelf:You cannot delete your own account.`;
     case 'RecipeInUse':
-      return $localize`:@@apiError.recipeInUse:This recipe is used in planning and cannot be deleted.`;
+      return $localize`:@@apiError.recipeInUse:This recipe is used in a meal plan and cannot be deleted.`;
     case 'LeftoverAlreadyPlanned':
       return $localize`:@@apiError.leftoverAlreadyPlanned:Leftovers are already planned for that date.`;
     case 'MealMustPrecedeLeftovers':
       return $localize`:@@apiError.mealMustPrecedeLeftovers:The meal must remain before all of its leftovers.`;
-    case 'InvalidGroceryProducts':
-      return $localize`:@@apiError.invalidGroceryProducts:Some grocery products no longer belong to the selected profile. Reopen the form and try again.`;
+    case 'InvalidProfileGroceries':
+      return $localize`:@@apiError.invalidProfileGroceries:Some groceries no longer belong to the selected profile. Reopen the form and try again.`;
     case 'GroceriesNotReviewed':
       return $localize`:@@apiError.groceriesNotReviewed:Review this meal's groceries before adding another item.`;
-    case 'InvalidGroceryOrder':
-      return $localize`:@@apiError.invalidGroceryOrder:The grocery list changed. Refresh it before reordering.`;
+    case 'InvalidShoppingListOrder':
+      return $localize`:@@apiError.invalidShoppingListOrder:The shopping list changed. Refresh it before reordering.`;
     case 'CycleMustStartAfterExisting':
       return $localize`:@@apiError.cycleMustStartAfterExisting:The new cycle must start after all existing cycle start dates.`;
     case 'CycleStartDateExists':
       return $localize`:@@apiError.cycleStartDateExists:A planning cycle already starts on this date.`;
-    case 'PlanningNoteExists':
-      return $localize`:@@apiError.planningNoteExists:This date already has a planning note.`;
+    case 'PlanningDayNoteExists':
+      return $localize`:@@apiError.planningDayNoteExists:This date already has a day note.`;
     case 'DateOutsideCycle':
       return $localize`:@@apiError.dateOutsideCycle:Choose a date inside the planning cycle.`;
     case 'LeftoverMustFollowOriginal':
@@ -69,7 +69,7 @@ function localizedProblemCode(code: string): string | null {
     case 'InvalidRecipeImageOrder':
       return $localize`:@@apiError.invalidRecipeImageOrder:The recipe photos changed. Reload before reordering them.`;
     case 'RecipeProfileInUse':
-      return $localize`:@@apiError.recipeProfileInUse:This profile is used in planning and cannot be deleted.`;
+      return $localize`:@@apiError.recipeProfileInUse:This profile is used in a meal plan and cannot be deleted.`;
     case 'RecipeMustKeepProfile':
       return $localize`:@@apiError.recipeMustKeepProfile:A recipe must keep at least one profile.`;
     default:

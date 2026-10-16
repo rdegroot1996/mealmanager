@@ -18,8 +18,8 @@ describe('RecipesStore', () => {
   afterEach(() => http.verify());
 
   it('loads filtered summaries and stores them', () => {
-    store.loadSummaries({ category: 'dinner', tag: 'quick', search: 'pasta' }).subscribe();
-    const request = http.expectOne('/api/recipes?category=dinner&tags=quick&search=pasta');
+    store.loadSummaries({ category: 'Meals', tags: ['quick'], search: 'pasta' }).subscribe();
+    const request = http.expectOne('/api/recipes?category=Meals&tags=quick&search=pasta');
     expect(request.request.method).toBe('GET');
     request.flush([
       {
@@ -84,7 +84,7 @@ describe('RecipesStore', () => {
       images: [],
     });
 
-    expect(store.activeRecipe()?.profiles[0].products).toEqual([]);
+    expect(store.activeRecipe()?.profiles[0].groceries).toEqual([]);
   });
 
   it('loads the catalog with favorite and planning-history filters', () => {

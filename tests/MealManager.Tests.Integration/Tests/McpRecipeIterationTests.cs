@@ -48,7 +48,7 @@ public sealed partial class McpServerTests
         {
             startDate = today.AddDays(-1),
             endDate = today.AddDays(3),
-            expectedPlanningVersion = "none",
+            expectedMealPlanVersion = "none",
             entries = new[]
             {
                 Meal("past", today.AddDays(-1), pastId, past.GetProperty("profiles")[0].GetProperty("id").GetGuid()),

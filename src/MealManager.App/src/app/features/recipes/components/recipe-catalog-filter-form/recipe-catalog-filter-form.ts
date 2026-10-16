@@ -25,11 +25,11 @@ export class RecipeCatalogFilterForm {
   readonly tagSearchId = `${this.categoryGroupName}-tag-search`;
   readonly categoryLabel = recipeCategoryLabel;
   readonly categoryHeading = $localize`:@@recipes.recipeCatalogPage.filter.category:Category`;
-  readonly labelsHeading = $localize`:@@recipes.labels:Labels`;
-  readonly searchLabelsPlaceholder = $localize`:@@recipes.recipeCatalogPage.filter.searchLabels:Search labels...`;
-  readonly selectedLabelsLabel = $localize`:@@recipes.selectedLabels:Selected labels`;
-  readonly availableLabelsLabel = $localize`:@@recipes.availableLabels:Available labels`;
-  readonly noMatchingLabels = $localize`:@@recipes.noMatchingLabels:No matching labels.`;
+  readonly tagsHeading = $localize`:@@recipes.tags:Tags`;
+  readonly searchTagsPlaceholder = $localize`:@@recipes.recipeCatalogPage.filter.searchTags:Search tags...`;
+  readonly selectedTagsLabel = $localize`:@@recipes.selectedTags:Selected tags`;
+  readonly availableTagsLabel = $localize`:@@recipes.availableTags:Available tags`;
+  readonly noMatchingTags = $localize`:@@recipes.noMatchingTags:No matching tags.`;
   readonly favoriteOnlyLabel = $localize`:@@recipes.recipeCatalogPage.favoriteOnly:Favorites only`;
   readonly categories: (RecipeCategory | '')[] = ['', ...recipeCategories];
 

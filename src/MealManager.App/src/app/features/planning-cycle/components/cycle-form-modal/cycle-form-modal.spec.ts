@@ -49,6 +49,21 @@ describe('CycleFormModal', () => {
     expect(component).toBeTruthy();
   });
 
+  it('asks before discarding changed dates or duration, but not an untouched cycle', async () => {
+    vi.spyOn(component.modal()!, 'open').mockImplementation(() => {});
+    const discard = vi.spyOn(component.discardModal(), 'confirmDiscard').mockResolvedValue(false);
+    component.open();
+    expect(await component.beforeDismiss()).toBe(true);
+    const days = component.days();
+    component.days.set(days + 1);
+    expect(await component.beforeDismiss()).toBe(false);
+    component.days.set(days);
+    expect(await component.beforeDismiss()).toBe(true);
+    component.startDate.set('2030-01-01');
+    expect(await component.beforeDismiss()).toBe(false);
+    expect(discard).toHaveBeenCalledTimes(2);
+  });
+
   it('rejects a cleared planning-day quantity without breaking the date preview', async () => {
     const input = fixture.nativeElement.querySelector('#cycle-planning-days') as HTMLInputElement;
     input.value = '';

@@ -14,9 +14,9 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
-    path: 'planning',
+    path: 'planner',
     loadChildren: () =>
-      import('./features/planning/planning.routes').then(({ PLANNING_ROUTES }) => PLANNING_ROUTES),
+      import('./features/planner/planner.routes').then(({ PLANNER_ROUTES }) => PLANNER_ROUTES),
     canActivate: [authGuard],
   },
   {
@@ -26,10 +26,10 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
-    path: 'groceries',
+    path: 'shopping-list',
     loadChildren: () =>
-      import('./features/groceries/groceries.routes').then(
-        ({ GROCERIES_ROUTES }) => GROCERIES_ROUTES,
+      import('./features/shopping-list/shopping-list.routes').then(
+        ({ SHOPPING_LIST_ROUTES }) => SHOPPING_LIST_ROUTES,
       ),
     canActivate: [authGuard],
   },
@@ -39,7 +39,6 @@ export const routes: Routes = [
       import('./features/settings/settings.routes').then(({ SETTINGS_ROUTES }) => SETTINGS_ROUTES),
     canActivate: [authGuard, adminGuard],
   },
-  { path: 'users', pathMatch: 'full', redirectTo: 'settings' },
   {
     path: '**',
     redirectTo: '',

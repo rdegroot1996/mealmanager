@@ -1,44 +1,46 @@
 # MealManager MCP reference
 
-MealManager exposes optional Streamable HTTP tools at `/mcp` for household recipes, planning and groceries.
-
-Server instructions live in [Instructions.md](../src/MealManager.Api/Mcp/Instructions.md), embedded in the API and supplied to clients during initialization.
+Optional Streamable HTTP tools at `/mcp` let a personal AI client work with household recipes, meal plans, groceries, and Shopping lists. [Server instructions](../src/MealManager.Api/Mcp/Instructions.md) are embedded in the API and sent during initialization.
 
 ## Configuration
 
-Set `Mcp__Enabled=true` and `Mcp__AccessToken=<random secret of at least 32 characters>`, then restart MealManager. Clients must send `Authorization: Bearer <token>`; missing or invalid credentials receive `401 Unauthorized`. The [Compose example](../docker-compose.example.yml) includes these settings.
+Set `Mcp__Enabled=true` and `Mcp__AccessToken=<random secret of at least 32 characters>`, then restart. Clients send `Authorization: Bearer <token>`; invalid credentials receive `401 Unauthorized`. See the [Compose example](../docker-compose.example.yml).
 
-The token grants household read and write access, separate from web logins. Store it as a deployment secret, keep the endpoint private, and use HTTPS across untrusted networks. Rotate the token to revoke access.
+The token grants household read/write access independently of web accounts. Store it as a deployment secret, keep the endpoint private, and use HTTPS across untrusted networks. Rotate it to revoke access.
 
-## Recipe and planning workflows
+## Workflows and contracts
 
-- **Discovery:** `search_recipes` returns a bounded shortlist by name, labels, favorites and planning-history sorting. `list_recipe_catalog` supplies complete paginated coverage with ingredients, profiles, `isFavorite`, `pastTimesPlanned`, `lastPastPlanned` and separate `upcomingTimesPlanned` for broader ingredient and variety reasoning. Use whichever supplies the needed context rather than automatically calling both. `list_recipe_tags` supplies household labels. Follow `nextCursor` with the same filters for complete coverage. History counts original meals dated today or earlier, not leftovers, future meals, or confirmed cooking.
-- **Recent history:** `list_recent_planning_cycles` returns complete cycles newest first with dates, meals, profiles, linked leftovers and day notes. `limit` defaults to four (1–12); omit `beforeStartDate` for cycles starting today or earlier, or supply an exclusive boundary for cycles preceding a proposal. Pass `nextBeforeStartDate` as the next boundary for older history. Cycles need not be seven days. Distinguish elapsed entries from future dates within returned cycles.
-- **Import:** Show the proposed recipe and Default profile, including Needed and Usually at home products. Only after explicit confirmation, call `create_recipe`, then read its Default profile and fill it with `update_recipe_profile`. Recover that profile if its update fails. Source interpretation happens in the client; MCP does not fetch URLs or ingest photos.
-- **Editing:** One `update_recipe` tool edits recipe fields, ingredients and steps. Omitted fields stay unchanged; supplied lists replace their contents. Retain existing row IDs and omit IDs for new rows. Profiles are edited separately. Submit `recipeVersion` as `expectedRecipeVersion`, or `profileVersion` as `expectedProfileVersion`. A `RecipeChanged` error requires a fresh read and reconciliation.
-- **Planning:** Read `get_active_planning`, then show the exact inclusive cycle range and dated proposal for approval. New cycles normally start after the previous cycle and keep its length; explicit dates override this. Use known labels, day notes for eating out, linked leftovers for cooking ahead, and bulk profiles for freezer prep.
-- **Saving:** `create_planning_cycle` accepts an initial plan; `apply_planning` replaces the active plan. Submit the read `planningVersion` (`none` when no cycle exists), all retained entries and notes, existing IDs, and unique client keys for new records. Omitted records are removed. On `PlanningChanged`, read and reconcile; after a lost response, read before retrying.
+| Purpose           | Tools and behavior                                                                                                                                                                                                                                                                                    |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Find recipes      | `search_recipes` returns a ranked shortlist by name, category, exact tags, favorites, or planning history. `list_recipe_catalog` provides paginated coverage with ingredients, profiles, and statistics. Choose the read that supplies the needed context.                                            |
+| Discover tags     | `list_recipe_tags` returns exact household tag names and use counts. Every supplied tag filter must match.                                                                                                                                                                                            |
+| Read history      | `list_recent_planning_cycles` returns complete cycles newest first. `limit` is 1–12, default 4; `beforeStartDate` is exclusive. Follow `nextBeforeStartDate` for older cycles.                                                                                                                        |
+| Read/edit recipes | `get_recipe` and `get_recipe_profile` supply content and version tokens. `update_recipe` and `update_recipe_profile` patch omitted fields in place; supplied arrays replace their complete ordered contents, and empty arrays clear them. Retain known row IDs; omit IDs for new rows.                |
+| Import recipes    | The client interprets the source and shows the recipe and Default profile for explicit approval. Call `create_recipe`, read the returned Default profile, then fill its confirmed `groceries` through `update_recipe_profile`. Recover an incomplete profile rather than creating a duplicate recipe. |
+| Plan meals        | Read `get_active_meal_plan`, show an exact dated proposal for approval, then `create_planning_cycle` or `apply_meal_plan`. Precise user instructions can directly authorize their changes.                                                                                                            |
+| Review groceries  | `review_meal_groceries` replaces a planned meal's explicit purchase selection. An empty `groceries` array confirms nothing to buy.                                                                                                                                                                    |
+| Edit shopping     | `get_shopping_list` returns Other items in `items` and reviewed `mealGroups`, each containing `meal` metadata and `items`. Use `add_shopping_list_item`, `update_shopping_list_item`, and `remove_shopping_list_item`; identify the group and clarify ambiguous matches.                              |
 
-`get_grocery_list` separates Other items from meal groups, identifying each meal's recipe, date and profile. Items in either group can be removed. The AI should identify the group when making changes and clarify ambiguous matches. Removal changes shopping only; recipe/profile products and grocery-review status are preserved.
+Recipe statistics count original meals, excluding leftovers. `pastTimesPlanned` and `lastPastPlanned` use today and earlier; future counts are separate. They describe planned meals, not confirmed cooking. Follow `nextCursor` with unchanged filters for complete catalog/tag coverage.
 
-Planning never adds groceries automatically. Grocery review is explicit, including nothing to buy. Historical planning is read-only. MCP does not track pantry or freezer inventory or delete recipes and profiles.
+Recipe/profile updates submit `expectedRecipeVersion` or `expectedProfileVersion` from the preceding read. `RecipeChanged` requires a fresh read and reconciliation. Profile payloads use `groceries` for reusable purchase defaults, distinct from ingredient measurements and supermarket products.
+
+Complete plan writes submit `expectedMealPlanVersion` from `mealPlanVersion` (`none` without a cycle), all retained entries/notes, existing IDs, and unique client keys for new records. Omitted records are removed; array order sets within-day order. `MealPlanChanged` requires a new read and reconciliation. Read after a lost response before retrying.
+
+Planning never adds groceries automatically. Changing a meal's profile clears its review; removing shopping items preserves the review and reusable profile groceries. Historical meal plans are read-only. See the [functional overview](functional-overview.md) for shared product rules. MCP does not fetch source URLs, import photos, track pantry/freezer inventory, or delete recipes/profiles.
 
 ## Verification
 
-Check authentication, initialization and tool discovery against a running instance:
+Against a running instance:
 
 ```powershell
 ./scripts/Test-McpEndpoint.ps1 -Url http://127.0.0.1:8080/mcp -Token $env:MEALMANAGER_MCP_TOKEN
 ```
 
-Add `-ExerciseWrites` only with isolated test data; it persists recipes, plans and groceries.
-
-To build and test the full application in Docker, including restart persistence:
+Add `-ExerciseWrites` only for isolated data; it persists recipes, plans, and shopping items. For an isolated Docker build, workflow checks, and restart persistence:
 
 ```powershell
 ./scripts/Test-McpDocker.ps1
 ```
 
-This uses a temporary container and volume, then removes both. The scripts test HTTP contracts and persisted workflows; confirmation and semantic interpretation are verified in the connected AI client.
-
-Sparse planning requests trigger proactive household discovery before proposing a plan. Generated plans require approval before persistence. Recipes support plain-text Notes for source references or tips; an omitted notes edit preserves content and an empty string clears it. Category values are Meals, Baking, Desserts, Snacks, and Other. Search supports frequency sorting across all scheduled original meals and recency sorting based on past meals.
+The script removes its temporary container and volume. Protocol tests verify contracts and persistence; client interpretation and user approval remain AI-client responsibilities.

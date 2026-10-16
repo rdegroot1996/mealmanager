@@ -7,6 +7,8 @@ import { ToastHost } from './shared/components/toast-host/toast-host';
 import { LanguageSwitcher } from './core/i18n/language-switcher';
 import { AppIcon } from './shared/components/app-icon/app-icon';
 import { MobileAppBar } from './core/layout/mobile-app-bar';
+import { RecipeReturnContext } from './core/layout/recipe-return-context';
+import { AppBrand } from './shared/components/app-brand/app-brand';
 import { Modal } from './shared/components/modal/modal';
 
 @Component({
@@ -18,6 +20,7 @@ import { Modal } from './shared/components/modal/modal';
     ToastHost,
     LanguageSwitcher,
     AppIcon,
+    AppBrand,
     Modal,
     MobileAppBar,
   ],
@@ -28,6 +31,8 @@ export class App {
   private router = inject(Router);
   pageTitle = signal($localize`:@@navigation.dashboard:Dashboard`);
   pageOwnsHeading = signal(false);
+
+  private recipeReturnContext = inject(RecipeReturnContext);
 
   constructor() {
     this.updatePageTitle();
@@ -51,8 +56,12 @@ export class App {
   menuItems: AppNavigationItem[] = [
     { name: $localize`:@@navigation.dashboard:Dashboard`, route: '/', icon: 'home' },
     { name: $localize`:@@navigation.recipes:Recipes`, route: '/recipes', icon: 'menu_book' },
-    { name: $localize`:@@navigation.planning:Planning`, route: '/planning', icon: 'date_range' },
-    { name: $localize`:@@common.groceries:Groceries`, route: '/groceries', icon: 'shopping_cart' },
+    { name: $localize`:@@navigation.planner:Planner`, route: '/planner', icon: 'date_range' },
+    {
+      name: $localize`:@@groceries.pageTitle:Shopping list`,
+      route: '/shopping-list',
+      icon: 'shopping_cart',
+    },
   ];
 
   private updatePageTitle() {

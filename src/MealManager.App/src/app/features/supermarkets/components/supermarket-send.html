@@ -22,6 +22,8 @@
 
 <app-modal
   #reviewDialog
+  [dismissOnBackdrop]="!pending() && view() !== 'loading'"
+  [beforeDismiss]="beforeDismiss"
   size="wide"
   [labelledBy]="reviewDialog.titleId + '-heading'"
   (closed)="onClosed()"
@@ -100,17 +102,18 @@
     </p>
     @if (review()!.unreviewedMeals) {
       <p
-        class="alert alert-warning mt-3 text-sm"
+        class="alert alert-warning border-0 mt-3 flex items-start gap-3 rounded-field px-4 py-3 text-sm leading-[21px]"
         role="status"
         data-testid="export-unreviewed-meals"
       >
+        <app-icon name="warning" class="mt-0.5 size-5 shrink-0" />
         @if (review()!.unreviewedMeals === 1) {
           <span i18n="@@supermarkets.unreviewedOne"
-            >1 meal has not been reviewed for groceries yet.</span
+            >Groceries for 1 meal haven't been reviewed yet.</span
           >
         } @else {
           <span i18n="@@supermarkets.unreviewedCount">
-            {{ review()!.unreviewedMeals }} meals have not been reviewed for groceries yet.
+            Groceries for {{ review()!.unreviewedMeals }} meals haven't been reviewed yet.
           </span>
         }
       </p>
@@ -123,7 +126,7 @@
       <span i18n="@@design.exportPacks">Packs to buy</span>
     </div>
     <div class="flex flex-col [&>[data-review-row]:last-child]:border-b-0">
-      @for (row of uncheckedRows(); track row.groceryItemId) {
+      @for (row of uncheckedRows(); track row.shoppingListItemId) {
         <ng-container
           [ngTemplateOutlet]="groceryRow"
           [ngTemplateOutletContext]="{ $implicit: row }"
@@ -140,7 +143,7 @@
           Already checked ({{ checkedRows().length }})
         </summary>
         <div class="flex flex-col gap-3 [&>[data-review-row]:last-child]:border-b-0">
-          @for (row of checkedRows(); track row.groceryItemId) {
+          @for (row of checkedRows(); track row.shoppingListItemId) {
             <ng-container
               [ngTemplateOutlet]="groceryRow"
               [ngTemplateOutletContext]="{ $implicit: row }"
@@ -159,7 +162,7 @@
     }
     @if (mappingConflict()) {
       <p class="mt-3 text-sm text-error" role="alert" i18n="@@supermarkets.mappingConflict">
-        Choose one product to remember for each recipe product.
+        Choose one supermarket product to remember for each profile grocery item.
       </p>
     }
   } @else if (view() === 'sending') {
@@ -264,8 +267,9 @@
       Adds the selected products to your cart. This does not place an order.
     </p>
   }
-  <div modal-actions>
+  <div modal-actions class="flex w-full flex-col gap-3">
     @if (view() === 'products') {
+      <p class="text-sm text-base-content/75" role="status">{{ readinessLabel() }}</p>
       <button
         class="btn btn-primary"
         type="button"
@@ -277,6 +281,14 @@
           <span class="ml-auto pl-4 tabular-nums">{{
             total.cents / 100 | currency: total.currency
           }}</span>
+        }
+      </button>
+    } @else if (view() === 'results') {
+      <button class="btn btn-primary" type="button" (click)="close()">
+        @if (failure() || counts().failed) {
+          <ng-container i18n="@@supermarkets.reviewList">Review list</ng-container>
+        } @else {
+          <ng-container i18n="@@common.done">Done</ng-container>
         }
       </button>
     } @else if (view() === 'error') {
@@ -321,22 +333,22 @@
 <ng-template #groceryRow let-row>
   <div
     class="grid min-w-0 grid-cols-1 gap-3 border-b border-base-300 py-5 min-[800px]:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_160px] min-[800px]:items-center min-[800px]:gap-6"
-    [attr.data-review-row]="row.groceryItemId"
+    [attr.data-review-row]="row.shoppingListItemId"
   >
     <label class="flex min-w-0 items-start gap-3">
       <input
         class="checkbox checkbox-sm checkbox-primary mt-0.5 shrink-0 max-[799px]:text-base"
         type="checkbox"
         [ngModel]="row.selected"
-        (ngModelChange)="changeRow(row.groceryItemId, { selected: $event })"
-        [disabled]="blocked(row.groceryItemId)"
+        (ngModelChange)="changeRow(row.shoppingListItemId, { selected: $event })"
+        [disabled]="blocked(row.shoppingListItemId)"
       />
       <span class="min-w-0" [class.line-through]="!row.selected" [class.opacity-60]="!row.selected">
         <span class="block break-words text-sm font-medium">{{ row.name }}</span>
         <span class="mt-1 block text-xs text-base-content/75" i18n="@@supermarkets.sourceQuantity"
           >{{ row.quantity }} on list</span
         >
-        @if (row.profileProductId) {
+        @if (row.recipeProfileGroceryItemId) {
           <span class="block break-words text-xs text-base-content/75">{{ row.group }}</span>
         }
       </span>
@@ -345,11 +357,11 @@
       <button
         class="flex min-w-0 items-center gap-3 text-left w-full rounded-field py-1 focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-60"
         type="button"
-        [attr.data-grocery-id]="row.groceryItemId"
+        [attr.data-grocery-id]="row.shoppingListItemId"
         [attr.aria-label]="productChoiceLabel(row)"
-        [disabled]="!row.selected || blocked(row.groceryItemId)"
+        [disabled]="!row.selected || blocked(row.shoppingListItemId)"
         [class.line-through]="!row.selected"
-        (click)="choose(row.groceryItemId)"
+        (click)="choose(row.shoppingListItemId)"
       >
         @if (row.product; as product) {
           <app-supermarket-product-summary class="min-w-0 flex-1" [product]="product" />
@@ -372,7 +384,7 @@
       </button>
       @if (
         row.product &&
-        row.profileProductId &&
+        row.recipeProfileGroceryItemId &&
         row.remember &&
         originalProductId(row) &&
         row.product.id !== originalProductId(row)
@@ -387,7 +399,7 @@
     >
       @if (row.product; as product) {
         <app-form-field
-          [controlId]="'packs-' + row.groceryItemId"
+          [controlId]="'packs-' + row.shoppingListItemId"
           [label]="packsLabel"
           [error]="
             row.selected && product.availability === 'Available'
@@ -397,12 +409,14 @@
         >
           <app-number-input
             [fullWidth]="true"
-            [controlId]="'packs-' + row.groceryItemId"
+            [controlId]="'packs-' + row.shoppingListItemId"
             [label]="row.name + ': ' + packsLabel"
             [value]="row.buyQuantity"
             [maximum]="maxQuantity(product)"
             [disabled]="
-              !row.selected || product.availability !== 'Available' || blocked(row.groceryItemId)
+              !row.selected ||
+              product.availability !== 'Available' ||
+              blocked(row.shoppingListItemId)
             "
             [invalid]="
               row.selected &&
@@ -411,10 +425,10 @@
             "
             [describedBy]="
               row.selected && quantityError(product, row.buyQuantity)
-                ? 'packs-' + row.groceryItemId + '-error'
+                ? 'packs-' + row.shoppingListItemId + '-error'
                 : null
             "
-            (valueChange)="changeRow(row.groceryItemId, { buyQuantity: $event })"
+            (valueChange)="changeRow(row.shoppingListItemId, { buyQuantity: $event })"
           />
         </app-form-field>
       } @else {
@@ -423,3 +437,4 @@
     </div>
   </div>
 </ng-template>
+<app-confirmation-modal #discardModal />

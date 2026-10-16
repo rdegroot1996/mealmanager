@@ -19,9 +19,39 @@ describe('SearchField', () => {
 
     input.value = 'Pasta';
     input.dispatchEvent(new Event('input'));
-    input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter' }));
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
 
     expect(component.value()).toBe('Pasta');
     expect(searched).toHaveBeenCalledOnce();
+  });
+  it('debounces typing, submits Enter immediately, and cancels a pending search on clear', () => {
+    vi.useFakeTimers();
+    try {
+      fixture.componentRef.setInput('autoSearch', true);
+      const searched = vi.fn();
+      component.searched.subscribe(searched);
+      component.change('Pa');
+      vi.advanceTimersByTime(100);
+      component.change('Pasta');
+      vi.advanceTimersByTime(249);
+      expect(searched).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
+      expect(searched).toHaveBeenCalledTimes(1);
+      component.change('Soup');
+      component.submit();
+      vi.advanceTimersByTime(500);
+      expect(searched).toHaveBeenCalledTimes(2);
+      component.change('Rice');
+      component.clear();
+      vi.advanceTimersByTime(500);
+      expect(component.value()).toBe('');
+      expect(searched).toHaveBeenCalledTimes(3);
+      component.change('Cake');
+      fixture.destroy();
+      vi.advanceTimersByTime(500);
+      expect(searched).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

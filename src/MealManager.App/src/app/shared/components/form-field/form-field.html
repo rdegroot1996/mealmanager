@@ -1,8 +1,8 @@
-<div class="fieldset w-full">
-  <label class="fieldset-legend" [attr.for]="controlId()">
+<div class="fieldset w-full" [class]="compact() ? 'p-0 gap-1' : ''">
+  <label class="fieldset-legend" [class]="compact() ? 'py-0 mb-0' : ''" [attr.for]="controlId()">
     {{ label() }}
     @if (required()) {
-      <span aria-hidden="true"> *</span>
+      <span aria-hidden="true" class="text-base-content/50"> *</span>
     }
   </label>
   <ng-content></ng-content>

@@ -9,7 +9,7 @@
     Retry
   </button>
 }
-<header class="mb-6 flex min-w-0 flex-wrap items-center justify-between gap-3">
+<header class="mb-5 flex min-w-0 flex-wrap items-center justify-between gap-3">
   <h1 class="font-display text-[32px] font-medium tracking-tight min-[800px]:text-[34px]">
     {{ title }}
   </h1>
@@ -37,8 +37,9 @@
         label="Search recipes"
         i18n-placeholder="@@recipes.searchPlaceholder"
         placeholder="Search recipes..."
+        [autoSearch]="true"
         [value]="searchQuery()"
-        (valueChange)="searchQuery.set($event)"
+        (valueChange)="changeSearch($event)"
         (searched)="applyFilters()"
       />
 

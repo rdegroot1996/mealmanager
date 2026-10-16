@@ -23,8 +23,8 @@ describe('supermarket session ownership', () => {
   };
   const rows: ReviewRow[] = [
     {
-      groceryItemId: 'source',
-      profileProductId: null,
+      shoppingListItemId: 'source',
+      recipeProfileGroceryItemId: null,
       name: 'Noodles',
       quantity: 1,
       checked: false,
@@ -49,7 +49,7 @@ describe('supermarket session ownership', () => {
         quantity: 1,
         outcome: 'Added',
         reason: null,
-        groceryItemIds: ['source'],
+        shoppingListItemIds: ['source'],
         localWarning: null,
       },
     ],
@@ -144,7 +144,7 @@ describe('supermarket session ownership', () => {
     store.results.set({
       cycle: {
         ...result,
-        lines: [{ ...result.lines[0], groceryItemIds: ['old'], outcome: 'Failed' }],
+        lines: [{ ...result.lines[0], shoppingListItemIds: ['old'], outcome: 'Failed' }],
       },
     });
     store.completed.set({ cycle: ['previous-addition'] });
@@ -157,7 +157,7 @@ describe('supermarket session ownership', () => {
   });
   it('does not merge results from a replaced connection or account', () => {
     store.results.set({
-      cycle: { ...result, lines: [{ ...result.lines[0], groceryItemIds: ['old'] }] },
+      cycle: { ...result, lines: [{ ...result.lines[0], shoppingListItemIds: ['old'] }] },
     });
     store.confirm('cycle', { ...review, connectionGeneration: 'new-generation' }, rows, [
       { productId: 's1001', quantity: 1 },

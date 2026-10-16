@@ -52,19 +52,19 @@ try {
     Wait-Application
     # Dot-sourcing the read-only check establishes a fresh MCP session for persistence reads.
     . "$PSScriptRoot/Test-McpEndpoint.ps1" -Url "$baseUrl/mcp" -Token $env:Mcp__AccessToken
-    $planning = Send-McpRequest 'tools/call' @{ name = 'get_active_planning'; arguments = @{} }
+    $mealPlan = Send-McpRequest 'tools/call' @{ name = 'get_active_meal_plan'; arguments = @{} }
     $recipes = Send-McpRequest 'tools/call' @{ name = 'list_recipe_catalog'; arguments = @{} }
-    if (@($planning.result.structuredContent.planning.entries).Count -ne 1 -or
+    if (@($mealPlan.result.structuredContent.mealPlan.entries).Count -ne 1 -or
         $recipes.result.structuredContent.totalCount -ne 2) {
         throw 'MCP data did not survive the container restart.'
     }
-    $previousCycleId = $planning.result.structuredContent.cycle.previousPlanningCycleId
-    $shopping = Send-McpRequest 'tools/call' @{ name = 'get_grocery_list'; arguments = @{ cycleId = $previousCycleId } }
-    $reviewedGroups = @($shopping.result.structuredContent.planningMealGroceries)
-    if ($reviewedGroups.Count -ne 1 -or @($reviewedGroups[0].groceries).Count -ne 0) {
+    $previousCycleId = $mealPlan.result.structuredContent.cycle.previousPlanningCycleId
+    $shopping = Send-McpRequest 'tools/call' @{ name = 'get_shopping_list'; arguments = @{ cycleId = $previousCycleId } }
+    $reviewedGroups = @($shopping.result.structuredContent.mealGroups)
+    if ($reviewedGroups.Count -ne 1 -or @($reviewedGroups[0].items).Count -ne 0) {
         throw 'Historical shopping data did not survive the container restart.'
     }
-    Write-Output 'PASS: recipes, active planning and historical shopping survive restart.'
+    Write-Output 'PASS: recipes, active meal plan and historical shopping survive restart.'
 }
 finally {
     & docker rm --force $name 2>$null | Out-Null

@@ -1,5 +1,5 @@
 import { setupServer } from 'msw/node';
-import { ApiGroceryList, ApiGroceryItem } from '../app/api/models/api-groceries';
+import { ApiShoppingList, ApiShoppingListItem } from '../app/api/models/api-shopping-list';
 import { handlers, resetMockData } from './handlers';
 import { ApiSupermarketProduct, ApiSupermarketReview } from '../app/api/models/api-supermarkets';
 
@@ -18,14 +18,16 @@ describe('mock supermarket integration', () => {
   it('returns mock products when a grocery name has no matching supermarket products', async () => {
     const response = await api('/api/supermarkets/picnic/products?query=Tomatoes');
     expect(response.status).toBe(200);
-    const products = (await response.json()) as ApiSupermarketProduct[];
-    expect(products.length).toBeGreaterThan(0);
-    expect(products.some((product) => product.availability === 'Available')).toBe(true);
+    const groceries = (await response.json()) as ApiSupermarketProduct[];
+    expect(groceries.length).toBeGreaterThan(0);
+    expect(groceries.some((product) => product.availability === 'Available')).toBe(true);
   });
 
   it('keeps matching product searches focused on the query', async () => {
-    const products = await (await api('/api/supermarkets/picnic/products?query=%20mELk%20')).json();
-    expect(products).toEqual([expect.objectContaining({ id: 's1003' })]);
+    const groceries = await (
+      await api('/api/supermarkets/picnic/products?query=%20mELk%20')
+    ).json();
+    expect(groceries).toEqual([expect.objectContaining({ id: 's1003' })]);
   });
 
   it.each(['', '   ', 'x'.repeat(201)])(
@@ -60,11 +62,11 @@ describe('mock supermarket integration', () => {
 
   it('reviews meal groups before manual items and preserves reordered groceries', async () => {
     const cycle = await (await api('/api/planning-cycles/current')).json();
-    const planning = await (await api(`/api/planning/cycle/${cycle.id}`)).json();
+    const mealPlan = await (await api(`/api/meal-plans/cycle/${cycle.id}`)).json();
     const recipe = await (await api('/api/recipes/r1')).json();
     const meal = await (
-      await api('/api/planning-meals', 'POST', {
-        planningId: planning.id,
+      await api('/api/planned-meals', 'POST', {
+        mealPlanId: mealPlan.id,
         recipeId: recipe.id,
         recipeProfileId: recipe.profiles[0].id,
         date: cycle.startDate,
@@ -72,21 +74,21 @@ describe('mock supermarket integration', () => {
     ).json();
     expect(
       (
-        await api(`/api/planning-meals/${meal.id}/groceries`, 'POST', {
+        await api(`/api/planned-meals/${meal.id}/groceries`, 'POST', {
           groceries: [{ name: 'Noodles', quantity: 1 }],
         })
       ).status,
     ).toBe(201);
     const sauce = (await (
-      await api(`/api/planning-meals/${meal.id}/groceries/items`, 'POST', {
+      await api(`/api/planned-meals/${meal.id}/groceries/items`, 'POST', {
         name: 'Sauce',
         quantity: 1,
       })
-    ).json()) as ApiGroceryItem;
+    ).json()) as ApiShoppingListItem;
     for (const name of ['Milk', 'Bread']) {
       expect(
         (
-          await api(`/api/grocery-lists/cycle/${cycle.id}/items`, 'POST', {
+          await api(`/api/shopping-lists/cycle/${cycle.id}/items`, 'POST', {
             name,
             quantity: 1,
           })
@@ -94,22 +96,20 @@ describe('mock supermarket integration', () => {
       ).toBe(201);
     }
     const getList = async () =>
-      (await (await api(`/api/grocery-lists/cycle/${cycle.id}`)).json()) as ApiGroceryList;
+      (await (await api(`/api/shopping-lists/cycle/${cycle.id}`)).json()) as ApiShoppingList;
     let list = await getList();
-    const mealItems = list.planningMealGroceries.find(
-      (group) => group.planningMeal.id === meal.id,
-    )!.groceries;
-    for (const [planningMealId, itemIds] of [
+    const mealItems = list.mealGroups.find((group) => group.meal.id === meal.id)!.items;
+    for (const [plannedMealId, itemIds] of [
       [
         meal.id,
         [sauce.id, ...mealItems.filter((item) => item.id !== sauce.id).map((item) => item.id)],
       ],
-      [null, [...list.groceries].reverse().map((item) => item.id)],
+      [null, [...list.items].reverse().map((item) => item.id)],
     ]) {
       expect(
         (
-          await api(`/api/grocery-lists/${list.id}/items/order`, 'PUT', {
-            planningMealId,
+          await api(`/api/shopping-lists/${list.id}/items/order`, 'PUT', {
+            plannedMealId,
             itemIds,
           })
         ).status,
@@ -119,31 +119,30 @@ describe('mock supermarket integration', () => {
     const review = (await (
       await api(`/api/supermarkets/cycles/${cycle.id}/review?provider=picnic`)
     ).json()) as ApiSupermarketReview;
-    const expected = [
-      ...list.planningMealGroceries.flatMap((group) => group.groceries),
-      ...list.groceries,
-    ];
+    const expected = [...list.mealGroups.flatMap((group) => group.items), ...list.items];
     expect(expected[0].id).toBe(sauce.id);
-    expect(review.items.map((item) => item.groceryItemId)).toEqual(expected.map((item) => item.id));
+    expect(review.items.map((item) => item.shoppingListItemId)).toEqual(
+      expected.map((item) => item.id),
+    );
   });
 
   it('remembers a first product choice for later groceries from the same recipe profile', async () => {
     const cycle = await (await api('/api/planning-cycles/current')).json();
-    const planning = await (await api(`/api/planning/cycle/${cycle.id}`)).json();
+    const mealPlan = await (await api(`/api/meal-plans/cycle/${cycle.id}`)).json();
     const recipe = await (await api('/api/recipes/r1')).json();
     const profile = await (await api(`/api/recipe-profiles/${recipe.profiles[0].id}`)).json();
     const addGroceries = async () => {
       const meal = await (
-        await api('/api/planning-meals', 'POST', {
-          planningId: planning.id,
+        await api('/api/planned-meals', 'POST', {
+          mealPlanId: mealPlan.id,
           recipeId: recipe.id,
           recipeProfileId: profile.id,
           date: cycle.startDate,
         })
       ).json();
-      const response = await api(`/api/planning-meals/${meal.id}/groceries`, 'POST', {
+      const response = await api(`/api/planned-meals/${meal.id}/groceries`, 'POST', {
         groceries: [
-          { recipeProfileProductId: profile.products[0].id, name: 'Noodles', quantity: 1 },
+          { recipeProfileGroceryItemId: profile.groceries[0].id, name: 'Noodles', quantity: 1 },
         ],
       });
       expect(response.status).toBe(201);
@@ -157,10 +156,10 @@ describe('mock supermarket integration', () => {
     const initial = await review();
     const item = initial.items[0];
     expect(item.product).toBeNull();
-    const products = (await (
+    const groceries = (await (
       await api(`/api/supermarkets/picnic/products?query=${encodeURIComponent(item.name)}`)
     ).json()) as ApiSupermarketProduct[];
-    const product = products.find((candidate) => candidate.availability === 'Available')!;
+    const product = groceries.find((candidate) => candidate.availability === 'Available')!;
     expect(product).toBeDefined();
     const sent = await api(`/api/supermarkets/cycles/${cycle.id}/send`, 'POST', {
       provider: initial.provider,
@@ -168,7 +167,12 @@ describe('mock supermarket integration', () => {
       connectionGeneration: initial.connectionGeneration,
       revision: initial.revision,
       items: [
-        { groceryItemId: item.groceryItemId, productId: product.id, quantity: 1, remember: false },
+        {
+          shoppingListItemId: item.shoppingListItemId,
+          productId: product.id,
+          quantity: 1,
+          remember: false,
+        },
       ],
       totals: [{ productId: product.id, quantity: 1 }],
     });
@@ -177,9 +181,11 @@ describe('mock supermarket integration', () => {
     const later = await review();
     expect(later.items).toHaveLength(2);
     expect(later.items.every((row) => row.product?.id === product.id)).toBe(true);
-    expect(later.items.find((row) => row.groceryItemId === item.groceryItemId)?.checked).toBe(true);
-    expect(later.items.find((row) => row.groceryItemId !== item.groceryItemId)?.checked).toBe(
-      false,
-    );
+    expect(
+      later.items.find((row) => row.shoppingListItemId === item.shoppingListItemId)?.checked,
+    ).toBe(true);
+    expect(
+      later.items.find((row) => row.shoppingListItemId !== item.shoppingListItemId)?.checked,
+    ).toBe(false);
   });
 });

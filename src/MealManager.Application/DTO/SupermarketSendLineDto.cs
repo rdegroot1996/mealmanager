@@ -8,6 +8,6 @@ public record SupermarketSendLineDto
     public required int Quantity { get; init; }
     public required string Outcome { get; init; }
     public required string? Reason { get; init; }
-    public required IReadOnlyList<Guid> GroceryItemIds { get; init; }
+    public required IReadOnlyList<Guid> ShoppingListItemIds { get; init; }
     public string? LocalWarning { get; init; }
 }

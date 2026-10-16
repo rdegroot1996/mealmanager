@@ -27,9 +27,9 @@ export function moreActionsForItemLabel(name: string): string {
 }
 
 export function addGroceriesForMealLabel(name: string): string {
-  return $localize`:@@planning.addGroceriesForMeal:Add groceries for ${name}:recipeName:`;
+  return $localize`:@@planner.reviewGroceriesForMeal:Review groceries for ${name}:recipeName:`;
 }
 
 export function editGroceriesForMealLabel(name: string): string {
-  return $localize`:@@planning.editGroceriesForMeal:Edit groceries for ${name}:recipeName:`;
+  return $localize`:@@planner.editGrocerySelectionForMeal:Edit grocery selection for ${name}:recipeName:`;
 }

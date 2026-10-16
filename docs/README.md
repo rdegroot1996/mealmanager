@@ -18,25 +18,25 @@ Controllers remain thin. Mutations use commands; reads use queries. API errors e
 
 ### Model Context Protocol
 
-Optional `/mcp` access uses a household bearer token, separate from web sessions. Tools call Application use cases; version checks and transactions protect recipe and planning writes. See [configuration and contracts](mcp-clients.md).
+Optional `/mcp` access uses a household bearer token, separate from web sessions. Tools call Application use cases; version checks and transactions protect recipe and meal-plan writes. See [configuration and contracts](mcp-clients.md).
 
 ### Supermarket integrations
 
-`ISupermarketProvider` adapters own authentication and cart APIs. Provider connections use protected tokens in SQLite `AppSettings`; product mappings are unique per profile product and provider.
+`ISupermarketProvider` adapters own authentication and cart APIs. Provider connections use protected tokens in SQLite `AppSettings`; product mappings are unique per profile grocery item and provider.
 
 Exports validate the reviewed list and connection. Only acknowledged additions update unchanged groceries and mappings. Cart mutations are never retried automatically. See [Picnic](picnic.md).
 
 ## Persistence and images
 
-`PlanningCycle`, `Planning`, and `GroceryList` are separate roots coordinated by Application commands. Meals and linked leftovers share one ordered planning-entry hierarchy. Reordering uses transactions and temporary positions. An explicit grocery-review record distinguishes unreviewed meals from confirmed empty selections.
+`PlanningCycle`, `MealPlan`, and `ShoppingList` are separate roots coordinated by Application commands. Meals and linked leftovers share one ordered planning-entry hierarchy. Reordering uses transactions and temporary positions. An explicit grocery-review record distinguishes unreviewed meals from confirmed empty selections.
 
-Meal groceries retain nullable profile-product identifiers; deleting a source product preserves shopping history. Referenced recipes and profiles cannot be deleted. Ingredients use decimal quantities; purchase products use whole units.
+Meal groceries retain nullable profile-grocery identifiers; deleting a source grocery item preserves shopping history. Referenced recipes and profiles cannot be deleted. Ingredients use decimal quantities; purchase quantities use whole units.
 
-Mutation row DTOs are separate from response DTOs. Ingredient, step, and profile-product replacement arrays define their order. Creation assigns server IDs; REST updates accept retained IDs and new client-generated UUIDs, rejecting duplicate IDs or IDs owned by another recipe or profile. MCP updates require known retained IDs and omit IDs for new rows.
+Mutation row DTOs are separate from response DTOs. Ingredient, step, and profile-grocery replacement arrays define their order. Creation assigns server IDs; REST updates accept retained IDs and new client-generated UUIDs, rejecting duplicate IDs or IDs owned by another recipe or profile. MCP updates require known retained IDs and omit IDs for new rows.
 
 Images are stored under `recipe-images`, with metadata in SQLite. Magick.NET validates JPEG, PNG, WebP, GIF, HEIC/HEIF content, normalizes orientation, fits images within 1600 × 1200 without upscaling, flattens transparency on white, strips metadata, and encodes JPEG at quality 85. Upload limits are 10 MB and 40 megapixels.
 
-Startup applies EF migrations. Generate schema changes under `src/MealManager.Infrastructure/Migrations`; never edit generated migrations or snapshots.
+Startup applies EF migrations. Generate changes under `src/MealManager.Infrastructure/Migrations`; never edit generated migrations or snapshots.
 
 ## Authentication and HTTP security
 

@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MealManager.Application.Queries;
 
-public class PlanningCycleQueries(ApplicationDbContext dbContext, PlanningQueries planningQueries)
+public class PlanningCycleQueries(ApplicationDbContext dbContext, MealPlanQueries mealPlanQueries)
 {
     public async Task<RecentPlanningCyclesDto> ListRecentPlanningCycles(int limit = 4, DateOnly? beforeStartDate = null)
     {
@@ -15,7 +15,7 @@ public class PlanningCycleQueries(ApplicationDbContext dbContext, PlanningQuerie
         var cycles = await query.Where(cycle => cycle.StartDate < before).OrderByDescending(cycle => cycle.StartDate)
             .Take(limit + 1).ToArrayAsync();
         var page = cycles.Take(limit).ToArray();
-        var plans = (await planningQueries.GetCyclePlannings(page.Select(cycle => cycle.Id).ToArray()))
+        var plans = (await mealPlanQueries.GetCycleMealPlans(page.Select(cycle => cycle.Id).ToArray()))
             .ToDictionary(plan => plan.PlanningCycleId);
         return new RecentPlanningCyclesDto
         {

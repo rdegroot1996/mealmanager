@@ -12,3 +12,5 @@ validation is deferred. Use disposable test data, never household backups
 or real credentials.
 
 For security reports, follow [SECURITY.md](SECURITY.md).
+
+Use the [terminology table](docs/functional-overview.md#terminology) across documentation and contracts. Coding-agent instructions are in [AGENTS.md](AGENTS.md).

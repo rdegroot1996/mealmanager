@@ -20,6 +20,7 @@ export class NumberInput {
   minimum = input(1);
   maximum = input<number | null>(null);
   disabled = input(false);
+  required = input(false);
   invalid = input(false);
   describedBy = input<string | null>(null);
   valueChange = output<number>();

@@ -66,7 +66,7 @@ export const recipes: MockRecipe[] = [
         id: 'r1-p1',
         name: 'Default',
         servings: 4,
-        products: [
+        groceries: [
           { id: 'pr1', name: 'Spaghetti', quantity: 1, atHome: false },
           { id: 'pr2', name: 'Ground Beef', quantity: 1, atHome: false },
           { id: 'pr3', name: 'Tomato Sauce', quantity: 1, atHome: false },
@@ -78,7 +78,7 @@ export const recipes: MockRecipe[] = [
         id: 'r1-p2',
         name: 'Bulk',
         servings: 8,
-        products: [
+        groceries: [
           { id: 'pr6', name: 'Spaghetti', quantity: 2, atHome: false },
           { id: 'pr7', name: 'Ground Beef', quantity: 2, atHome: false },
           { id: 'pr8', name: 'Tomato Sauce', quantity: 2, atHome: false },
@@ -137,7 +137,7 @@ export const recipes: MockRecipe[] = [
         id: 'r2-p1',
         name: 'Default',
         servings: 3,
-        products: [
+        groceries: [
           { id: 'pr11', name: 'Chicken Breast', quantity: 1, atHome: false },
           { id: 'pr12', name: 'Bell Pepper', quantity: 2, atHome: false },
           { id: 'pr13', name: 'Broccoli', quantity: 1, atHome: false },
@@ -182,7 +182,7 @@ export const recipes: MockRecipe[] = [
         id: 'r3-p1',
         name: 'Default',
         servings: 2,
-        products: [
+        groceries: [
           { id: 'pr16', name: 'Cucumber', quantity: 1, atHome: false },
           { id: 'pr17', name: 'Tomatoes', quantity: 4, atHome: false },
           { id: 'pr18', name: 'Feta Cheese', quantity: 1, atHome: false },
@@ -230,7 +230,7 @@ export const recipes: MockRecipe[] = [
         id: 'r4-p1',
         name: 'Default',
         servings: 4,
-        products: [
+        groceries: [
           { id: 'pr20', name: 'Flour', quantity: 1, atHome: true },
           { id: 'pr21', name: 'Milk', quantity: 1, atHome: false },
           { id: 'pr22', name: 'Eggs', quantity: 1, atHome: true },
@@ -283,7 +283,7 @@ export const recipes: MockRecipe[] = [
         id: 'r5-p1',
         name: 'Default',
         servings: 4,
-        products: [
+        groceries: [
           { id: 'pr24', name: 'Ground Beef', quantity: 1, atHome: false },
           { id: 'pr25', name: 'Taco Shells', quantity: 1, atHome: false },
           { id: 'pr26', name: 'Lettuce', quantity: 1, atHome: false },
@@ -295,7 +295,7 @@ export const recipes: MockRecipe[] = [
         id: 'r5-p2',
         name: 'Party',
         servings: 8,
-        products: [
+        groceries: [
           { id: 'pr29', name: 'Ground Beef', quantity: 2, atHome: false },
           { id: 'pr30', name: 'Taco Shells', quantity: 2, atHome: false },
           { id: 'pr31', name: 'Lettuce', quantity: 2, atHome: false },

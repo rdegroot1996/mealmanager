@@ -44,11 +44,11 @@ public class PlanningCycleAccess(ApplicationDbContext dbContext)
                 "The active planning cycle must start after every other cycle.");
         }
 
-        var hasEntriesOutsideRange = await dbContext.Plannings
+        var hasEntriesOutsideRange = await dbContext.MealPlans
             .Where(p => p.PlanningCycleId == cycleId)
             .SelectMany(p => p.Entries)
             .AnyAsync(entry => entry.Date < startDate || entry.Date > endDate);
-        var hasNotesOutsideRange = await dbContext.Plannings
+        var hasNotesOutsideRange = await dbContext.MealPlans
             .Where(p => p.PlanningCycleId == cycleId)
             .SelectMany(p => p.Notes)
             .AnyAsync(n => n.Date < startDate || n.Date > endDate);
@@ -56,7 +56,7 @@ public class PlanningCycleAccess(ApplicationDbContext dbContext)
         {
             throw new InvalidOperationError(
                 ErrorCodes.CycleCannotExcludeEntries,
-                "The planning cycle cannot exclude existing planning entries.");
+                "The planning cycle cannot exclude existing meal plan entries.");
         }
     }
 

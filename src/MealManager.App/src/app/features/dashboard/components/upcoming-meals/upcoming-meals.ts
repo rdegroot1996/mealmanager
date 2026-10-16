@@ -5,7 +5,7 @@ import { RecipeSummary } from '../../../../shared/components/recipe-summary/reci
 import { planningDateParts } from '../../../../shared/utils/planning-date';
 import { RouterLink } from '@angular/router';
 import { viewRecipeLabel } from '../../../../core/i18n/labels';
-import { LeftoverBadge } from '../../../planning/components/leftover-badge/leftover-badge';
+import { LeftoverBadge } from '../../../planner/components/leftover-badge/leftover-badge';
 
 @Component({
   selector: 'app-upcoming-meals',

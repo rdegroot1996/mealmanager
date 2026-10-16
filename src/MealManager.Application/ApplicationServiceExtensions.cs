@@ -22,10 +22,10 @@ public static class ApplicationServiceExtensions
             .AddTransient<RecipeImageCommands>()
             .AddTransient<RecipeProfileCommands>()
             .AddTransient<PlanningCycleCommands>()
-            .AddTransient<PlanningReplacementCommands>()
-            .AddTransient<PlanningMealCommands>()
-            .AddTransient<PlanningNoteCommands>()
-            .AddTransient<GroceryListCommands>()
+            .AddTransient<MealPlanReplacementCommands>()
+            .AddTransient<PlannedMealCommands>()
+            .AddTransient<PlanningDayNoteCommands>()
+            .AddTransient<ShoppingListCommands>()
             .AddTransient<PlanningCycleAccess>();
 
     private static IServiceCollection AddQueries(this IServiceCollection services) =>
@@ -40,7 +40,7 @@ public static class ApplicationServiceExtensions
             .AddTransient<RecipeImageQueries>()
             .AddTransient<RecipeProfileQueries>()
             .AddTransient<PlanningCycleQueries>()
-            .AddTransient<PlanningQueries>()
-            .AddTransient<PlanningStateQueries>()
-            .AddTransient<GroceryListQueries>();
+            .AddTransient<MealPlanQueries>()
+            .AddTransient<MealPlanStateQueries>()
+            .AddTransient<ShoppingListQueries>();
 }

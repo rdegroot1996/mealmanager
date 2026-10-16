@@ -17,6 +17,21 @@ describe('UserFormModal', () => {
 
   afterEach(() => http.verify());
 
+  it('protects account drafts, including password-only changes, and clears passwords on closing', async () => {
+    const fixture = TestBed.createComponent(UserFormModal);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    vi.spyOn(component.modal(), 'open').mockImplementation(() => {});
+    const discard = vi.spyOn(component.discardModal(), 'confirmDiscard').mockResolvedValue(false);
+    component.open();
+    expect(await component.beforeDismiss()).toBe(true);
+    component.password.set('new-password');
+    expect(await component.beforeDismiss()).toBe(false);
+    expect(discard).toHaveBeenCalledOnce();
+    component.endSession();
+    expect(component.password()).toBe('');
+  });
+
   it('validates required create fields before sending a request', () => {
     const fixture = TestBed.createComponent(UserFormModal);
     fixture.detectChanges();

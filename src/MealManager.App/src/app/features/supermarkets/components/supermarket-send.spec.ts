@@ -3,6 +3,7 @@ import { signal } from '@angular/core';
 import { of, Subject, throwError } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { SupermarketSend } from './supermarket-send';
+import { Modal } from '../../../shared/components/modal/modal';
 import { SupermarketsStore } from '../state/supermarkets.store';
 import {
   ApiSupermarketConnection,
@@ -22,8 +23,8 @@ const review: ApiSupermarketReview = {
   unreviewedMeals: 0,
   items: [
     {
-      groceryItemId: 'a',
-      profileProductId: 'slot',
+      shoppingListItemId: 'a',
+      recipeProfileGroceryItemId: 'slot',
       name: 'Noodles',
       quantity: 2,
       checked: false,
@@ -31,8 +32,8 @@ const review: ApiSupermarketReview = {
       product: mockSupermarketProducts[0],
     },
     {
-      groceryItemId: 'b',
-      profileProductId: null,
+      shoppingListItemId: 'b',
+      recipeProfileGroceryItemId: null,
       name: 'Already bought',
       quantity: 1,
       checked: true,
@@ -56,7 +57,7 @@ const result: ApiSupermarketSend = {
       outcome: 'Added',
       reason: null,
       localWarning: null,
-      groceryItemIds: ['a'],
+      shoppingListItemIds: ['a'],
     },
   ],
 };
@@ -125,6 +126,27 @@ describe('supermarket handoff dialog', () => {
     expect(dialog.querySelector('a')).toBeNull();
     expect(dialog.textContent).not.toContain('Settings');
     expect(store.review).not.toHaveBeenCalled();
+  });
+
+  it('protects edited export choices while allowing clean cancellation and explicit close during sending', async () => {
+    component.openReview();
+    const discard = vi.spyOn(component.discardModal(), 'confirmDiscard').mockResolvedValue(false);
+    expect(await component.beforeDismiss()).toBe(true);
+    component.changeRow('a', { buyQuantity: 3 });
+    expect(await component.beforeDismiss()).toBe(false);
+    expect(component.rows()[0].buyQuantity).toBe(3);
+    component.changeRow('a', { buyQuantity: 2 });
+    expect(await component.beforeDismiss()).toBe(true);
+    store.pending.set({ cycle: true });
+    component.view.set('sending');
+    await fixture.whenStable();
+    const modal = fixture.debugElement.children.find((x) => x.componentInstance instanceof Modal)
+      ?.componentInstance as Modal;
+    expect(modal.dismissOnBackdrop()).toBe(false);
+    expect(await component.beforeDismiss()).toBe(true);
+    expect(discard).toHaveBeenCalledOnce();
+    component.close();
+    expect(store.pending()['cycle']).toBe(true);
   });
 
   it('shows a spinner during initial review and renders remembered product images on completion', async () => {
@@ -337,17 +359,20 @@ describe('supermarket handoff dialog', () => {
     expect(fixture.nativeElement.querySelectorAll('dialog')[1].open).toBe(true);
   });
 
-  it('keeps the cart explanation in the footer and the unreviewed warning before the products', async () => {
+  it('keeps the cart explanation in the footer and the unreviewed warning before the groceries', async () => {
     store.review.mockReturnValue(of({ ...review, unreviewedMeals: 1 }));
     component.openReview();
+    component.changeRow('a', { product: null });
     await fixture.whenStable();
     const dialog = fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
     const warning = dialog.querySelector('[data-testid="export-unreviewed-meals"]')!;
-    expect(warning.textContent).toContain('1 meal has not been reviewed');
+    expect(warning.textContent).toContain("Groceries for 1 meal haven't been reviewed yet.");
     const row = dialog.querySelector('[data-review-row="a"]')!;
     expect(warning.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
     const footer = dialog.querySelector('.app-dialog-footer')!;
     expect(footer.textContent).toContain('This does not place an order.');
+    expect(footer.textContent).toContain('1 item needs attention.');
+    expect(footer.querySelectorAll('button')).toHaveLength(1);
     expect(footer.querySelector('[data-testid="export-unreviewed-meals"]')).toBeNull();
     const note = footer.querySelector('[modal-note]')!;
     expect(
@@ -388,7 +413,7 @@ describe('supermarket handoff dialog', () => {
     expect(fixture.nativeElement.querySelectorAll('dialog')[1].open).toBe(true);
   });
 
-  it('keeps duplicate products as independent rows and exports their summed packs', async () => {
+  it('keeps duplicate groceries as independent rows and exports their summed packs', async () => {
     component.openReview();
     component.changeRow('b', { selected: true });
     component.changeRow('a', { buyQuantity: 4 });
@@ -524,13 +549,13 @@ describe('supermarket handoff dialog', () => {
     expect(component.rows()[0].remember).toBe(false);
   });
 
-  it('fills repeated unmapped profile products without including excluded groceries', () => {
+  it('fills repeated unmapped profile groceries without including excluded groceries', () => {
     store.review.mockReturnValue(
       of({
         ...review,
         items: [
           { ...review.items[0], product: null },
-          { ...review.items[1], profileProductId: 'slot', product: null },
+          { ...review.items[1], recipeProfileGroceryItemId: 'slot', product: null },
         ],
       }),
     );
@@ -603,21 +628,21 @@ describe('supermarket handoff dialog', () => {
           {
             ...result.lines[0],
             productName: 'Rejected',
-            groceryItemIds: ['b'],
+            shoppingListItemIds: ['b'],
             outcome: 'Failed',
             reason: 'Rejected',
           },
           {
             ...result.lines[0],
             productName: 'Unconfirmed',
-            groceryItemIds: ['c'],
+            shoppingListItemIds: ['c'],
             outcome: 'Unknown',
             reason: 'Uncertain',
           },
           {
             ...result.lines[0],
             productName: 'Skipped',
-            groceryItemIds: ['d'],
+            shoppingListItemIds: ['d'],
             outcome: 'NotAttempted',
             reason: 'Uncertain',
           },
@@ -650,7 +675,7 @@ describe('supermarket handoff dialog', () => {
     expect(component.rows()[0].selected).toBe(false);
   });
 
-  it('keeps local-save warnings above collapsed successes and does not claim skipped products were added', async () => {
+  it('keeps local-save warnings above collapsed successes and does not claim skipped groceries were added', async () => {
     store.results.set({
       cycle: {
         ...result,
@@ -659,7 +684,7 @@ describe('supermarket handoff dialog', () => {
           {
             ...result.lines[0],
             productName: 'Skipped',
-            groceryItemIds: ['b'],
+            shoppingListItemIds: ['b'],
             outcome: 'NotAttempted',
             reason: 'LocalPersistence',
           },
@@ -735,5 +760,37 @@ describe('supermarket handoff dialog', () => {
     response.next(result);
     expect(component.review()).toBeNull();
     expect(component.send()).toBeNull();
+  });
+  it('identifies missing choices, combined quantity limits, and cleared selections before export', () => {
+    component.openReview();
+    component.changeRow('a', { product: null });
+    expect(component.readinessIssues().map((issue) => issue.kind)).toEqual(['product']);
+    expect(component.readinessLabel()).toBe('1 item needs attention.');
+    component.changeRow('a', { product: mockSupermarketProducts[0], buyQuantity: 999 });
+    component.changeRow('b', { selected: true, buyQuantity: 999 });
+    expect(component.readinessIssues()).toHaveLength(2);
+    expect(component.readinessLabel()).toBe('2 items need attention.');
+    component.changeRow('a', { selected: false });
+    component.changeRow('b', { selected: false });
+    expect(component.readinessLabel()).toContain('Select at least one');
+    expect(component.valid()).toBe(false);
+  });
+  it('offers Done or Review list on results and closes without another cart write', async () => {
+    store.results.set({ cycle: result });
+    component.viewResult();
+    await fixture.whenStable();
+    const dialog = fixture.nativeElement.querySelector('dialog');
+    expect(dialog.querySelector('.app-dialog-footer').textContent).toContain('Done');
+    const before = store.confirm.mock.calls.length;
+    component.close();
+    expect(store.confirm.mock.calls).toHaveLength(before);
+    store.results.set({
+      cycle: { ...result, lines: [{ ...result.lines[0], outcome: 'Unknown' }] },
+    });
+    component.viewResult();
+    await fixture.whenStable();
+    expect(dialog.querySelector('.app-dialog-footer').textContent).toContain('Review list');
+    component.close();
+    expect(store.confirm.mock.calls).toHaveLength(before);
   });
 });

@@ -10,11 +10,11 @@ internal static class RecipePlanningHistory
         recipes.Select(recipe => new RecipeWithPlanningHistory
         {
             Recipe = recipe,
-            PastCount = dbContext.Set<PlanningMeal>().Count(meal => meal.RecipeId == recipe.Id && meal.Date <= today),
-            LastPastDate = dbContext.Set<PlanningMeal>().Where(meal => meal.RecipeId == recipe.Id && meal.Date <= today)
+            PastCount = dbContext.Set<PlannedMeal>().Count(meal => meal.RecipeId == recipe.Id && meal.Date <= today),
+            LastPastDate = dbContext.Set<PlannedMeal>().Where(meal => meal.RecipeId == recipe.Id && meal.Date <= today)
                 .Select(meal => (DateOnly?)meal.Date).Max(),
-            UpcomingCount = dbContext.Set<PlanningMeal>().Count(meal => meal.RecipeId == recipe.Id && meal.Date > today),
-            RecentCount = dbContext.Set<PlanningMeal>().Count(meal => meal.RecipeId == recipe.Id
+            UpcomingCount = dbContext.Set<PlannedMeal>().Count(meal => meal.RecipeId == recipe.Id && meal.Date > today),
+            RecentCount = dbContext.Set<PlannedMeal>().Count(meal => meal.RecipeId == recipe.Id
                 && meal.Date >= today.AddDays(-89) && meal.Date <= today),
         });
 }

@@ -24,14 +24,14 @@ public class SupermarketControllerTests(CustomWebApplicationFactory factory) : T
         (await HttpClient.PostAsJsonAsync("/api/integrations/picnic/verification-code", new { })).EnsureSuccessStatusCode();
         (await HttpClient.PostAsJsonAsync("/api/integrations/picnic/verify", new VerifyPicnicDto { Code = PicnicMockHandler.Code })).EnsureSuccessStatusCode();
     }
-    private async Task<(PlanningCycleDto Cycle, GroceryItemDto Item)> Prepare()
+    private async Task<(PlanningCycleDto Cycle, ShoppingListItemDto Item)> Prepare()
     {
         var response = await HttpClient.PostAsJsonAsync("/api/planning-cycles", new CreatePlanningCycleDto { StartDate = new(2026, 1, 1), EndDate = new(2026, 1, 7) });
         var cycle = (await response.Content.ReadFromJsonAsync<PlanningCycleDto>(JsonOptions))!;
         return (cycle, await AddItem(cycle.Id, "Woknoedels", 2));
     }
-    private async Task<GroceryItemDto> AddItem(Guid cycle, string name, int quantity = 1) =>
-        (await (await HttpClient.PostAsJsonAsync($"/api/grocery-lists/cycle/{cycle}/items", new AddManualGroceryItemDto { Name = name, Quantity = quantity })).Content.ReadFromJsonAsync<GroceryItemDto>(JsonOptions))!;
+    private async Task<ShoppingListItemDto> AddItem(Guid cycle, string name, int quantity = 1) =>
+        (await (await HttpClient.PostAsJsonAsync($"/api/shopping-lists/cycle/{cycle}/items", new AddManualShoppingListItemDto { Name = name, Quantity = quantity })).Content.ReadFromJsonAsync<ShoppingListItemDto>(JsonOptions))!;
     private Task<SupermarketReviewDto?> Review(Guid id) => HttpClient.GetFromJsonAsync<SupermarketReviewDto>($"/api/supermarkets/cycles/{id}/review?provider=picnic", JsonOptions);
     private static SendSupermarketDto Selection(SupermarketReviewDto review, string product = "s1001") => new()
     {
@@ -41,7 +41,7 @@ public class SupermarketControllerTests(CustomWebApplicationFactory factory) : T
         Revision = review.Revision,
         Items = review.Items.Select(x => new SupermarketSelectionDto
         {
-            GroceryItemId = x.GroceryItemId,
+            ShoppingListItemId = x.ShoppingListItemId,
             ProductId = product,
             Quantity = x.Quantity,
             Remember = false,
@@ -54,7 +54,7 @@ public class SupermarketControllerTests(CustomWebApplicationFactory factory) : T
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<SupermarketSendDto>(JsonOptions))!;
     }
-    private async Task<List<GroceryItemDto>> Groceries(Guid cycle) => (await HttpClient.GetFromJsonAsync<GroceryListDto>($"/api/grocery-lists/cycle/{cycle}", JsonOptions))!.Groceries.ToList();
+    private async Task<List<ShoppingListItemDto>> Groceries(Guid cycle) => (await HttpClient.GetFromJsonAsync<ShoppingListDto>($"/api/shopping-lists/cycle/{cycle}", JsonOptions))!.Items.ToList();
     private async Task<PicnicSettings> Settings()
     {
         using var scope = Factory.Services.CreateScope();
@@ -64,41 +64,41 @@ public class SupermarketControllerTests(CustomWebApplicationFactory factory) : T
     {
         var recipeResponse = await HttpClient.PostAsJsonAsync("/api/recipes", new CreateRecipeDto { Name = "Noodles", Category = RecipeCategory.Meals, BaseServings = 2, Tags = [], Ingredients = [], Steps = [] });
         var recipe = (await recipeResponse.Content.ReadFromJsonAsync<RecipeDto>(JsonOptions))!;
-        var profileResponse = await HttpClient.PutAsJsonAsync($"/api/recipe-profiles/{recipe.Profiles.Single().Id}", new UpdateRecipeProfileDto { Name = "Default", Servings = 2, Products = [new() { Id = Guid.Empty, Name = "Woknoedels", Quantity = 2, AtHome = false }] });
+        var profileResponse = await HttpClient.PutAsJsonAsync($"/api/recipe-profiles/{recipe.Profiles.Single().Id}", new UpdateRecipeProfileDto { Name = "Default", Servings = 2, Groceries = [new() { Id = Guid.Empty, Name = "Woknoedels", Quantity = 2, AtHome = false }] });
         var profile = (await profileResponse.Content.ReadFromJsonAsync<RecipeProfileDto>(JsonOptions))!;
-        var planning = await HttpClient.GetFromJsonAsync<PlanningDto>($"/api/planning/cycle/{cycle.Id}", JsonOptions);
-        var mealResponse = await HttpClient.PostAsJsonAsync("/api/planning-meals", new AddPlanningMealDto { PlanningId = planning!.Id, RecipeId = recipe.Id, RecipeProfileId = profile.Id, Date = date ?? cycle.StartDate });
-        var meal = (await mealResponse.Content.ReadFromJsonAsync<PlanningEntryDto>(JsonOptions))!;
-        await MealGroceries(meal.Id, profile.Products.Single().Id);
+        var mealPlan = await HttpClient.GetFromJsonAsync<MealPlanDto>($"/api/meal-plans/cycle/{cycle.Id}", JsonOptions);
+        var mealResponse = await HttpClient.PostAsJsonAsync("/api/planned-meals", new AddPlannedMealDto { MealPlanId = mealPlan!.Id, RecipeId = recipe.Id, RecipeProfileId = profile.Id, Date = date ?? cycle.StartDate });
+        var meal = (await mealResponse.Content.ReadFromJsonAsync<PlannedEntryDto>(JsonOptions))!;
+        await MealGroceryReview(meal.Id, profile.Groceries.Single().Id);
         return (profile, meal.Id, recipe.Id);
     }
-    private async Task MealGroceries(Guid meal, Guid slot) =>
-        (await HttpClient.PostAsJsonAsync($"/api/planning-meals/{meal}/groceries", new AddMealGroceriesDto { Groceries = [new() { RecipeProfileProductId = slot, Name = "Woknoedels", Quantity = 2 }] })).EnsureSuccessStatusCode();
+    private async Task MealGroceryReview(Guid meal, Guid slot) =>
+        (await HttpClient.PostAsJsonAsync($"/api/planned-meals/{meal}/groceries", new ReviewMealGroceriesDto { Groceries = [new() { RecipeProfileGroceryItemId = slot, Name = "Woknoedels", Quantity = 2 }] })).EnsureSuccessStatusCode();
 
     [Fact]
-    public async Task Review_PreservesGroceryListGroupAndReorderedItemOrder()
+    public async Task Review_PreservesShoppingListGroupAndReorderedItemOrder()
     {
         await Connect();
         var (cycle, manual) = await Prepare();
         var secondManual = await AddItem(cycle.Id, "Milk");
         await AddProfileMeal(cycle, cycle.StartDate.AddDays(1));
         var (_, earlierMeal, _) = await AddProfileMeal(cycle);
-        var addedResponse = await HttpClient.PostAsJsonAsync($"/api/planning-meals/{earlierMeal}/groceries/items",
-            new AddManualGroceryItemDto { Name = "Sauce", Quantity = 1 });
+        var addedResponse = await HttpClient.PostAsJsonAsync($"/api/planned-meals/{earlierMeal}/groceries/items",
+            new AddManualShoppingListItemDto { Name = "Sauce", Quantity = 1 });
         addedResponse.EnsureSuccessStatusCode();
-        var added = (await addedResponse.Content.ReadFromJsonAsync<GroceryItemDto>(JsonOptions))!;
-        var list = (await HttpClient.GetFromJsonAsync<GroceryListDto>($"/api/grocery-lists/cycle/{cycle.Id}", JsonOptions))!;
-        var mealItems = list.PlanningMealGroceries.Single(x => x.PlanningMeal.Id == earlierMeal).Groceries;
-        (await HttpClient.PutAsJsonAsync($"/api/grocery-lists/{list.Id}/items/order",
-            new UpdateGroceryItemOrderDto { PlanningMealId = earlierMeal, ItemIds = [added.Id, mealItems.First(x => x.Id != added.Id).Id] })).EnsureSuccessStatusCode();
-        (await HttpClient.PutAsJsonAsync($"/api/grocery-lists/{list.Id}/items/order",
-            new UpdateGroceryItemOrderDto { PlanningMealId = null, ItemIds = [secondManual.Id, manual.Id] })).EnsureSuccessStatusCode();
+        var added = (await addedResponse.Content.ReadFromJsonAsync<ShoppingListItemDto>(JsonOptions))!;
+        var list = (await HttpClient.GetFromJsonAsync<ShoppingListDto>($"/api/shopping-lists/cycle/{cycle.Id}", JsonOptions))!;
+        var mealItems = list.MealGroups.Single(x => x.Meal.Id == earlierMeal).Items;
+        (await HttpClient.PutAsJsonAsync($"/api/shopping-lists/{list.Id}/items/order",
+            new UpdateShoppingListItemOrderDto { PlannedMealId = earlierMeal, ItemIds = [added.Id, mealItems.First(x => x.Id != added.Id).Id] })).EnsureSuccessStatusCode();
+        (await HttpClient.PutAsJsonAsync($"/api/shopping-lists/{list.Id}/items/order",
+            new UpdateShoppingListItemOrderDto { PlannedMealId = null, ItemIds = [secondManual.Id, manual.Id] })).EnsureSuccessStatusCode();
 
-        list = (await HttpClient.GetFromJsonAsync<GroceryListDto>($"/api/grocery-lists/cycle/{cycle.Id}", JsonOptions))!;
-        var expected = list.PlanningMealGroceries.SelectMany(x => x.Groceries).Concat(list.Groceries).Select(x => x.Id).ToArray();
+        list = (await HttpClient.GetFromJsonAsync<ShoppingListDto>($"/api/shopping-lists/cycle/{cycle.Id}", JsonOptions))!;
+        var expected = list.MealGroups.SelectMany(x => x.Items).Concat(list.Items).Select(x => x.Id).ToArray();
         Assert.Equal(added.Id, expected[0]);
         Assert.Equal([secondManual.Id, manual.Id], expected.TakeLast(2));
-        Assert.Equal(expected, (await Review(cycle.Id))!.Items.Select(x => x.GroceryItemId));
+        Assert.Equal(expected, (await Review(cycle.Id))!.Items.Select(x => x.ShoppingListItemId));
     }
 
     [Fact]
@@ -151,7 +151,7 @@ public class SupermarketControllerTests(CustomWebApplicationFactory factory) : T
         var review = (await Review(cycle.Id))!;
         var command = Selection(review) with
         {
-            Items = [new SupermarketSelectionDto { GroceryItemId = first.Id, ProductId = "s1001", Quantity = 2, Remember = false }, new SupermarketSelectionDto { GroceryItemId = second.Id, ProductId = "s-rejected", Quantity = 1, Remember = false }, new SupermarketSelectionDto { GroceryItemId = third.Id, ProductId = "s-rejected-two", Quantity = 1, Remember = false }, new SupermarketSelectionDto { GroceryItemId = fourth.Id, ProductId = "s1003", Quantity = 1, Remember = false }],
+            Items = [new SupermarketSelectionDto { ShoppingListItemId = first.Id, ProductId = "s1001", Quantity = 2, Remember = false }, new SupermarketSelectionDto { ShoppingListItemId = second.Id, ProductId = "s-rejected", Quantity = 1, Remember = false }, new SupermarketSelectionDto { ShoppingListItemId = third.Id, ProductId = "s-rejected-two", Quantity = 1, Remember = false }, new SupermarketSelectionDto { ShoppingListItemId = fourth.Id, ProductId = "s1003", Quantity = 1, Remember = false }],
             Totals = [new SupermarketQuantityDto { ProductId = "s1001", Quantity = 2 }, new SupermarketQuantityDto { ProductId = "s-rejected", Quantity = 1 }, new SupermarketQuantityDto { ProductId = "s-rejected-two", Quantity = 1 }, new SupermarketQuantityDto { ProductId = "s1003", Quantity = 1 }],
         };
         var send = await Send(cycle.Id, command);
@@ -161,7 +161,7 @@ public class SupermarketControllerTests(CustomWebApplicationFactory factory) : T
         Assert.True((await Groceries(cycle.Id)).Single(x => x.Id == first.Id).Checked);
         Assert.False((await Groceries(cycle.Id)).Single(x => x.Id == second.Id).Checked);
         var fresh = (await Review(cycle.Id))!;
-        var retry = Selection(fresh, "s1003") with { Items = [new SupermarketSelectionDto { GroceryItemId = second.Id, ProductId = "s1003", Quantity = 1, Remember = false }, new SupermarketSelectionDto { GroceryItemId = third.Id, ProductId = "s1003", Quantity = 1, Remember = false }], Totals = [new SupermarketQuantityDto { ProductId = "s1003", Quantity = 2 }] };
+        var retry = Selection(fresh, "s1003") with { Items = [new SupermarketSelectionDto { ShoppingListItemId = second.Id, ProductId = "s1003", Quantity = 1, Remember = false }, new SupermarketSelectionDto { ShoppingListItemId = third.Id, ProductId = "s1003", Quantity = 1, Remember = false }], Totals = [new SupermarketQuantityDto { ProductId = "s1003", Quantity = 2 }] };
         Assert.Equal("Added", (await Send(cycle.Id, retry)).Lines.Single().Outcome);
         Assert.Equal(3, Mock.AdditionCount);
         Assert.DoesNotContain("cart", Mock.Requests);
@@ -174,7 +174,7 @@ public class SupermarketControllerTests(CustomWebApplicationFactory factory) : T
         var review = (await Review(cycle.Id))!;
         var send = await Send(cycle.Id, Selection(review) with
         {
-            Items = [new SupermarketSelectionDto { GroceryItemId = first.Id, ProductId = "s1001", Quantity = 2, Remember = false }, new SupermarketSelectionDto { GroceryItemId = second.Id, ProductId = "s-uncertain", Quantity = 1, Remember = false }, new SupermarketSelectionDto { GroceryItemId = third.Id, ProductId = "s1003", Quantity = 1, Remember = false }],
+            Items = [new SupermarketSelectionDto { ShoppingListItemId = first.Id, ProductId = "s1001", Quantity = 2, Remember = false }, new SupermarketSelectionDto { ShoppingListItemId = second.Id, ProductId = "s-uncertain", Quantity = 1, Remember = false }, new SupermarketSelectionDto { ShoppingListItemId = third.Id, ProductId = "s1003", Quantity = 1, Remember = false }],
             Totals = [new SupermarketQuantityDto { ProductId = "s1001", Quantity = 2 }, new SupermarketQuantityDto { ProductId = "s-uncertain", Quantity = 1 }, new SupermarketQuantityDto { ProductId = "s1003", Quantity = 1 }],
         });
         Assert.Equal(new[] { "Added", "Unknown", "NotAttempted" }, send.Lines.Select(x => x.Outcome));
@@ -187,7 +187,7 @@ public class SupermarketControllerTests(CustomWebApplicationFactory factory) : T
     public async Task ChangedSourceDuringAddition_IsNotChecked()
     {
         await Connect(); var (cycle, item) = await Prepare();
-        Mock.AfterAddition = async () => (await HttpClient.PutAsJsonAsync($"/api/grocery-lists/{item.Id}", new UpdateGroceryItemDto { Name = "Changed", Quantity = 1, Checked = false })).EnsureSuccessStatusCode();
+        Mock.AfterAddition = async () => (await HttpClient.PutAsJsonAsync($"/api/shopping-lists/{item.Id}", new UpdateShoppingListItemDto { Name = "Changed", Quantity = 1, Checked = false })).EnsureSuccessStatusCode();
         Assert.Equal("Added", (await Send(cycle.Id, Selection((await Review(cycle.Id))!))).Lines.Single().Outcome);
         Assert.False((await Groceries(cycle.Id)).Single().Checked);
     }
@@ -200,11 +200,11 @@ public class SupermarketControllerTests(CustomWebApplicationFactory factory) : T
         {
             Selection(review) with { Items = [], Totals = [] }, Selection(review, "missing"), Selection(review, "s1004"),
             Selection(review) with { Totals = [new SupermarketQuantityDto { ProductId = "s1001", Quantity = 21 }] },
-            Selection(review) with { Items = [new SupermarketSelectionDto { GroceryItemId = item.Id, ProductId = "s1001", Quantity = 0, Remember = false }] },
-            Selection(review) with { Items = [new SupermarketSelectionDto { GroceryItemId = item.Id, ProductId = "s1001", Quantity = 2, Remember = false }, new SupermarketSelectionDto { GroceryItemId = item.Id, ProductId = "s1001", Quantity = 2, Remember = false }] },
+            Selection(review) with { Items = [new SupermarketSelectionDto { ShoppingListItemId = item.Id, ProductId = "s1001", Quantity = 0, Remember = false }] },
+            Selection(review) with { Items = [new SupermarketSelectionDto { ShoppingListItemId = item.Id, ProductId = "s1001", Quantity = 2, Remember = false }, new SupermarketSelectionDto { ShoppingListItemId = item.Id, ProductId = "s1001", Quantity = 2, Remember = false }] },
         };
         foreach (var command in commands) Assert.Equal(HttpStatusCode.BadRequest, (await HttpClient.PostAsJsonAsync($"/api/supermarkets/cycles/{cycle.Id}/send", command)).StatusCode);
-        (await HttpClient.PutAsJsonAsync($"/api/grocery-lists/{item.Id}", new UpdateGroceryItemDto { Name = "Changed", Quantity = 1, Checked = false })).EnsureSuccessStatusCode();
+        (await HttpClient.PutAsJsonAsync($"/api/shopping-lists/{item.Id}", new UpdateShoppingListItemDto { Name = "Changed", Quantity = 1, Checked = false })).EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.BadRequest, (await HttpClient.PostAsJsonAsync($"/api/supermarkets/cycles/{cycle.Id}/send", Selection(review))).StatusCode);
         Assert.Equal(0, Mock.AdditionCount);
     }
@@ -224,32 +224,32 @@ public class SupermarketControllerTests(CustomWebApplicationFactory factory) : T
     public async Task ProfileMapping_InitialChoiceIsAutomatic_ReplacementOptOutSurvivesFailedSelection()
     {
         await Connect(); var (cycle, manual) = await Prepare();
-        (await HttpClient.DeleteAsync($"/api/grocery-lists/{manual.Id}")).EnsureSuccessStatusCode();
+        (await HttpClient.DeleteAsync($"/api/shopping-lists/{manual.Id}")).EnsureSuccessStatusCode();
         var (profile, _, _) = await AddProfileMeal(cycle);
         await Send(cycle.Id, Selection((await Review(cycle.Id))!));
         var mappedProduct = (await Review(cycle.Id))!.Items.Single().Product!;
         Assert.Equal("s1001", mappedProduct.Id);
         Assert.Equal("Picnic Woknoedels", mappedProduct.Name);
         Assert.Equal("250 g", mappedProduct.Pack);
-        var failed = Selection((await Review(cycle.Id))!, "s-rejected") with { Items = (await Review(cycle.Id))!.Items.Select(x => new SupermarketSelectionDto { GroceryItemId = x.GroceryItemId, ProductId = "s-rejected", Quantity = 2, Remember = true }).ToList() };
+        var failed = Selection((await Review(cycle.Id))!, "s-rejected") with { Items = (await Review(cycle.Id))!.Items.Select(x => new SupermarketSelectionDto { ShoppingListItemId = x.ShoppingListItemId, ProductId = "s-rejected", Quantity = 2, Remember = true }).ToList() };
         Assert.Equal("Failed", (await Send(cycle.Id, failed)).Lines.Single().Outcome);
         await Send(cycle.Id, Selection((await Review(cycle.Id))!, "s1002"));
         Assert.Equal("s1001", (await Review(cycle.Id))!.Items.Single().Product!.Id);
-        Assert.Equal(2, (await HttpClient.GetFromJsonAsync<RecipeProfileDto>($"/api/recipe-profiles/{profile.Id}", JsonOptions))!.Products.Single().Quantity);
+        Assert.Equal(2, (await HttpClient.GetFromJsonAsync<RecipeProfileDto>($"/api/recipe-profiles/{profile.Id}", JsonOptions))!.Groceries.Single().Quantity);
     }
 
     [Fact]
     public async Task RepeatedProfileConflict_AccountsForAutomaticFirstTimeRemembering()
     {
         await Connect(); var (cycle, manual) = await Prepare();
-        (await HttpClient.DeleteAsync($"/api/grocery-lists/{manual.Id}")).EnsureSuccessStatusCode();
+        (await HttpClient.DeleteAsync($"/api/shopping-lists/{manual.Id}")).EnsureSuccessStatusCode();
         var (profile, _, recipeId) = await AddProfileMeal(cycle);
-        var planning = await HttpClient.GetFromJsonAsync<PlanningDto>($"/api/planning/cycle/{cycle.Id}", JsonOptions);
-        var response = await HttpClient.PostAsJsonAsync("/api/planning-meals", new AddPlanningMealDto { PlanningId = planning!.Id, RecipeId = recipeId, RecipeProfileId = profile.Id, Date = cycle.StartDate.AddDays(1) });
-        await MealGroceries((await response.Content.ReadFromJsonAsync<PlanningEntryDto>(JsonOptions))!.Id, profile.Products.Single().Id);
+        var mealPlan = await HttpClient.GetFromJsonAsync<MealPlanDto>($"/api/meal-plans/cycle/{cycle.Id}", JsonOptions);
+        var response = await HttpClient.PostAsJsonAsync("/api/planned-meals", new AddPlannedMealDto { MealPlanId = mealPlan!.Id, RecipeId = recipeId, RecipeProfileId = profile.Id, Date = cycle.StartDate.AddDays(1) });
+        await MealGroceryReview((await response.Content.ReadFromJsonAsync<PlannedEntryDto>(JsonOptions))!.Id, profile.Groceries.Single().Id);
         var review = (await Review(cycle.Id))!;
-        var ids = review.Items.Select(x => x.GroceryItemId).ToArray();
-        var bad = Selection(review) with { Items = [new SupermarketSelectionDto { GroceryItemId = ids[0], ProductId = "s1001", Quantity = 2, Remember = false }, new SupermarketSelectionDto { GroceryItemId = ids[1], ProductId = "s1002", Quantity = 2, Remember = false }], Totals = [new SupermarketQuantityDto { ProductId = "s1001", Quantity = 2 }, new SupermarketQuantityDto { ProductId = "s1002", Quantity = 2 }] };
+        var ids = review.Items.Select(x => x.ShoppingListItemId).ToArray();
+        var bad = Selection(review) with { Items = [new SupermarketSelectionDto { ShoppingListItemId = ids[0], ProductId = "s1001", Quantity = 2, Remember = false }, new SupermarketSelectionDto { ShoppingListItemId = ids[1], ProductId = "s1002", Quantity = 2, Remember = false }], Totals = [new SupermarketQuantityDto { ProductId = "s1001", Quantity = 2 }, new SupermarketQuantityDto { ProductId = "s1002", Quantity = 2 }] };
         Assert.Equal(HttpStatusCode.BadRequest, (await HttpClient.PostAsJsonAsync($"/api/supermarkets/cycles/{cycle.Id}/send", bad)).StatusCode);
         var send = await Send(cycle.Id, Selection(review));
         Assert.Equal(4, send.Lines.Single().Quantity);
@@ -269,12 +269,12 @@ public class SupermarketControllerTests(CustomWebApplicationFactory factory) : T
         {
             using var scope = Factory.Services.CreateScope();
             await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.ExecuteSqlRawAsync(
-                "CREATE TRIGGER fail_grocery_update BEFORE UPDATE ON GroceryItem BEGIN SELECT RAISE(ABORT, 'test persistence failure'); END");
+                "CREATE TRIGGER fail_grocery_update BEFORE UPDATE ON ShoppingListItem BEGIN SELECT RAISE(ABORT, 'test persistence failure'); END");
         };
         try
         {
             var send = await Send(cycle.Id, Selection((await Review(cycle.Id))!) with
-            { Items = [new SupermarketSelectionDto { GroceryItemId = first.Id, ProductId = "s1001", Quantity = 2, Remember = false }, new SupermarketSelectionDto { GroceryItemId = second.Id, ProductId = "s1003", Quantity = 1, Remember = false }], Totals = [new SupermarketQuantityDto { ProductId = "s1001", Quantity = 2 }, new SupermarketQuantityDto { ProductId = "s1003", Quantity = 1 }] });
+            { Items = [new SupermarketSelectionDto { ShoppingListItemId = first.Id, ProductId = "s1001", Quantity = 2, Remember = false }, new SupermarketSelectionDto { ShoppingListItemId = second.Id, ProductId = "s1003", Quantity = 1, Remember = false }], Totals = [new SupermarketQuantityDto { ProductId = "s1001", Quantity = 2 }, new SupermarketQuantityDto { ProductId = "s1003", Quantity = 1 }] });
             Assert.Equal(new[] { "Added", "NotAttempted" }, send.Lines.Select(x => x.Outcome));
             Assert.Equal("LocalPersistence", send.Lines.First().LocalWarning);
             Assert.Equal(1, Mock.AdditionCount);
@@ -334,7 +334,7 @@ public class SupermarketControllerTests(CustomWebApplicationFactory factory) : T
         await Connect(); var (cycle, first) = await Prepare(); var second = await AddItem(cycle.Id, "Milk"); var third = await AddItem(cycle.Id, "Rice");
         Mock.AfterAddition = () => UpdateSettings(x => x with { ProtectedToken = Factory.Services.GetRequiredService<PicnicSessions>().Protect("expired") });
         var send = await Send(cycle.Id, Selection((await Review(cycle.Id))!) with
-        { Items = [new SupermarketSelectionDto { GroceryItemId = first.Id, ProductId = "s1001", Quantity = 2, Remember = false }, new SupermarketSelectionDto { GroceryItemId = second.Id, ProductId = "s1003", Quantity = 1, Remember = false }, new SupermarketSelectionDto { GroceryItemId = third.Id, ProductId = "s1002", Quantity = 1, Remember = false }], Totals = [new SupermarketQuantityDto { ProductId = "s1001", Quantity = 2 }, new SupermarketQuantityDto { ProductId = "s1003", Quantity = 1 }, new SupermarketQuantityDto { ProductId = "s1002", Quantity = 1 }] });
+        { Items = [new SupermarketSelectionDto { ShoppingListItemId = first.Id, ProductId = "s1001", Quantity = 2, Remember = false }, new SupermarketSelectionDto { ShoppingListItemId = second.Id, ProductId = "s1003", Quantity = 1, Remember = false }, new SupermarketSelectionDto { ShoppingListItemId = third.Id, ProductId = "s1002", Quantity = 1, Remember = false }], Totals = [new SupermarketQuantityDto { ProductId = "s1001", Quantity = 2 }, new SupermarketQuantityDto { ProductId = "s1003", Quantity = 1 }, new SupermarketQuantityDto { ProductId = "s1002", Quantity = 1 }] });
         Assert.Equal(new[] { "Added", "Failed", "NotAttempted" }, send.Lines.Select(x => x.Outcome));
         Assert.Equal("SessionExpired", send.Lines[1].Reason);
         Assert.Equal("ReconnectRequired", (await Settings()).Status);
@@ -346,7 +346,7 @@ public class SupermarketControllerTests(CustomWebApplicationFactory factory) : T
     {
         await Connect(); var (cycle, first) = await Prepare(); var second = await AddItem(cycle.Id, "Milk");
         Mock.AfterAddition = () => UpdateSettings(x => new PicnicSettings { CountryCode = x.CountryCode });
-        var send = await Send(cycle.Id, Selection((await Review(cycle.Id))!) with { Items = [new SupermarketSelectionDto { GroceryItemId = first.Id, ProductId = "s1001", Quantity = 2, Remember = false }, new SupermarketSelectionDto { GroceryItemId = second.Id, ProductId = "s1003", Quantity = 1, Remember = false }], Totals = [new SupermarketQuantityDto { ProductId = "s1001", Quantity = 2 }, new SupermarketQuantityDto { ProductId = "s1003", Quantity = 1 }] });
+        var send = await Send(cycle.Id, Selection((await Review(cycle.Id))!) with { Items = [new SupermarketSelectionDto { ShoppingListItemId = first.Id, ProductId = "s1001", Quantity = 2, Remember = false }, new SupermarketSelectionDto { ShoppingListItemId = second.Id, ProductId = "s1003", Quantity = 1, Remember = false }], Totals = [new SupermarketQuantityDto { ProductId = "s1001", Quantity = 2 }, new SupermarketQuantityDto { ProductId = "s1003", Quantity = 1 }] });
         Assert.Equal(new[] { "Added", "NotAttempted" }, send.Lines.Select(x => x.Outcome));
         Assert.Equal(1, Mock.AdditionCount);
     }

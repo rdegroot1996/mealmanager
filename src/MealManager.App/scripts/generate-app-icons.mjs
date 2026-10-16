@@ -16,13 +16,19 @@ if (!restaurant) {
 }
 
 const paths = restaurant.slice(1);
-const background = '#fffaf3';
-const foreground = '#875536';
+const themeSource = await readFile(path.join(appRoot, 'src/styles.css'), 'utf8');
+function themeColor(name) {
+  const color = themeSource.match(new RegExp(`--color-${name}:\\s*(#[0-9a-fA-F]{6})`))?.[1];
+  if (!color) throw new Error(`Could not read the ${name} brand color.`);
+  return color;
+}
+const background = themeColor('secondary');
+const foreground = themeColor('primary');
 
 function createSvg({ scale = 1, rounded = false } = {}) {
   const inset = (24 * (1 - scale)) / 2;
   const transform = scale < 1 ? ` transform="translate(${inset} ${inset}) scale(${scale})"` : '';
-  const radius = rounded ? ' rx="5.25"' : '';
+  const radius = rounded ? ' rx="7"' : '';
   const pathElements = paths.map((data) => `    <path d="${data}"/>`).join('\n');
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -55,9 +61,9 @@ function createIco(png) {
   return Buffer.concat([header, entry, png]);
 }
 
-const standardSvg = createSvg({ scale: 0.78 });
-const maskableSvg = createSvg({ scale: 0.68 });
-const faviconSvg = createSvg({ rounded: true });
+const standardSvg = createSvg({ scale: 2 / 3 });
+const maskableSvg = createSvg({ scale: 0.6 });
+const faviconSvg = createSvg({ scale: 0.78, rounded: true });
 const temporaryFavicon = path.join(publicRoot, 'favicon-64.tmp.png');
 const browser = await chromium.launch({ headless: true });
 

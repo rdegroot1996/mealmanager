@@ -14,21 +14,21 @@
   </label>
 
   <fieldset>
-    <label class="mb-2 block font-medium" [for]="tagSearchId">{{ labelsHeading }}</label>
+    <label class="mb-2 block font-medium" [for]="tagSearchId">{{ tagsHeading }}</label>
     <div class="input flex w-full items-center gap-2 border-base-300 bg-base-100 h-11">
       <app-icon name="search" class="size-5 text-base-content/75" />
       <input
         class="min-w-0 grow max-[799px]:text-base"
         type="search"
         [id]="tagSearchId"
-        [placeholder]="searchLabelsPlaceholder"
+        [placeholder]="searchTagsPlaceholder"
         [value]="tagSearch()"
         (input)="tagSearch.set($any($event.target).value)"
       />
     </div>
 
     @if (selectedTags().length) {
-      <div class="mt-2 flex flex-wrap gap-2" [attr.aria-label]="selectedLabelsLabel">
+      <div class="mt-2 flex flex-wrap gap-2" [attr.aria-label]="selectedTagsLabel">
         @for (tag of selectedTags(); track tag) {
           <button
             type="button"
@@ -45,7 +45,7 @@
     <div
       class="mt-2 flex max-h-40 flex-col overflow-y-auto rounded-field bg-base-100 p-1"
       role="group"
-      [attr.aria-label]="availableLabelsLabel"
+      [attr.aria-label]="availableTagsLabel"
     >
       @for (tag of visibleTags(); track tag) {
         <label
@@ -60,7 +60,7 @@
           <span>{{ tag }}</span>
         </label>
       } @empty {
-        <p class="p-2 text-sm leading-[21px] text-base-content/75">{{ noMatchingLabels }}</p>
+        <p class="p-2 text-sm leading-[21px] text-base-content/75">{{ noMatchingTags }}</p>
       }
     </div>
   </fieldset>

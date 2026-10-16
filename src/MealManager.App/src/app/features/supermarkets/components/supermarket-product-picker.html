@@ -4,7 +4,7 @@
   (valueChange)="search($event, false)"
   (searched)="search()"
 />
-@if (row().profileProductId && !originalProductId()) {
+@if (row().recipeProfileGroceryItemId && !originalProductId()) {
   <p class="mt-3 text-sm text-base-content/75" i18n="@@supermarkets.firstChoiceHint">
     Your first choice is remembered for this recipe after a successful addition.
   </p>

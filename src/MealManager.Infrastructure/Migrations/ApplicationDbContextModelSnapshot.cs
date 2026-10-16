@@ -43,7 +43,7 @@ namespace MealManager.Infrastructure.Migrations
                     b.UseTpcMappingStrategy();
                 });
 
-            modelBuilder.Entity("MealManager.Domain.Entities.PlanningEntry", b =>
+            modelBuilder.Entity("MealManager.Domain.Entities.PlannedEntry", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
@@ -56,7 +56,7 @@ namespace MealManager.Infrastructure.Migrations
                         .HasMaxLength(13)
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("PlanningId")
+                    b.Property<Guid>("MealPlanId")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("SortOrder")
@@ -64,15 +64,15 @@ namespace MealManager.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("PlanningId", "Date", "SortOrder")
+                    b.HasIndex("MealPlanId", "Date", "SortOrder")
                         .IsUnique();
 
-                    b.ToTable("PlanningEntry", null, t =>
+                    b.ToTable("PlannedEntry", null, t =>
                         {
-                            t.HasCheckConstraint("CK_PlanningEntry_ValidKind", "(EntryType = 'meal' AND OriginalMealId IS NULL AND RecipeId IS NOT NULL AND RecipeProfileId IS NOT NULL) OR (EntryType = 'leftover' AND OriginalMealId IS NOT NULL AND RecipeId IS NULL AND RecipeProfileId IS NULL)");
+                            t.HasCheckConstraint("CK_PlannedEntry_ValidKind", "(EntryType = 'meal' AND OriginalMealId IS NULL AND RecipeId IS NOT NULL AND RecipeProfileId IS NOT NULL) OR (EntryType = 'leftover' AND OriginalMealId IS NOT NULL AND RecipeId IS NULL AND RecipeProfileId IS NULL)");
                         });
 
-                    b.HasDiscriminator<string>("EntryType").HasValue("PlanningEntry");
+                    b.HasDiscriminator<string>("EntryType").HasValue("PlannedEntry");
 
                     b.UseTphMappingStrategy();
                 });
@@ -272,42 +272,20 @@ namespace MealManager.Infrastructure.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("MealManager.Domain.Entities.GroceryItem", b =>
+            modelBuilder.Entity("MealManager.Domain.Entities.MealGroceryReview", b =>
                 {
                     b.HasBaseType("MealManager.Domain.Entities.BaseEntity");
 
-                    b.Property<bool>("Checked")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<Guid>("GroceryListId")
+                    b.Property<Guid>("PlannedMealId")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                    b.HasIndex("PlannedMealId")
+                        .IsUnique();
 
-                    b.Property<int>("Order")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<Guid?>("PlanningMealId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<Guid?>("RecipeProfileProductId")
-                        .HasColumnType("TEXT");
-
-                    b.HasIndex("GroceryListId");
-
-                    b.HasIndex("PlanningMealId");
-
-                    b.HasIndex("RecipeProfileProductId");
-
-                    b.ToTable("GroceryItem");
+                    b.ToTable("MealGroceryReview");
                 });
 
-            modelBuilder.Entity("MealManager.Domain.Entities.GroceryList", b =>
+            modelBuilder.Entity("MealManager.Domain.Entities.MealPlan", b =>
                 {
                     b.HasBaseType("MealManager.Domain.Entities.BaseEntity");
 
@@ -317,33 +295,7 @@ namespace MealManager.Infrastructure.Migrations
                     b.HasIndex("PlanningCycleId")
                         .IsUnique();
 
-                    b.ToTable("GroceryLists");
-                });
-
-            modelBuilder.Entity("MealManager.Domain.Entities.MealGroceries", b =>
-                {
-                    b.HasBaseType("MealManager.Domain.Entities.BaseEntity");
-
-                    b.Property<Guid>("PlanningMealId")
-                        .HasColumnType("TEXT");
-
-                    b.HasIndex("PlanningMealId")
-                        .IsUnique();
-
-                    b.ToTable("MealGroceries");
-                });
-
-            modelBuilder.Entity("MealManager.Domain.Entities.Planning", b =>
-                {
-                    b.HasBaseType("MealManager.Domain.Entities.BaseEntity");
-
-                    b.Property<Guid>("PlanningCycleId")
-                        .HasColumnType("TEXT");
-
-                    b.HasIndex("PlanningCycleId")
-                        .IsUnique();
-
-                    b.ToTable("Plannings");
+                    b.ToTable("MealPlans");
                 });
 
             modelBuilder.Entity("MealManager.Domain.Entities.PlanningCycle", b =>
@@ -362,24 +314,24 @@ namespace MealManager.Infrastructure.Migrations
                     b.ToTable("PlanningCycles");
                 });
 
-            modelBuilder.Entity("MealManager.Domain.Entities.PlanningNote", b =>
+            modelBuilder.Entity("MealManager.Domain.Entities.PlanningDayNote", b =>
                 {
                     b.HasBaseType("MealManager.Domain.Entities.BaseEntity");
 
                     b.Property<DateOnly>("Date")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("PlanningId")
+                    b.Property<Guid>("MealPlanId")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Text")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.HasIndex("PlanningId", "Date")
+                    b.HasIndex("MealPlanId", "Date")
                         .IsUnique();
 
-                    b.ToTable("PlanningNote");
+                    b.ToTable("PlanningDayNote");
                 });
 
             modelBuilder.Entity("MealManager.Domain.Entities.Recipe", b =>
@@ -474,7 +426,7 @@ namespace MealManager.Infrastructure.Migrations
                     b.ToTable("RecipeProfile");
                 });
 
-            modelBuilder.Entity("MealManager.Domain.Entities.RecipeProfileProduct", b =>
+            modelBuilder.Entity("MealManager.Domain.Entities.RecipeProfileGroceryItem", b =>
                 {
                     b.HasBaseType("MealManager.Domain.Entities.BaseEntity");
 
@@ -496,7 +448,7 @@ namespace MealManager.Infrastructure.Migrations
 
                     b.HasIndex("RecipeProfileId");
 
-                    b.ToTable("RecipeProfileProduct");
+                    b.ToTable("RecipeProfileGroceryItem");
                 });
 
             modelBuilder.Entity("MealManager.Domain.Entities.RecipeStep", b =>
@@ -534,6 +486,54 @@ namespace MealManager.Infrastructure.Migrations
                     b.ToTable("RecipeTag");
                 });
 
+            modelBuilder.Entity("MealManager.Domain.Entities.ShoppingList", b =>
+                {
+                    b.HasBaseType("MealManager.Domain.Entities.BaseEntity");
+
+                    b.Property<Guid>("PlanningCycleId")
+                        .HasColumnType("TEXT");
+
+                    b.HasIndex("PlanningCycleId")
+                        .IsUnique();
+
+                    b.ToTable("ShoppingLists");
+                });
+
+            modelBuilder.Entity("MealManager.Domain.Entities.ShoppingListItem", b =>
+                {
+                    b.HasBaseType("MealManager.Domain.Entities.BaseEntity");
+
+                    b.Property<bool>("Checked")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("PlannedMealId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("RecipeProfileGroceryItemId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ShoppingListId")
+                        .HasColumnType("TEXT");
+
+                    b.HasIndex("PlannedMealId");
+
+                    b.HasIndex("RecipeProfileGroceryItemId");
+
+                    b.HasIndex("ShoppingListId");
+
+                    b.ToTable("ShoppingListItem");
+                });
+
             modelBuilder.Entity("MealManager.Domain.Entities.SupermarketProductMapping", b =>
                 {
                     b.HasBaseType("MealManager.Domain.Entities.BaseEntity");
@@ -554,18 +554,18 @@ namespace MealManager.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("RecipeProfileProductId")
+                    b.Property<Guid>("RecipeProfileGroceryItemId")
                         .HasColumnType("TEXT");
 
-                    b.HasIndex("RecipeProfileProductId", "Provider")
+                    b.HasIndex("RecipeProfileGroceryItemId", "Provider")
                         .IsUnique();
 
                     b.ToTable("SupermarketProductMappings");
                 });
 
-            modelBuilder.Entity("MealManager.Domain.Entities.PlanningLeftover", b =>
+            modelBuilder.Entity("MealManager.Domain.Entities.PlannedLeftover", b =>
                 {
-                    b.HasBaseType("MealManager.Domain.Entities.PlanningEntry");
+                    b.HasBaseType("MealManager.Domain.Entities.PlannedEntry");
 
                     b.Property<Guid>("OriginalMealId")
                         .HasColumnType("TEXT");
@@ -575,15 +575,15 @@ namespace MealManager.Infrastructure.Migrations
 
                     b.ToTable(t =>
                         {
-                            t.HasCheckConstraint("CK_PlanningEntry_ValidKind", "(EntryType = 'meal' AND OriginalMealId IS NULL AND RecipeId IS NOT NULL AND RecipeProfileId IS NOT NULL) OR (EntryType = 'leftover' AND OriginalMealId IS NOT NULL AND RecipeId IS NULL AND RecipeProfileId IS NULL)");
+                            t.HasCheckConstraint("CK_PlannedEntry_ValidKind", "(EntryType = 'meal' AND OriginalMealId IS NULL AND RecipeId IS NOT NULL AND RecipeProfileId IS NOT NULL) OR (EntryType = 'leftover' AND OriginalMealId IS NOT NULL AND RecipeId IS NULL AND RecipeProfileId IS NULL)");
                         });
 
                     b.HasDiscriminator().HasValue("leftover");
                 });
 
-            modelBuilder.Entity("MealManager.Domain.Entities.PlanningMeal", b =>
+            modelBuilder.Entity("MealManager.Domain.Entities.PlannedMeal", b =>
                 {
-                    b.HasBaseType("MealManager.Domain.Entities.PlanningEntry");
+                    b.HasBaseType("MealManager.Domain.Entities.PlannedEntry");
 
                     b.Property<Guid>("RecipeId")
                         .HasColumnType("TEXT");
@@ -597,21 +597,21 @@ namespace MealManager.Infrastructure.Migrations
 
                     b.ToTable(t =>
                         {
-                            t.HasCheckConstraint("CK_PlanningEntry_ValidKind", "(EntryType = 'meal' AND OriginalMealId IS NULL AND RecipeId IS NOT NULL AND RecipeProfileId IS NOT NULL) OR (EntryType = 'leftover' AND OriginalMealId IS NOT NULL AND RecipeId IS NULL AND RecipeProfileId IS NULL)");
+                            t.HasCheckConstraint("CK_PlannedEntry_ValidKind", "(EntryType = 'meal' AND OriginalMealId IS NULL AND RecipeId IS NOT NULL AND RecipeProfileId IS NOT NULL) OR (EntryType = 'leftover' AND OriginalMealId IS NOT NULL AND RecipeId IS NULL AND RecipeProfileId IS NULL)");
                         });
 
                     b.HasDiscriminator().HasValue("meal");
                 });
 
-            modelBuilder.Entity("MealManager.Domain.Entities.PlanningEntry", b =>
+            modelBuilder.Entity("MealManager.Domain.Entities.PlannedEntry", b =>
                 {
-                    b.HasOne("MealManager.Domain.Entities.Planning", "Planning")
+                    b.HasOne("MealManager.Domain.Entities.MealPlan", "MealPlan")
                         .WithMany("Entries")
-                        .HasForeignKey("PlanningId")
+                        .HasForeignKey("MealPlanId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Planning");
+                    b.Navigation("MealPlan");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
@@ -665,31 +665,18 @@ namespace MealManager.Infrastructure.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("MealManager.Domain.Entities.GroceryItem", b =>
+            modelBuilder.Entity("MealManager.Domain.Entities.MealGroceryReview", b =>
                 {
-                    b.HasOne("MealManager.Domain.Entities.GroceryList", "GroceryList")
-                        .WithMany("Groceries")
-                        .HasForeignKey("GroceryListId")
+                    b.HasOne("MealManager.Domain.Entities.PlannedMeal", "PlannedMeal")
+                        .WithOne("GroceryReview")
+                        .HasForeignKey("MealManager.Domain.Entities.MealGroceryReview", "PlannedMealId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("MealManager.Domain.Entities.PlanningMeal", "PlanningMeal")
-                        .WithMany()
-                        .HasForeignKey("PlanningMealId");
-
-                    b.HasOne("MealManager.Domain.Entities.RecipeProfileProduct", "RecipeProfileProduct")
-                        .WithMany()
-                        .HasForeignKey("RecipeProfileProductId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("GroceryList");
-
-                    b.Navigation("PlanningMeal");
-
-                    b.Navigation("RecipeProfileProduct");
+                    b.Navigation("PlannedMeal");
                 });
 
-            modelBuilder.Entity("MealManager.Domain.Entities.GroceryList", b =>
+            modelBuilder.Entity("MealManager.Domain.Entities.MealPlan", b =>
                 {
                     b.HasOne("MealManager.Domain.Entities.PlanningCycle", "PlanningCycle")
                         .WithMany()
@@ -700,37 +687,15 @@ namespace MealManager.Infrastructure.Migrations
                     b.Navigation("PlanningCycle");
                 });
 
-            modelBuilder.Entity("MealManager.Domain.Entities.MealGroceries", b =>
+            modelBuilder.Entity("MealManager.Domain.Entities.PlanningDayNote", b =>
                 {
-                    b.HasOne("MealManager.Domain.Entities.PlanningMeal", "PlanningMeal")
-                        .WithOne("Groceries")
-                        .HasForeignKey("MealManager.Domain.Entities.MealGroceries", "PlanningMealId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("PlanningMeal");
-                });
-
-            modelBuilder.Entity("MealManager.Domain.Entities.Planning", b =>
-                {
-                    b.HasOne("MealManager.Domain.Entities.PlanningCycle", "PlanningCycle")
-                        .WithMany()
-                        .HasForeignKey("PlanningCycleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("PlanningCycle");
-                });
-
-            modelBuilder.Entity("MealManager.Domain.Entities.PlanningNote", b =>
-                {
-                    b.HasOne("MealManager.Domain.Entities.Planning", "Planning")
+                    b.HasOne("MealManager.Domain.Entities.MealPlan", "MealPlan")
                         .WithMany("Notes")
-                        .HasForeignKey("PlanningId")
+                        .HasForeignKey("MealPlanId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Planning");
+                    b.Navigation("MealPlan");
                 });
 
             modelBuilder.Entity("MealManager.Domain.Entities.RecipeImage", b =>
@@ -766,10 +731,10 @@ namespace MealManager.Infrastructure.Migrations
                     b.Navigation("Recipe");
                 });
 
-            modelBuilder.Entity("MealManager.Domain.Entities.RecipeProfileProduct", b =>
+            modelBuilder.Entity("MealManager.Domain.Entities.RecipeProfileGroceryItem", b =>
                 {
                     b.HasOne("MealManager.Domain.Entities.RecipeProfile", "RecipeProfile")
-                        .WithMany("Products")
+                        .WithMany("Groceries")
                         .HasForeignKey("RecipeProfileId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -799,20 +764,55 @@ namespace MealManager.Infrastructure.Migrations
                     b.Navigation("Recipe");
                 });
 
-            modelBuilder.Entity("MealManager.Domain.Entities.SupermarketProductMapping", b =>
+            modelBuilder.Entity("MealManager.Domain.Entities.ShoppingList", b =>
                 {
-                    b.HasOne("MealManager.Domain.Entities.RecipeProfileProduct", "RecipeProfileProduct")
+                    b.HasOne("MealManager.Domain.Entities.PlanningCycle", "PlanningCycle")
                         .WithMany()
-                        .HasForeignKey("RecipeProfileProductId")
+                        .HasForeignKey("PlanningCycleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("RecipeProfileProduct");
+                    b.Navigation("PlanningCycle");
                 });
 
-            modelBuilder.Entity("MealManager.Domain.Entities.PlanningLeftover", b =>
+            modelBuilder.Entity("MealManager.Domain.Entities.ShoppingListItem", b =>
                 {
-                    b.HasOne("MealManager.Domain.Entities.PlanningMeal", "OriginalMeal")
+                    b.HasOne("MealManager.Domain.Entities.PlannedMeal", "PlannedMeal")
+                        .WithMany()
+                        .HasForeignKey("PlannedMealId");
+
+                    b.HasOne("MealManager.Domain.Entities.RecipeProfileGroceryItem", "RecipeProfileGroceryItem")
+                        .WithMany()
+                        .HasForeignKey("RecipeProfileGroceryItemId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("MealManager.Domain.Entities.ShoppingList", "ShoppingList")
+                        .WithMany("Items")
+                        .HasForeignKey("ShoppingListId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PlannedMeal");
+
+                    b.Navigation("RecipeProfileGroceryItem");
+
+                    b.Navigation("ShoppingList");
+                });
+
+            modelBuilder.Entity("MealManager.Domain.Entities.SupermarketProductMapping", b =>
+                {
+                    b.HasOne("MealManager.Domain.Entities.RecipeProfileGroceryItem", "RecipeProfileGroceryItem")
+                        .WithMany()
+                        .HasForeignKey("RecipeProfileGroceryItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RecipeProfileGroceryItem");
+                });
+
+            modelBuilder.Entity("MealManager.Domain.Entities.PlannedLeftover", b =>
+                {
+                    b.HasOne("MealManager.Domain.Entities.PlannedMeal", "OriginalMeal")
                         .WithMany("Leftovers")
                         .HasForeignKey("OriginalMealId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -821,7 +821,7 @@ namespace MealManager.Infrastructure.Migrations
                     b.Navigation("OriginalMeal");
                 });
 
-            modelBuilder.Entity("MealManager.Domain.Entities.PlanningMeal", b =>
+            modelBuilder.Entity("MealManager.Domain.Entities.PlannedMeal", b =>
                 {
                     b.HasOne("MealManager.Domain.Entities.Recipe", "Recipe")
                         .WithMany()
@@ -840,12 +840,7 @@ namespace MealManager.Infrastructure.Migrations
                     b.Navigation("RecipeProfile");
                 });
 
-            modelBuilder.Entity("MealManager.Domain.Entities.GroceryList", b =>
-                {
-                    b.Navigation("Groceries");
-                });
-
-            modelBuilder.Entity("MealManager.Domain.Entities.Planning", b =>
+            modelBuilder.Entity("MealManager.Domain.Entities.MealPlan", b =>
                 {
                     b.Navigation("Entries");
 
@@ -867,12 +862,17 @@ namespace MealManager.Infrastructure.Migrations
 
             modelBuilder.Entity("MealManager.Domain.Entities.RecipeProfile", b =>
                 {
-                    b.Navigation("Products");
+                    b.Navigation("Groceries");
                 });
 
-            modelBuilder.Entity("MealManager.Domain.Entities.PlanningMeal", b =>
+            modelBuilder.Entity("MealManager.Domain.Entities.ShoppingList", b =>
                 {
-                    b.Navigation("Groceries");
+                    b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("MealManager.Domain.Entities.PlannedMeal", b =>
+                {
+                    b.Navigation("GroceryReview");
 
                     b.Navigation("Leftovers");
                 });

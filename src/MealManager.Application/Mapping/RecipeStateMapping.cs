@@ -41,13 +41,13 @@ public static class RecipeStateMapping
         Id = profile.Id,
         Name = profile.Name,
         Servings = profile.Servings,
-        Products = profile.Products,
+        Groceries = profile.Groceries,
         ProfileVersion = Version(new
         {
             profile.Id,
             profile.Name,
             profile.Servings,
-            Products = profile.Products.OrderBy(row => row.Order).ThenBy(row => row.Id)
+            Groceries = profile.Groceries.OrderBy(row => row.Order).ThenBy(row => row.Id)
         }),
     };
 }

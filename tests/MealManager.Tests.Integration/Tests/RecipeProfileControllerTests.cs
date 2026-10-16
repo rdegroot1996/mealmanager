@@ -45,7 +45,7 @@ public class RecipeProfileControllerTests(CustomWebApplicationFactory factory) :
     }
 
     [Fact]
-    public async Task AddRecipeProfile_CreatesInitialProducts()
+    public async Task AddRecipeProfile_CreatesInitialGroceries()
     {
         var recipe = await CreateRecipeAsync();
 
@@ -54,9 +54,9 @@ public class RecipeProfileControllerTests(CustomWebApplicationFactory factory) :
             RecipeId = recipe.Id,
             Name = "Family",
             Servings = 4,
-            Products =
+            Groceries =
             [
-                new RecipeProfileProductInputDto
+                new RecipeProfileGroceryItemInputDto
                 {
                     Id = Guid.Empty,
                     Name = "Flour",
@@ -68,10 +68,10 @@ public class RecipeProfileControllerTests(CustomWebApplicationFactory factory) :
 
         response.EnsureSuccessStatusCode();
         var profile = (await response.Content.ReadFromJsonAsync<RecipeProfileDto>(JsonOptions))!;
-        var product = Assert.Single(profile.Products);
-        Assert.NotEqual(Guid.Empty, product.Id);
-        Assert.Equal("Flour", product.Name);
-        Assert.True(product.AtHome);
+        var item = Assert.Single(profile.Groceries);
+        Assert.NotEqual(Guid.Empty, item.Id);
+        Assert.Equal("Flour", item.Name);
+        Assert.True(item.AtHome);
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public class RecipeProfileControllerTests(CustomWebApplicationFactory factory) :
         {
             Name = "Updated",
             Servings = 6,
-            Products = [],
+            Groceries = [],
         });
         updateResponse.EnsureSuccessStatusCode();
 
@@ -120,7 +120,7 @@ public class RecipeProfileControllerTests(CustomWebApplicationFactory factory) :
     }
 
     [Fact]
-    public async Task UpdateRecipeProfile_UpdatesExistingProducts()
+    public async Task UpdateRecipeProfile_UpdatesExistingGroceries()
     {
         var recipe = await CreateRecipeAsync();
         var addResponse = await HttpClient.PostAsJsonAsync("/api/recipe-profiles", new AddRecipeProfileDto
@@ -132,34 +132,34 @@ public class RecipeProfileControllerTests(CustomWebApplicationFactory factory) :
         var created = await addResponse.Content.ReadFromJsonAsync<RecipeProfileDto>(JsonOptions);
         Assert.NotNull(created);
 
-        var productId = Guid.NewGuid();
+        var groceryItemId = Guid.NewGuid();
         await HttpClient.PutAsJsonAsync($"/api/recipe-profiles/{created.Id}", new UpdateRecipeProfileDto
         {
             Name = created.Name,
             Servings = created.Servings,
-            Products = [new RecipeProfileProductInputDto { Id = productId, Name = "Pasta", Quantity = 2, AtHome = false }],
+            Groceries = [new RecipeProfileGroceryItemInputDto { Id = groceryItemId, Name = "Pasta", Quantity = 2, AtHome = false }],
         });
 
         var updateResponse = await HttpClient.PutAsJsonAsync($"/api/recipe-profiles/{created.Id}", new UpdateRecipeProfileDto
         {
             Name = created.Name,
             Servings = created.Servings,
-            Products = [new RecipeProfileProductInputDto { Id = productId, Name = "Whole-wheat pasta", Quantity = 3, AtHome = true }],
+            Groceries = [new RecipeProfileGroceryItemInputDto { Id = groceryItemId, Name = "Whole-wheat pasta", Quantity = 3, AtHome = true }],
         });
         updateResponse.EnsureSuccessStatusCode();
 
         var updated = await updateResponse.Content.ReadFromJsonAsync<RecipeProfileDto>(JsonOptions);
         Assert.NotNull(updated);
-        var product = Assert.Single(updated.Products);
-        Assert.Equal(productId, product.Id);
-        Assert.Equal("Whole-wheat pasta", product.Name);
-        Assert.Equal(3, product.Quantity);
-        Assert.True(product.AtHome);
-        Assert.Equal(0, product.Order);
+        var item = Assert.Single(updated.Groceries);
+        Assert.Equal(groceryItemId, item.Id);
+        Assert.Equal("Whole-wheat pasta", item.Name);
+        Assert.Equal(3, item.Quantity);
+        Assert.True(item.AtHome);
+        Assert.Equal(0, item.Order);
     }
 
     [Fact]
-    public async Task UpdateRecipeProfile_CreatesProductsWithEmptyIds()
+    public async Task UpdateRecipeProfile_CreatesGroceriesWithEmptyIds()
     {
         var recipe = await CreateRecipeAsync();
         var addResponse = await HttpClient.PostAsJsonAsync("/api/recipe-profiles", new AddRecipeProfileDto
@@ -175,19 +175,19 @@ public class RecipeProfileControllerTests(CustomWebApplicationFactory factory) :
         {
             Name = created.Name,
             Servings = created.Servings,
-            Products =
+            Groceries =
             [
-                new RecipeProfileProductInputDto { Id = Guid.Empty, Name = "Pasta", Quantity = 2, AtHome = false },
-                new RecipeProfileProductInputDto { Id = Guid.Empty, Name = "Sauce", Quantity = 1, AtHome = false },
+                new RecipeProfileGroceryItemInputDto { Id = Guid.Empty, Name = "Pasta", Quantity = 2, AtHome = false },
+                new RecipeProfileGroceryItemInputDto { Id = Guid.Empty, Name = "Sauce", Quantity = 1, AtHome = false },
             ],
         });
         response.EnsureSuccessStatusCode();
 
         var updated = await response.Content.ReadFromJsonAsync<RecipeProfileDto>(JsonOptions);
         Assert.NotNull(updated);
-        Assert.Equal(2, updated.Products.Count);
-        Assert.All(updated.Products, product => Assert.NotEqual(Guid.Empty, product.Id));
-        Assert.Equal(2, updated.Products.Select(product => product.Id).Distinct().Count());
+        Assert.Equal(2, updated.Groceries.Count);
+        Assert.All(updated.Groceries, item => Assert.NotEqual(Guid.Empty, item.Id));
+        Assert.Equal(2, updated.Groceries.Select(item => item.Id).Distinct().Count());
     }
 
     [Fact]
@@ -264,13 +264,13 @@ public class RecipeProfileControllerTests(CustomWebApplicationFactory factory) :
     {
         var response = await HttpClient.PutAsJsonAsync(
             $"/api/recipe-profiles/{Guid.NewGuid()}",
-            new UpdateRecipeProfileDto { Name = "Missing", Servings = 2, Products = [] });
+            new UpdateRecipeProfileDto { Name = "Missing", Servings = 2, Groceries = [] });
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
-    public async Task UpdateRecipeProfile_InvalidProduct_ReturnsBadRequest()
+    public async Task UpdateRecipeProfile_InvalidGroceryItem_ReturnsBadRequest()
     {
         var recipe = await CreateRecipeAsync();
         var profile = Assert.Single(recipe.Profiles);
@@ -280,7 +280,7 @@ public class RecipeProfileControllerTests(CustomWebApplicationFactory factory) :
             {
                 Name = profile.Name,
                 Servings = profile.Servings,
-                Products = [new RecipeProfileProductInputDto { Id = Guid.Empty, Name = "", Quantity = 0, AtHome = false }],
+                Groceries = [new RecipeProfileGroceryItemInputDto { Id = Guid.Empty, Name = "", Quantity = 0, AtHome = false }],
             });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -297,7 +297,7 @@ public class RecipeProfileControllerTests(CustomWebApplicationFactory factory) :
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task UpdateRecipeProfile_RejectsDuplicateOrForeignProductIds(bool foreign)
+    public async Task UpdateRecipeProfile_RejectsDuplicateOrForeignGroceryItemIds(bool foreign)
     {
         var recipe = await CreateRecipeAsync();
         var ownId = Assert.Single(recipe.Profiles).Id;
@@ -306,41 +306,41 @@ public class RecipeProfileControllerTests(CustomWebApplicationFactory factory) :
             RecipeId = recipe.Id,
             Name = "Other",
             Servings = 2,
-            Products = [new RecipeProfileProductInputDto { Name = "Rice", Quantity = 1, AtHome = false }],
+            Groceries = [new RecipeProfileGroceryItemInputDto { Name = "Rice", Quantity = 1, AtHome = false }],
         });
         var other = (await otherResponse.Content.ReadFromJsonAsync<RecipeProfileDto>(JsonOptions))!;
-        var row = new RecipeProfileProductInputDto { Id = foreign ? Assert.Single(other.Products).Id : Guid.NewGuid(), Name = "Rice", Quantity = 1, AtHome = false };
+        var row = new RecipeProfileGroceryItemInputDto { Id = foreign ? Assert.Single(other.Groceries).Id : Guid.NewGuid(), Name = "Rice", Quantity = 1, AtHome = false };
         var response = await HttpClient.PutAsJsonAsync($"/api/recipe-profiles/{ownId}", new UpdateRecipeProfileDto
         {
             Name = "Should not save",
             Servings = 2,
-            Products = foreign ? [row] : [row, row],
+            Groceries = foreign ? [row] : [row, row],
         });
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         await AssertProblemCode(response, "ValidationError");
         var unchanged = await HttpClient.GetFromJsonAsync<RecipeProfileDto>($"/api/recipe-profiles/{ownId}", JsonOptions);
         Assert.Equal("Default", unchanged!.Name);
-        Assert.Empty(unchanged.Products);
+        Assert.Empty(unchanged.Groceries);
     }
 
     [Fact]
-    public async Task RecipeProfileMutations_RejectOverlongProductNames()
+    public async Task RecipeProfileMutations_RejectOverlongGroceryItemNames()
     {
         var recipe = await CreateRecipeAsync();
-        var row = new RecipeProfileProductInputDto { Name = new string('a', 201), Quantity = 1, AtHome = false };
+        var row = new RecipeProfileGroceryItemInputDto { Name = new string('a', 201), Quantity = 1, AtHome = false };
         var create = await HttpClient.PostAsJsonAsync("/api/recipe-profiles", new AddRecipeProfileDto
         {
             RecipeId = recipe.Id,
             Name = "New",
             Servings = 2,
-            Products = [row],
+            Groceries = [row],
         });
         Assert.Equal(HttpStatusCode.BadRequest, create.StatusCode);
         var update = await HttpClient.PutAsJsonAsync($"/api/recipe-profiles/{Assert.Single(recipe.Profiles).Id}", new UpdateRecipeProfileDto
         {
             Name = "Default",
             Servings = 2,
-            Products = [row],
+            Groceries = [row],
         });
         Assert.Equal(HttpStatusCode.BadRequest, update.StatusCode);
     }

@@ -1,5 +1,5 @@
 import { DateTime } from 'luxon';
-import { plannings } from './plannings';
+import { mealPlans } from './meal-plans';
 import { ACTIVE_CYCLE_ID, createPlanningCycles } from './planning-cycles';
 import { recipes } from './recipes';
 
@@ -11,15 +11,15 @@ describe('mock data relationships', () => {
   });
 
   it('links every planned meal to a profile owned by its recipe', () => {
-    for (const planning of Object.values(plannings)) {
-      for (const meal of planning.meals) {
+    for (const mealPlan of Object.values(mealPlans)) {
+      for (const meal of mealPlan.meals) {
         const recipe = recipes.find((item) => item.id === meal.recipe.id);
 
         expect(recipe?.profiles.some((profile) => profile.id === meal.recipeProfile.id)).toBe(true);
       }
 
-      for (const leftover of planning.leftovers) {
-        expect(planning.meals.some((meal) => meal.id === leftover.originalMealId)).toBe(true);
+      for (const leftover of mealPlan.leftovers) {
+        expect(mealPlan.meals.some((meal) => meal.id === leftover.originalMealId)).toBe(true);
       }
     }
   });
@@ -32,11 +32,11 @@ describe('mock data relationships', () => {
     expect(activeCycle.endDate).toBe('2026-09-11');
   });
 
-  it('uses globally unique identifiers for recipe rows and profile products', () => {
+  it('uses globally unique identifiers for recipe rows and profile groceries', () => {
     const groups = [
       recipes.flatMap((recipe) => recipe.ingredients),
       recipes.flatMap((recipe) => recipe.steps),
-      recipes.flatMap((recipe) => recipe.profiles.flatMap((profile) => profile.products)),
+      recipes.flatMap((recipe) => recipe.profiles.flatMap((profile) => profile.groceries)),
     ];
     for (const rows of groups) expect(new Set(rows.map((row) => row.id)).size).toBe(rows.length);
   });

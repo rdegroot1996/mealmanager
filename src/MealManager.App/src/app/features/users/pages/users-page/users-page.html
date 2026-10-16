@@ -62,8 +62,8 @@
             class="btn btn-ghost btn-square size-11 min-h-11"
             type="button"
             (click)="form.open(user)"
-            aria-label="Edit"
-            i18n-aria-label="@@users.usersPage.template.edit"
+            [attr.aria-label]="editItemLabel(user.displayName)"
+            [attr.title]="editItemLabel(user.displayName)"
           >
             <app-icon name="edit" class="size-5" />
           </button>

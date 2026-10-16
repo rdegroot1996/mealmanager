@@ -26,6 +26,16 @@ export class ConfirmationModal {
   private resolver: ((confirmed: boolean) => void) | null = null;
   private pending: Promise<boolean> | null = null;
 
+  confirmDiscard(): Promise<boolean> {
+    return this.open({
+      title: $localize`:@@recipes.editRecipePage.discardUnsavedChanges:Discard unsaved changes?`,
+      message: $localize`:@@common.unsavedDialogChanges:Your changes have not been saved. If you close now, they will be lost.`,
+      cancelLabel: $localize`:@@recipes.keepEditing:Keep editing`,
+      confirmLabel: $localize`:@@recipes.discardChanges:Discard changes`,
+      destructive: true,
+    });
+  }
+
   open(options: ConfirmationOptions): Promise<boolean> {
     if (this.pending) return this.pending;
 

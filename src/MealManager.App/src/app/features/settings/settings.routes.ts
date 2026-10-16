@@ -8,6 +8,4 @@ export const SETTINGS_ROUTES: Routes = [
     component: SettingsPage,
     title: $localize`:@@settings.title:Settings`,
   },
-  { path: 'users', pathMatch: 'full', redirectTo: '' },
-  { path: 'supermarkets', pathMatch: 'full', redirectTo: '' },
 ];

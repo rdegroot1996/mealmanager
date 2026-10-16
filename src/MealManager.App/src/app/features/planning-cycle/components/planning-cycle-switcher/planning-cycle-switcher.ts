@@ -37,6 +37,9 @@ export class PlanningCycleSwitcher {
   next() {
     this.navigate(this.cycleStore.currentCycle()?.nextPlanningCycleId ?? null);
   }
+  returnToActive() {
+    this.navigate('active');
+  }
   retry() {
     this.navigate(this.retryId);
   }
@@ -45,8 +48,9 @@ export class PlanningCycleSwitcher {
     this.retryId = id;
     this.pending.set(true);
     this.error.set('');
-    this.request = this.cycleStore
-      .loadCycle(id)
+    this.request = (
+      id === 'active' ? this.cycleStore.loadCurrentCycle() : this.cycleStore.loadCycle(id)
+    )
       .pipe(finalize(() => this.pending.set(false)))
       .subscribe({
         next: (cycle) => this.cycleChanged.emit(cycle.id),

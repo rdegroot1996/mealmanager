@@ -1,5 +1,5 @@
-<app-modal #modal (closed)="endSession()">
-  <h2 modal-title i18n="@@recipes.addToPlanner">Add to Planner</h2>
+<app-modal #modal [busy]="saving()" (closed)="endSession()">
+  <h2 modal-title i18n="@@recipes.addToPlanner">Add to planner</h2>
   <p class="mb-4" i18n="@@recipes.planRecipeModal.template.whenDoYouWantToAdd">
     When do you want to add <strong>{{ recipe().name }}</strong
     >?
@@ -16,7 +16,7 @@
       [disabled]="saving()"
       [days]="days()"
       [(selectedDate)]="selectedDate"
-      i18n-placeholder="@@planning.selectDayPlaceholder"
+      i18n-placeholder="@@planner.selectDayPlaceholder"
       placeholder="Select a day..."
     />
   }
@@ -33,7 +33,7 @@
       @if (saving()) {
         <ng-container i18n="@@common.adding">Adding…</ng-container>
       } @else {
-        <ng-container i18n="@@recipes.addToPlanner">Add to Planner</ng-container>
+        <ng-container i18n="@@recipes.addToPlanner">Add to planner</ng-container>
       }
     </button>
   </div>

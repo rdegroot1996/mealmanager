@@ -61,7 +61,7 @@ describe('FavoriteRecipes', () => {
     );
     expect(card.querySelector('.line-clamp-2')).not.toBeNull();
     const favoriteButton = fixture.nativeElement.querySelector(
-      'button[aria-label="Remove from favorites"]',
+      'button[aria-label="Remove Pasta from favorites"]',
     );
     expect(favoriteButton).not.toBeNull();
     expect(card.contains(favoriteButton)).toBe(false);

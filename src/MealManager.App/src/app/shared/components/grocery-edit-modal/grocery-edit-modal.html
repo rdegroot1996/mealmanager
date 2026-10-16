@@ -1,4 +1,4 @@
-<app-modal #modal (closed)="closed.emit()">
+<app-modal #modal [busy]="disabled()" [beforeDismiss]="beforeDismiss" (closed)="closed.emit()">
   <h2 modal-title>
     @if (creating()) {
       <ng-container i18n="@@groceries.addItemTitle">Add grocery item</ng-container>
@@ -126,3 +126,5 @@
     }
   </button>
 </app-modal>
+
+<app-confirmation-modal #discardModal />

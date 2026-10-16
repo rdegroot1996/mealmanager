@@ -29,16 +29,16 @@ test('upcoming meals retain nearer meals and leftovers when the active cycle is 
     steps: [],
   });
   const old = await post('/api/planning-cycles', { startDate: date(-2), endDate: date(1) });
-  const planning = await (await page.request.get(`/api/planning/cycle/${old.id}`)).json();
-  const meal = await post('/api/planning-meals', {
-    planningId: planning.id,
+  const mealPlan = await (await page.request.get(`/api/meal-plans/cycle/${old.id}`)).json();
+  const meal = await post('/api/planned-meals', {
+    mealPlanId: mealPlan.id,
     date: date(-1),
     recipeId: recipe.id,
     recipeProfileId: recipe.profiles[0].id,
   });
-  await post(`/api/planning-meals/${meal.id}/leftovers`, { date: date(0) });
-  await post('/api/planning-meals', {
-    planningId: planning.id,
+  await post(`/api/planned-meals/${meal.id}/leftovers`, { date: date(0) });
+  await post('/api/planned-meals', {
+    mealPlanId: mealPlan.id,
     date: date(1),
     recipeId: recipe.id,
     recipeProfileId: recipe.profiles[0].id,
@@ -67,19 +67,19 @@ test('shopping suggestions reuse historical names without saving or changing qua
     startDate: '2026-01-01',
     endDate: '2026-01-04',
   });
-  await post(`/api/grocery-lists/cycle/${old.id}/items`, { name: 'wc papier', quantity: 4 });
+  await post(`/api/shopping-lists/cycle/${old.id}/items`, { name: 'wc papier', quantity: 4 });
   const current = await post('/api/planning-cycles', {
     startDate: '2026-01-05',
     endDate: '2026-01-08',
   });
-  await page.goto('/groceries');
+  await page.goto('/shopping-list');
   await page.getByRole('button', { name: 'Add item', exact: true }).click();
   await page.getByRole('spinbutton', { name: 'Quantity', exact: true }).fill('2');
   const editor = page.getByRole('dialog', { name: 'Add grocery item', exact: true });
   const queries: string[] = [];
   page.on('request', (request) => {
     const url = new URL(request.url());
-    if (url.pathname === '/api/grocery-lists/suggestions')
+    if (url.pathname === '/api/shopping-lists/suggestions')
       queries.push(url.searchParams.get('search')!);
   });
   await page.getByLabel('Item name').pressSequentially('wc', { delay: 20 });
@@ -97,13 +97,13 @@ test('shopping suggestions reuse historical names without saving or changing qua
   await expect(dropdown).toBeHidden();
   await expect(page.getByLabel('Item name')).toHaveValue('wc papier');
   await expect(page.getByRole('spinbutton', { name: 'Quantity', exact: true })).toHaveValue('2');
-  const before = await (await page.request.get(`/api/grocery-lists/cycle/${current.id}`)).json();
-  expect(before.groceries).toHaveLength(0);
+  const before = await (await page.request.get(`/api/shopping-lists/cycle/${current.id}`)).json();
+  expect(before.items).toHaveLength(0);
   await page.getByRole('button', { name: 'Add', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Edit wc papier', exact: true })).toBeVisible();
-  const saved = await (await page.request.get(`/api/grocery-lists/cycle/${current.id}`)).json();
+  const saved = await (await page.request.get(`/api/shopping-lists/cycle/${current.id}`)).json();
   expect(
-    saved.groceries.map((item: { name: string; quantity: number }) => ({
+    saved.items.map((item: { name: string; quantity: number }) => ({
       name: item.name,
       quantity: item.quantity,
     })),

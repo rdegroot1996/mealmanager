@@ -18,7 +18,7 @@ export interface ApiRecipeImage {
   order: number;
 }
 
-export interface ApiRecipeProduct {
+export interface ApiRecipeProfileGroceryItem {
   id: string;
   name: string;
   quantity: number;
@@ -30,7 +30,7 @@ export interface ApiRecipeProfile {
   id: string;
   name: string;
   servings: number;
-  products: ApiRecipeProduct[];
+  groceries: ApiRecipeProfileGroceryItem[];
 }
 
 export interface ApiRecipe {

@@ -1,0 +1,24 @@
+<app-grocery-row
+  [item]="item()"
+  [disabled]="pending()"
+  (moveRequested)="moveRequested.emit($event)"
+  (saved)="save($event)"
+  (removed)="removed.emit(item().id)"
+>
+  <label class="min-h-11 flex min-w-0 flex-1 cursor-pointer items-center gap-2">
+    <input
+      type="checkbox"
+      class="checkbox checkbox-sm checkbox-success max-[799px]:text-base"
+      [checked]="item().checked"
+      [disabled]="pending()"
+      (change)="toggled.emit(item())"
+    />
+    <span
+      class="min-w-0 break-words [overflow-wrap:anywhere]"
+      [class.line-through]="item().checked"
+      [class.text-base-content/75]="item().checked"
+    >
+      {{ item().name }}
+    </span>
+  </label>
+</app-grocery-row>

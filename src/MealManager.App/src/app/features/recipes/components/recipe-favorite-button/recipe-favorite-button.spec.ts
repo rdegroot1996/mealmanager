@@ -12,7 +12,7 @@ describe('RecipeFavoriteButton', () => {
       providers: [provideHttpClient(), provideHttpClientTesting()],
     });
     fixture = TestBed.createComponent(RecipeFavoriteButton);
-    fixture.componentRef.setInput('recipe', { id: 'recipe-1', isFavorite: false });
+    fixture.componentRef.setInput('recipe', { id: 'recipe-1', name: 'Pasta', isFavorite: false });
     http = TestBed.inject(HttpTestingController);
   });
 
@@ -25,6 +25,8 @@ describe('RecipeFavoriteButton', () => {
     expect(button.classList).toContain('btn-circle');
     expect(button.querySelectorAll('app-icon')).toHaveLength(1);
     expect(button.getAttribute('aria-pressed')).toBe('false');
+    expect(button.getAttribute('aria-label')).toBe('Add Pasta to favorites');
+    expect(button.title).toBe('Add Pasta to favorites');
     expect(button.querySelector('app-icon')?.classList).toContain('block');
 
     button.click();
@@ -39,5 +41,9 @@ describe('RecipeFavoriteButton', () => {
       isFavorite: true,
     });
     http.expectOne('/api/recipes?favorite=true&sort=RecentPlanningPopularity').flush([]);
+    fixture.componentRef.setInput('recipe', { id: 'recipe-1', name: 'Pasta', isFavorite: true });
+    fixture.detectChanges();
+    expect(button.getAttribute('aria-label')).toBe('Remove Pasta from favorites');
+    expect(button.title).toBe('Remove Pasta from favorites');
   });
 });

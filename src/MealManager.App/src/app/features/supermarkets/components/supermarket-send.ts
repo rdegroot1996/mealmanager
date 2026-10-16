@@ -32,6 +32,7 @@ import { SupermarketProductSummary } from './supermarket-product-summary';
 import { NumberInput } from '../../../shared/components/number-input/number-input';
 import { FormField } from '../../../shared/components/form-field/form-field';
 import { LoadingIndicator } from '../../../shared/components/loading-indicator/loading-indicator';
+import { ConfirmationModal } from '../../../shared/components/confirmation-modal/confirmation-modal';
 
 type ReviewView =
   'destination' | 'unavailable' | 'loading' | 'products' | 'sending' | 'results' | 'error';
@@ -50,10 +51,28 @@ type ReviewView =
     NumberInput,
     FormField,
     LoadingIndicator,
+    ConfirmationModal,
   ],
   templateUrl: './supermarket-send.html',
 })
 export class SupermarketSend implements OnDestroy {
+  private savedDraft = '';
+  readonly discardModal = viewChild.required<ConfirmationModal>('discardModal');
+  readonly beforeDismiss = () =>
+    this.view() !== 'products' ||
+    this.draftSnapshot() === this.savedDraft ||
+    this.discardModal().confirmDiscard();
+  private draftSnapshot() {
+    return JSON.stringify(
+      this.rows().map((row) => ({
+        id: row.shoppingListItemId,
+        selected: row.selected,
+        product: row.product?.id,
+        quantity: row.buyQuantity,
+        remember: row.remember,
+      })),
+    );
+  }
   cycleId = input.required<string>();
   hasGroceries = input(true);
   disabled = input(false);
@@ -75,7 +94,7 @@ export class SupermarketSend implements OnDestroy {
   review = signal<ApiSupermarketReview | null>(null);
   rows = signal<ReviewRow[]>([]);
   choosing = signal<string | null>(null);
-  choosingRow = computed(() => this.rows().find((x) => x.groceryItemId === this.choosing()));
+  choosingRow = computed(() => this.rows().find((x) => x.shoppingListItemId === this.choosing()));
   uncheckedRows = computed(() => this.rows().filter((x) => !x.checked));
   checkedRows = computed(() => this.rows().filter((x) => x.checked));
   checkedExpanded = signal(false);
@@ -118,9 +137,12 @@ export class SupermarketSend implements OnDestroy {
     const choices = new Map<string, string>();
     for (const row of this.rows().filter(
       (x) =>
-        x.selected && x.product && x.profileProductId && (x.remember || !this.originalProductId(x)),
+        x.selected &&
+        x.product &&
+        x.recipeProfileGroceryItemId &&
+        (x.remember || !this.originalProductId(x)),
     )) {
-      const key = row.profileProductId!;
+      const key = row.recipeProfileGroceryItemId!;
       if (choices.has(key) && choices.get(key) !== row.product!.id) return true;
       choices.set(key, row.product!.id);
     }
@@ -135,6 +157,52 @@ export class SupermarketSend implements OnDestroy {
         .filter((x) => x.selected)
         .every((x) => Number.isInteger(x.buyQuantity) && x.buyQuantity > 0),
   );
+  readinessIssues = computed(() => {
+    const selected = this.rows().filter((row) => row.selected);
+    const issues = new Map<string, { row: ReviewRow; kind: 'product' | 'quantity' | 'mapping' }>();
+    for (const row of selected) {
+      if (!row.product || row.product.availability !== 'Available')
+        issues.set(row.shoppingListItemId, { row, kind: 'product' });
+      else if (this.quantityError(row.product, row.buyQuantity))
+        issues.set(row.shoppingListItemId, { row, kind: 'quantity' });
+    }
+    for (const total of this.totals()) {
+      if (total.quantity > this.maxQuantity(total.product)) {
+        for (const row of total.sources)
+          if (!issues.has(row.shoppingListItemId))
+            issues.set(row.shoppingListItemId, { row, kind: 'quantity' });
+      }
+    }
+    const remembered = selected.filter(
+      (row) =>
+        row.product &&
+        row.recipeProfileGroceryItemId &&
+        (row.remember || !this.originalProductId(row)),
+    );
+    for (const row of remembered) {
+      if (
+        remembered.some(
+          (other) =>
+            other.recipeProfileGroceryItemId === row.recipeProfileGroceryItemId &&
+            other.product!.id !== row.product!.id,
+        ) &&
+        !issues.has(row.shoppingListItemId)
+      )
+        issues.set(row.shoppingListItemId, { row, kind: 'mapping' });
+    }
+    return [...issues.values()];
+  });
+  readinessLabel = computed(() => {
+    const issues = this.readinessIssues();
+    if (!this.rows().some((row) => row.selected))
+      return $localize`:@@supermarkets.selectAnItem:Select at least one list item.`;
+    if (!issues.length)
+      return $localize`:@@supermarkets.readyToExport:Ready to add to your supermarket cart.`;
+    const count = issues.length;
+    return count === 1
+      ? $localize`:@@supermarkets.oneItemNeedsAttention:1 item needs attention.`
+      : $localize`:@@supermarkets.itemsNeedAttention:${count}:count: items need attention.`;
+  });
   valid = computed(
     () =>
       this.selectionValid() &&
@@ -288,12 +356,13 @@ export class SupermarketSend implements OnDestroy {
         this.rows.set(
           review.items.map((item) => ({
             ...item,
-            selected: !this.blocked(item.groceryItemId) && !item.checked,
+            selected: !this.blocked(item.shoppingListItemId) && !item.checked,
             remember: !item.product,
             buyQuantity: item.quantity,
           })),
         );
         this.checkedExpanded.set(this.rows().some((x) => x.checked && x.selected));
+        this.savedDraft = this.draftSnapshot();
         this.choosing.set(null);
         this.show('products');
       },
@@ -350,7 +419,8 @@ export class SupermarketSend implements OnDestroy {
     return this.originalProduct(row)?.id ?? null;
   }
   originalProduct(row: ReviewRow) {
-    return this.review()?.items.find((x) => x.groceryItemId === row.groceryItemId)?.product;
+    return this.review()?.items.find((x) => x.shoppingListItemId === row.shoppingListItemId)
+      ?.product;
   }
   maxQuantity(product: ApiSupermarketProduct) {
     return Math.min(product.maxQuantity ?? 999, 999);
@@ -363,9 +433,11 @@ export class SupermarketSend implements OnDestroy {
 
   changeRow(id: string, patch: Partial<ReviewRow>) {
     if (this.blocked(id)) return;
-    const old = this.rows().find((x) => x.groceryItemId === id);
+    const old = this.rows().find((x) => x.shoppingListItemId === id);
     if (!old) return;
-    this.rows.update((rows) => rows.map((x) => (x.groceryItemId === id ? { ...x, ...patch } : x)));
+    this.rows.update((rows) =>
+      rows.map((x) => (x.shoppingListItemId === id ? { ...x, ...patch } : x)),
+    );
   }
 
   productChoiceLabel(row: ReviewRow) {
@@ -375,7 +447,10 @@ export class SupermarketSend implements OnDestroy {
   }
 
   choose(id: string) {
-    if (this.blocked(id) || !this.rows().some((row) => row.groceryItemId === id && row.selected))
+    if (
+      this.blocked(id) ||
+      !this.rows().some((row) => row.shoppingListItemId === id && row.selected)
+    )
       return;
     this.listScroll = this.dialog()?.body().nativeElement.scrollTop ?? 0;
     this.choosing.set(id);
@@ -391,12 +466,12 @@ export class SupermarketSend implements OnDestroy {
   select(choice: { product: ApiSupermarketProduct; remember: boolean }) {
     const row = this.choosingRow();
     if (!row || choice.product.availability !== 'Available') return;
-    this.changeRow(row.groceryItemId, { ...choice, selected: true });
-    if (row.profileProductId && !this.originalProductId(row)) {
+    this.changeRow(row.shoppingListItemId, { ...choice, selected: true });
+    if (row.recipeProfileGroceryItemId && !this.originalProductId(row)) {
       for (const other of this.rows().filter(
-        (x) => x.profileProductId === row.profileProductId && !x.product,
+        (x) => x.recipeProfileGroceryItemId === row.recipeProfileGroceryItemId && !x.product,
       ))
-        this.changeRow(other.groceryItemId, { product: choice.product, remember: true });
+        this.changeRow(other.shoppingListItemId, { product: choice.product, remember: true });
     }
     this.backToProducts();
   }

@@ -25,7 +25,6 @@ export class RecipesStore {
   loadSummaries(params?: {
     category?: string;
     tags?: string[];
-    tag?: string;
     search?: string;
     favorite?: boolean;
     sort?: RecipeSearchSort;
@@ -33,7 +32,7 @@ export class RecipesStore {
     const request = ++this.summaryRequest;
     const query = new URLSearchParams();
     if (params?.category) query.set('category', params.category);
-    for (const tag of params?.tags ?? (params?.tag ? [params.tag] : [])) query.append('tags', tag);
+    for (const tag of params?.tags ?? []) query.append('tags', tag);
     if (params?.search) query.set('search', params.search);
     if (params?.favorite) query.set('favorite', 'true');
     if (params?.sort && params.sort !== 'Name') query.set('sort', params.sort);
@@ -155,7 +154,7 @@ export class RecipesStore {
     const request = {
       name: profile.name,
       servings: profile.servings,
-      products: profile.products.map(({ id, name, quantity, atHome }) => ({
+      groceries: profile.groceries.map(({ id, name, quantity, atHome }) => ({
         id,
         name,
         quantity,
@@ -209,7 +208,7 @@ export class RecipesStore {
     return {
       ...data,
       category: data.category as Recipe['category'],
-      profiles: data.profiles.map((profile) => ({ ...profile, products: [] })),
+      profiles: data.profiles.map((profile) => ({ ...profile, groceries: [] })),
     };
   }
 }

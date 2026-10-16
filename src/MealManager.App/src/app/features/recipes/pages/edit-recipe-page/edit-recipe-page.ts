@@ -1,3 +1,5 @@
+import { RecipePlanningContext } from '../../../planner/state/recipe-planning-context';
+import { moveItemInArray } from '../../../../shared/utils/array-order';
 import { recipeCategories, recipeCategoryLabel } from '../../models/recipe-category';
 import {
   afterNextRender,
@@ -19,7 +21,6 @@ import { RecipesStore } from '../../state/recipes.store';
 import { FormsModule } from '@angular/forms';
 import { PageHeader } from '../../../../shared/components/page-header/page-header';
 import { UnitSelector } from '../../../../shared/components/unit-selector/unit-selector';
-import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { FormField } from '../../../../shared/components/form-field/form-field';
 import { finalize, Subscription } from 'rxjs';
 import { apiErrorMessage } from '../../../../shared/services/api-error-message';
@@ -32,6 +33,7 @@ import { LanguageService } from '../../../../core/i18n/language.service';
 import { formatDecimal, parseDecimal } from '../../../../core/i18n/decimal';
 import { AppIcon } from '../../../../shared/components/app-icon/app-icon';
 import { NumberInput } from '../../../../shared/components/number-input/number-input';
+import { ReorderActions } from '../../../../shared/components/reorder-actions/reorder-actions';
 
 interface StoredRecipePhoto {
   id: string;
@@ -45,17 +47,19 @@ interface StoredRecipePhoto {
     RouterLink,
     PageHeader,
     UnitSelector,
-    DragDropModule,
     FormField,
     LoadingIndicator,
     EmptyState,
     ConfirmationModal,
     AppIcon,
     NumberInput,
+    ReorderActions,
   ],
   templateUrl: './edit-recipe-page.html',
 })
 export class EditRecipePage implements OnInit {
+  readonly backToPlannerLabel = $localize`:@@recipes.backToPlanner:Back to planner`;
+  readonly tagsLabel = $localize`:@@recipes.tags:Tags`;
   readonly categories = recipeCategories;
   readonly categoryLabel = recipeCategoryLabel;
   activatedRoute = inject(ActivatedRoute);
@@ -70,9 +74,70 @@ export class EditRecipePage implements OnInit {
   private unregisterLanguageSwitch?: () => void;
   private languageSwitchApproved = false;
 
+  private planningContext = inject(RecipePlanningContext);
+  readonly planningDraft =
+    this.activatedRoute.snapshot.queryParamMap.get('plan') === '1'
+      ? this.planningContext.current()
+      : null;
+  continueLabel() {
+    return !this.recipe()?.id || this.hasUnsavedChanges()
+      ? $localize`:@@recipes.saveContinuePlanning:Save and continue planning`
+      : $localize`:@@recipes.continuePlanning:Continue planning`;
+  }
+  continuePlanning() {
+    if (this.saving() || this.imagesPending()) return;
+    if (!this.recipe()?.id || this.hasUnsavedChanges()) this.saveRecipe(false, true);
+    else this.returnToPlanning(this.recipe()!.id);
+  }
+  private returnToPlanning(recipeId?: string) {
+    if (!this.planningDraft) return;
+    this.planningContext.set({ ...this.planningDraft, recipeId });
+    void this.router.navigate(['/planner'], { queryParams: { resume: 'recipe' } });
+  }
+  preparePlanningReturn() {
+    if (this.planningDraft)
+      this.planningContext.set({ ...this.planningDraft, recipeId: undefined });
+  }
   recipe = signal<Recipe | null>(null);
   saveError = signal('');
   validationErrors = signal<string[]>([]);
+  validationIssues = signal<{ id: string; message: string }[]>([]);
+  private serverErrors = signal<{ id: string; message: string }[]>([]);
+  fieldError(id: string): string | null {
+    if (!this.validationAttempted() || !this.recipe()) return null;
+    return (
+      this.validateFields(this.recipe()!).find((issue) => issue.id === id)?.message ??
+      this.serverErrors().find((issue) => issue.id === id)?.message ??
+      null
+    );
+  }
+  validationTargetLabel(id: string): string {
+    if (id.startsWith('ingredient-')) {
+      const index = Number(id.split('-').at(-1)) + 1;
+      return $localize`:@@recipes.ingredientNumber:Ingredient ${index}:number:`;
+    }
+    if (id.startsWith('step-')) return this.stepName(Number(id.split('-').at(-1)) + 1);
+    switch (id) {
+      case 'recipe-name':
+        return $localize`:@@recipes.editRecipePage.template.recipeName:Recipe name`;
+      case 'recipe-base-servings':
+        return $localize`:@@recipes.editRecipePage.template.baseServings:Base servings`;
+      case 'recipe-category':
+        return $localize`:@@recipes.editRecipePage.template.category:Category`;
+      case 'recipe-notes':
+        return $localize`:@@recipes.notes:Notes`;
+      default:
+        return this.tagsLabel;
+    }
+  }
+  @HostListener('input', ['$event'])
+  clearServerField(event: Event) {
+    const id = (event.target as HTMLElement)?.id;
+    this.serverErrors.update((errors) => errors.filter((error) => error.id !== id));
+  }
+  validationAttempted = signal(false);
+  readonly ingredientLabel = $localize`:@@recipes.ingredient:ingredient`;
+  reorderAnnouncement = signal('');
   imageError = signal('');
   imageUploading = signal(false);
   uploadProgress = signal<{ current: number; total: number } | null>(null);
@@ -93,7 +158,7 @@ export class EditRecipePage implements OnInit {
   imageInput = viewChild<ElementRef<HTMLInputElement>>('imageInput');
   discardChangesModal = viewChild.required<ConfirmationModal>('discardChangesModal');
   private destroyed = false;
-  private creatingRecipe = false;
+  creatingRecipe = this.activatedRoute.snapshot.queryParamMap.get('new') === '1';
   private recipeRequest?: Subscription;
   private tagsRequest?: Subscription;
   ngOnDestroy() {
@@ -131,6 +196,7 @@ export class EditRecipePage implements OnInit {
       this.creatingRecipe = true;
       // New recipe
       const newRecipe = this.createNewRecipe();
+      if (this.planningDraft) newRecipe.name = this.planningDraft.search;
       this.recipe.set(newRecipe);
       this.savedSnapshot = this.editableSnapshot(newRecipe);
     }
@@ -161,6 +227,15 @@ export class EditRecipePage implements OnInit {
           this.photoItems.set(editable.images.map(({ id, url }) => ({ id, url })));
           this.photoOrderDirty.set(false);
           this.savedSnapshot = this.editableSnapshot(editable);
+          if (this.activatedRoute.snapshot.queryParamMap.has('photos')) {
+            this.revealControl('recipe-photos');
+            void this.router.navigate([], {
+              relativeTo: this.activatedRoute,
+              queryParams: { photos: null },
+              queryParamsHandling: 'merge',
+              replaceUrl: true,
+            });
+          }
         },
         error: (error: HttpErrorResponse) => {
           if (error.status === 404) this.notFound.set(true);
@@ -172,13 +247,20 @@ export class EditRecipePage implements OnInit {
       });
   }
 
-  saveRecipe(addAnother = false) {
+  saveRecipe(addAnother = false, continuePlanning = false) {
     const recipe = this.recipe();
     if (!recipe || this.saving() || this.imagesPending()) return;
     this.saveError.set('');
-    const validationErrors = this.validate(recipe);
+    this.serverErrors.set([]);
+    const issues = this.validateFields(recipe);
+    this.validationIssues.set(issues);
+    const validationErrors = issues.map((issue) => issue.message);
+    this.validationAttempted.set(true);
     this.validationErrors.set(validationErrors);
-    if (validationErrors.length > 0) return;
+    if (validationErrors.length > 0) {
+      this.revealControl(this.firstInvalidControl(recipe));
+      return;
+    }
 
     recipe.name = recipe.name.trim();
     this.saving.set(true);
@@ -206,11 +288,26 @@ export class EditRecipePage implements OnInit {
         this.recipe.set(editable);
         this.savePhotoOrder(saved.id, () => {
           this.saving.set(false);
-          if (addAnother) {
+          if (this.planningDraft) {
+            this.planningContext.set({ ...this.planningDraft, recipeId: saved.id });
+            if (continuePlanning) this.returnToPlanning(saved.id);
+            else {
+              this.toast.success(
+                wasNew
+                  ? $localize`:@@recipes.editRecipePage.recipeSavedYouCanNowAddPhotos:Recipe saved. You can now add photos.`
+                  : $localize`:@@recipes.editRecipePage.recipeSaved:Recipe saved.`,
+              );
+              if (wasNew)
+                void this.router.navigate(['/recipes', saved.id, 'edit'], {
+                  replaceUrl: true,
+                  queryParams: { plan: '1', photos: '1' },
+                });
+            }
+          } else if (addAnother) {
             this.toast.success(
               $localize`:@@recipes.editRecipePage.recipeSavedReadyForAnother:Recipe saved. Ready for another.`,
             );
-            if (this.creatingRecipe) {
+            if (this.creatingRecipe && !this.activatedRoute.snapshot.paramMap.get('id')) {
               this.location.replaceState('/recipes/new');
               this.resetForAnotherRecipe();
             } else this.router.navigate(['/recipes/new']);
@@ -218,7 +315,10 @@ export class EditRecipePage implements OnInit {
             this.toast.success(
               $localize`:@@recipes.editRecipePage.recipeSavedYouCanNowAddPhotos:Recipe saved. You can now add photos.`,
             );
-            this.router.navigate(['/recipes', saved.id, 'edit'], { replaceUrl: true });
+            this.router.navigate(['/recipes', saved.id, 'edit'], {
+              replaceUrl: true,
+              queryParams: { photos: '1', new: '1' },
+            });
           } else {
             this.toast.success($localize`:@@recipes.editRecipePage.recipeSaved:Recipe saved.`);
             this.router.navigate(['/recipes', saved.id]);
@@ -233,6 +333,46 @@ export class EditRecipePage implements OnInit {
             $localize`:@@recipes.editRecipePage.theRecipeCouldNotBeSaved:The recipe could not be saved.`,
           ),
         );
+        if (
+          response instanceof HttpErrorResponse &&
+          response.error?.errors &&
+          typeof response.error.errors === 'object'
+        ) {
+          const mapped: { id: string; message: string }[] = [];
+          for (const key of Object.keys(response.error.errors)) {
+            const path = key.toLowerCase().replace(/^\$\./, '');
+            const basic: Record<string, string> = {
+              name: 'recipe-name',
+              category: 'recipe-category',
+              baseservings: 'recipe-base-servings',
+              notes: 'recipe-notes',
+              tags: 'recipe-tags',
+            };
+            let id = basic[path];
+            if (/^tags(?:\[\d+\])?$/.test(path)) id = 'recipe-tags';
+            const ingredient = /^ingredients\[(\d+)\]\.(name|quantity|unit)$/.exec(path);
+            const step = /^steps\[(\d+)\]\.description$/.exec(path);
+            if (ingredient) {
+              const rowId = submitted.ingredients[Number(ingredient[1])]?.id;
+              const index = this.recipe()?.ingredients.findIndex((row) => row.id === rowId) ?? -1;
+              if (index >= 0) id = `ingredient-${ingredient[2]}-${index}`;
+            }
+            if (step) {
+              const rowId = submitted.steps[Number(step[1])]?.id;
+              const index = this.recipe()?.steps.findIndex((row) => row.id === rowId) ?? -1;
+              if (index >= 0) id = `step-description-${index}`;
+            }
+            if (id)
+              mapped.push({
+                id,
+                message: $localize`:@@recipes.checkField:Check this field and try again.`,
+              });
+          }
+          this.serverErrors.set(mapped);
+          this.validationIssues.set(mapped);
+          this.validationErrors.set(mapped.map((issue) => issue.message));
+          this.revealControl(mapped[0]?.id ?? 'recipe-save-error');
+        } else this.revealControl('recipe-save-error');
       },
     });
   }
@@ -311,11 +451,6 @@ export class EditRecipePage implements OnInit {
     return Number.isFinite(value) && value > 0;
   }
 
-  reorderIngredientLabel(name: string): string {
-    const ingredient = name || $localize`:@@recipes.ingredient:ingredient`;
-    return $localize`:@@recipes.reorderIngredient:Reorder ${ingredient}:ingredient:. Use arrow keys or drag.`;
-  }
-
   removeIngredientLabel(name: string): string {
     const ingredient = name || $localize`:@@recipes.ingredient:ingredient`;
     return $localize`:@@recipes.removeIngredient:Remove ${ingredient}:ingredient:`;
@@ -339,16 +474,12 @@ export class EditRecipePage implements OnInit {
     return $localize`:@@recipes.removePhoto:Remove photo ${number}:photoNumber:`;
   }
 
-  reorderStepLabel(number: number): string {
-    return $localize`:@@recipes.reorderStep:Reorder step ${number}:stepNumber:. Use arrow keys or drag.`;
+  stepName(number: number) {
+    return $localize`:@@recipes.stepName:step ${number}:stepNumber:`;
   }
 
   removeStepLabel(number: number): string {
     return $localize`:@@recipes.removeStep:Remove step ${number}:stepNumber:`;
-  }
-
-  dropIngredient(event: CdkDragDrop<Recipe['ingredients']>) {
-    this.moveIngredient(event.previousIndex, event.currentIndex);
   }
 
   moveIngredient(previousIndex: number, currentIndex: number, restoreFocus = false) {
@@ -368,7 +499,10 @@ export class EditRecipePage implements OnInit {
     moveItemInArray(recipe.ingredients, previousIndex, currentIndex);
     this.renumberIngredients(recipe.ingredients);
     this.recipe.set({ ...recipe });
-    if (restoreFocus) this.focusAfterRender(`ingredient-handle-${ingredientId}`);
+    this.reorderAnnouncement.set(
+      $localize`:@@common.itemMoved:${recipe.ingredients[currentIndex].name}:itemName: moved to position ${currentIndex + 1}:position:.`,
+    );
+    if (restoreFocus) this.focusAfterRender(`ingredient-handle-${ingredientId}`, true);
   }
 
   removeStep(index: number) {
@@ -393,10 +527,6 @@ export class EditRecipePage implements OnInit {
     this.focusAfterRender(`step-description-${index}`);
   }
 
-  dropStep(event: CdkDragDrop<Recipe['steps']>) {
-    this.moveStep(event.previousIndex, event.currentIndex);
-  }
-
   moveStep(previousIndex: number, currentIndex: number, restoreFocus = false) {
     const recipe = this.recipe();
     if (
@@ -412,7 +542,10 @@ export class EditRecipePage implements OnInit {
     moveItemInArray(recipe.steps, previousIndex, currentIndex);
     this.renumberSteps(recipe.steps);
     this.recipe.set({ ...recipe });
-    if (restoreFocus) this.focusAfterRender(`step-handle-${stepId}`);
+    this.reorderAnnouncement.set(
+      $localize`:@@common.itemMoved:${this.stepName(previousIndex + 1)}:itemName: moved to position ${currentIndex + 1}:position:.`,
+    );
+    if (restoreFocus) this.focusAfterRender(`step-handle-${stepId}`, true);
   }
 
   triggerImageSelection() {
@@ -621,14 +754,50 @@ export class EditRecipePage implements OnInit {
     this.savedSnapshot = this.editableSnapshot(recipe);
     this.saveError.set('');
     this.validationErrors.set([]);
+    this.validationAttempted.set(false);
     this.imageError.set('');
     this.tagQuery.set('');
     this.loadTagSuggestions();
     this.focusAfterRender('recipe-name');
   }
 
-  private focusAfterRender(controlId: string) {
-    afterNextRender(() => document.getElementById(controlId)?.focus(), { injector: this.injector });
+  private focusAfterRender(controlId: string, nestedButton = false) {
+    afterNextRender(
+      () => {
+        const element = document.getElementById(controlId);
+        (nestedButton
+          ? element?.querySelector<HTMLElement>('button:not(:disabled)')
+          : element
+        )?.focus();
+      },
+      { injector: this.injector },
+    );
+  }
+
+  revealControl(id: string) {
+    afterNextRender(
+      () => {
+        const element = document.getElementById(id);
+        element?.scrollIntoView?.({ block: 'center' });
+        element?.focus({ preventScroll: true });
+      },
+      { injector: this.injector },
+    );
+  }
+
+  private firstInvalidControl(recipe: Recipe): string {
+    if (!recipe.name.trim()) return 'recipe-name';
+    if ((recipe.notes?.length ?? 0) > 4000) return 'recipe-notes';
+    if (!recipe.category) return 'recipe-category';
+    if (!Number.isInteger(Number(recipe.baseServings)) || recipe.baseServings <= 0)
+      return 'recipe-base-servings';
+    for (const [index, ingredient] of recipe.ingredients.entries()) {
+      if (!ingredient.name.trim()) return `ingredient-name-${index}`;
+      if (!this.isFiniteQuantity(ingredient.quantity)) return `ingredient-quantity-${index}`;
+      if (!ingredient.unit) return `ingredient-unit-${index}`;
+    }
+    const stepIndex = recipe.steps.findIndex((step) => !step.description.trim());
+    return stepIndex >= 0 ? `step-description-${stepIndex}` : 'recipe-validation';
   }
 
   private renumberIngredients(ingredients: Recipe['ingredients']) {
@@ -639,39 +808,53 @@ export class EditRecipePage implements OnInit {
     steps.forEach((step, index) => (step.order = index));
   }
 
-  private validate(recipe: Recipe): string[] {
-    const errors: string[] = [];
+  private validateFields(recipe: Recipe): { id: string; message: string }[] {
+    const errors: { id: string; message: string }[] = [];
+    const add = (id: string, message: string) => errors.push({ id, message });
     if (!recipe.name.trim())
-      errors.push(
+      add(
+        'recipe-name',
         $localize`:@@recipes.editRecipePage.recipeNameIsRequired:Recipe name is required.`,
       );
     if ((recipe.notes?.length ?? 0) > 4000)
-      errors.push($localize`:@@recipes.notesTooLong:Notes must be at most 4000 characters.`);
+      add(
+        'recipe-notes',
+        $localize`:@@recipes.notesTooLong:Notes must be at most 4000 characters.`,
+      );
     if (!recipe.category)
-      errors.push($localize`:@@recipes.editRecipePage.categoryIsRequired:Category is required.`);
-    if (!Number.isInteger(Number(recipe.baseServings)) || recipe.baseServings <= 0) {
-      errors.push(
+      add(
+        'recipe-category',
+        $localize`:@@recipes.editRecipePage.categoryIsRequired:Category is required.`,
+      );
+    if (!Number.isInteger(Number(recipe.baseServings)) || recipe.baseServings <= 0)
+      add(
+        'recipe-base-servings',
         $localize`:@@recipes.editRecipePage.baseServingsMustBeAPositiveWhole:Base servings must be a positive whole number.`,
       );
-    }
-    if (
-      recipe.ingredients.some(
-        (ingredient) =>
-          !ingredient.name.trim() ||
-          !Number.isFinite(ingredient.quantity) ||
-          ingredient.quantity <= 0 ||
-          !ingredient.unit,
-      )
-    ) {
-      errors.push(
-        $localize`:@@recipes.editRecipePage.eachIngredientNeedsANamePositiveQuantity:Each ingredient needs a name, positive quantity, and unit.`,
-      );
-    }
-    if (recipe.steps.some((step) => !step.description.trim())) {
-      errors.push(
-        $localize`:@@recipes.editRecipePage.eachPreparationStepNeedsADescription:Each preparation step needs a description.`,
-      );
-    }
+    recipe.ingredients.forEach((row, index) => {
+      if (!row.name.trim())
+        add(
+          `ingredient-name-${index}`,
+          $localize`:@@recipes.ingredientNameRequired:Enter an ingredient name.`,
+        );
+      if (!this.isFiniteQuantity(row.quantity))
+        add(
+          `ingredient-quantity-${index}`,
+          $localize`:@@recipes.ingredientQuantityRequired:Enter a quantity greater than zero.`,
+        );
+      if (!row.unit.trim())
+        add(
+          `ingredient-unit-${index}`,
+          $localize`:@@recipes.ingredientUnitRequired:Enter an ingredient unit.`,
+        );
+    });
+    recipe.steps.forEach((row, index) => {
+      if (!row.description.trim())
+        add(
+          `step-description-${index}`,
+          $localize`:@@recipes.stepDescriptionRequired:Enter a description for this step.`,
+        );
+    });
     return errors;
   }
 

@@ -16,13 +16,26 @@ import { PicnicStore } from '../state/picnic.store';
 import { apiErrorMessage } from '../../../shared/services/api-error-message';
 import { FormField } from '../../../shared/components/form-field/form-field';
 import { Modal } from '../../../shared/components/modal/modal';
+import { ConfirmationModal } from '../../../shared/components/confirmation-modal/confirmation-modal';
 
 @Component({
   selector: 'app-picnic-settings',
-  imports: [FormsModule, FormField, Modal, AppIcon],
+  imports: [FormsModule, FormField, Modal, AppIcon, ConfirmationModal],
   templateUrl: './picnic-settings.html',
 })
 export class PicnicSettings implements OnInit, OnDestroy {
+  readonly discardModal = viewChild.required<ConfirmationModal>('discardModal');
+  readonly beforeDismiss = () => {
+    const changed =
+      this.connection()?.status === 'VerificationRequired'
+        ? !!this.code.trim()
+        : this.editing() &&
+          (!!this.email.trim() ||
+            !!this.password ||
+            this.resetProductMappings ||
+            this.countryCode !== (this.connection()?.countryCode ?? 'NL'));
+    return !changed || this.discardModal().confirmDiscard();
+  };
   private store = inject(PicnicStore);
   private readonly injector = inject(Injector);
   connection = signal<ApiPicnicConnection | null>(null);
@@ -45,8 +58,10 @@ export class PicnicSettings implements OnInit, OnDestroy {
     this.management()?.open();
   }
   closeManagement() {
+    this.email = '';
     this.password = '';
     this.code = '';
+    this.resetProductMappings = false;
     this.editing.set(false);
   }
   ngOnInit() {

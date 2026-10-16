@@ -1,8 +1,0 @@
-namespace MealManager.Application.DTO;
-
-public record UpdateGroceryItemDto
-{
-    public string Name { get; init; } = string.Empty;
-    public int Quantity { get; init; }
-    public required bool Checked { get; init; }
-}

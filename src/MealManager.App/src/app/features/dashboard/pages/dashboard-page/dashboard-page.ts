@@ -1,6 +1,6 @@
 import { Component, computed, inject, LOCALE_ID } from '@angular/core';
 import { FavoriteRecipes } from '../../components/favorite-recipes/favorite-recipes';
-import { ActivePlanning } from '../../components/active-planning/active-planning';
+import { ActiveMealPlan } from '../../components/active-meal-plan/active-meal-plan';
 import { UpcomingMeals } from '../../components/upcoming-meals/upcoming-meals';
 
 import { DashboardState } from '../../dashboard-state';
@@ -8,7 +8,7 @@ import { DashboardState } from '../../dashboard-state';
 @Component({
   providers: [DashboardState],
   selector: 'app-dashboard-page',
-  imports: [FavoriteRecipes, ActivePlanning, UpcomingMeals],
+  imports: [FavoriteRecipes, ActiveMealPlan, UpcomingMeals],
   templateUrl: './dashboard-page.html',
 })
 export class DashboardPage {

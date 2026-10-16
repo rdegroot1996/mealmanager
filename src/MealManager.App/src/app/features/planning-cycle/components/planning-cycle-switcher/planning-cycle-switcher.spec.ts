@@ -33,6 +33,7 @@ describe('PlanningCycleSwitcher', () => {
     const selected = signal(cycles[2]);
     const store = {
       currentCycle: selected,
+      loadCurrentCycle: vi.fn(() => of(cycles[2]).pipe(tap((cycle) => selected.set(cycle)))),
       loadCycle: vi.fn((id: string) =>
         of(cycles.find((cycle) => cycle.id === id)!).pipe(tap((cycle) => selected.set(cycle))),
       ),
@@ -120,5 +121,19 @@ describe('PlanningCycleSwitcher', () => {
     store.currentCycle.set({ ...cycles[0], endDate: '2026-01-02' });
     expect(component.range()).toContain('2025');
     expect(component.range()).toContain('2026');
+  });
+  it('returns directly to the active cycle after browsing history', async () => {
+    const { component, store, fixture } = await setup();
+    component.previous();
+    await fixture.whenStable();
+    expect(fixture.nativeElement.textContent).toContain('Return to active cycle');
+    const changed = vi.fn();
+    component.cycleChanged.subscribe(changed);
+    component.returnToActive();
+    await fixture.whenStable();
+    expect(store.loadCurrentCycle).toHaveBeenCalledOnce();
+    expect(changed).toHaveBeenCalledWith('current');
+    expect(store.currentCycle().id).toBe('current');
+    expect(fixture.nativeElement.textContent).not.toContain('Return to active cycle');
   });
 });

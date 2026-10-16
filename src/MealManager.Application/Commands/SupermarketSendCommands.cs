@@ -26,11 +26,11 @@ public sealed class SupermarketSendCommands(
         var connection = await supermarkets.Connection(command.Provider, token);
         if (command.AccountId != connection.AccountId || command.ConnectionGeneration != connection.Generation)
             throw new InvalidOperationError(ErrorCodes.SupermarketConnectionRequired, "The supermarket connection changed. Open a new review.");
-        var profileIds = groceries.Where(x => x.RecipeProfileProductId.HasValue).Select(x => x.RecipeProfileProductId!.Value).Distinct().ToArray();
+        var profileIds = groceries.Where(x => x.RecipeProfileGroceryItemId.HasValue).Select(x => x.RecipeProfileGroceryItemId!.Value).Distinct().ToArray();
         var mappings = await dbContext.SupermarketProductMappings.AsNoTracking()
-            .Where(x => x.Provider == command.Provider && profileIds.Contains(x.RecipeProfileProductId)).ToDictionaryAsync(x => x.RecipeProfileProductId, token);
-        var remembered = command.Items.Where(x => groceries.Single(g => g.Id == x.GroceryItemId).RecipeProfileProductId is Guid id && (x.Remember || !mappings.ContainsKey(id)))
-            .GroupBy(x => groceries.Single(g => g.Id == x.GroceryItemId).RecipeProfileProductId);
+            .Where(x => x.Provider == command.Provider && profileIds.Contains(x.RecipeProfileGroceryItemId)).ToDictionaryAsync(x => x.RecipeProfileGroceryItemId, token);
+        var remembered = command.Items.Where(x => groceries.Single(g => g.Id == x.ShoppingListItemId).RecipeProfileGroceryItemId is Guid id && (x.Remember || !mappings.ContainsKey(id)))
+            .GroupBy(x => groceries.Single(g => g.Id == x.ShoppingListItemId).RecipeProfileGroceryItemId);
         if (remembered.Any(x => x.Select(s => s.ProductId).Distinct().Count() > 1)) throw InvalidSelection();
         var products = new Dictionary<string, SupermarketProduct>();
         try
@@ -55,7 +55,7 @@ public sealed class SupermarketSendCommands(
         {
             var product = products[total.ProductId];
             var selections = command.Items.Where(x => x.ProductId == product.Id).ToArray();
-            var sources = selections.Select(x => groceries.Single(g => g.Id == x.GroceryItemId)).ToArray();
+            var sources = selections.Select(x => groceries.Single(g => g.Id == x.ShoppingListItemId)).ToArray();
             var outcome = "NotAttempted";
             string? reason = stopped;
             string? warning = null;
@@ -118,7 +118,7 @@ public sealed class SupermarketSendCommands(
                 Quantity = total.Quantity,
                 Outcome = outcome,
                 Reason = reason,
-                GroceryItemIds = sources.Select(x => x.Id).ToArray(),
+                ShoppingListItemIds = sources.Select(x => x.Id).ToArray(),
                 LocalWarning = warning,
             });
         }
@@ -134,17 +134,17 @@ public sealed class SupermarketSendCommands(
     }
 
     private async Task<string?> CompleteLocal(SendSupermarketDto command, SupermarketProduct product, SupermarketSelectionDto[] selections,
-        GroceryItem[] sources, Dictionary<Guid, SupermarketProductMapping> originals, CancellationToken ct)
+        ShoppingListItem[] sources, Dictionary<Guid, SupermarketProductMapping> originals, CancellationToken ct)
     {
         await using var scope = scopes.CreateAsyncScope();
         var local = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         await using var transaction = await local.Database.BeginTransactionAsync(ct);
         var sourceIds = sources.Select(x => x.Id).ToArray();
-        var current = await local.Set<GroceryItem>().Where(x => sourceIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id, ct);
-        var profileIds = sources.Where(x => x.RecipeProfileProductId.HasValue).Select(x => x.RecipeProfileProductId!.Value).Distinct().ToArray();
-        var survivingProfiles = await local.Set<RecipeProfileProduct>().Where(x => profileIds.Contains(x.Id)).Select(x => x.Id).ToListAsync(ct);
-        var mappings = await local.SupermarketProductMappings.Where(x => x.Provider == command.Provider && profileIds.Contains(x.RecipeProfileProductId))
-            .ToDictionaryAsync(x => x.RecipeProfileProductId, ct);
+        var current = await local.Set<ShoppingListItem>().Where(x => sourceIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id, ct);
+        var profileIds = sources.Where(x => x.RecipeProfileGroceryItemId.HasValue).Select(x => x.RecipeProfileGroceryItemId!.Value).Distinct().ToArray();
+        var survivingProfiles = await local.Set<RecipeProfileGroceryItem>().Where(x => profileIds.Contains(x.Id)).Select(x => x.Id).ToListAsync(ct);
+        var mappings = await local.SupermarketProductMappings.Where(x => x.Provider == command.Provider && profileIds.Contains(x.RecipeProfileGroceryItemId))
+            .ToDictionaryAsync(x => x.RecipeProfileGroceryItemId, ct);
         var connectionJson = await local.AppSettings.Where(x => x.Key == ProviderSettingsStore.Key(command.Provider)).Select(x => x.Value).SingleOrDefaultAsync(ct);
         var sameConnection = command.Provider != MealManager.Common.Enums.SupermarketProvider.Picnic ||
             ProviderSettingsStore.Picnic(connectionJson).ConnectionGeneration == command.ConnectionGeneration;
@@ -152,7 +152,7 @@ public sealed class SupermarketSendCommands(
         var updatedProfiles = new HashSet<Guid>();
         foreach (var source in sources)
         {
-            if (!current.TryGetValue(source.Id, out var item) || item.Name != source.Name || item.Quantity != source.Quantity || item.RecipeProfileProductId != source.RecipeProfileProductId)
+            if (!current.TryGetValue(source.Id, out var item) || item.Name != source.Name || item.Quantity != source.Quantity || item.RecipeProfileGroceryItemId != source.RecipeProfileGroceryItemId)
                 continue;
             item.Checked = true;
             if (!sameConnection)
@@ -160,8 +160,8 @@ public sealed class SupermarketSendCommands(
                 warning = "MappingChanged";
                 continue;
             }
-            if (source.RecipeProfileProductId is not Guid profileId || !survivingProfiles.Contains(profileId)) continue;
-            var selection = selections.Single(x => x.GroceryItemId == source.Id);
+            if (source.RecipeProfileGroceryItemId is not Guid profileId || !survivingProfiles.Contains(profileId)) continue;
+            var selection = selections.Single(x => x.ShoppingListItemId == source.Id);
             originals.TryGetValue(profileId, out var original);
             if (!selection.Remember && original is not null) continue;
             if (updatedProfiles.Contains(profileId)) continue;
@@ -178,7 +178,7 @@ public sealed class SupermarketSendCommands(
                 {
                     Id = Guid.CreateVersion7(),
                     Provider = command.Provider,
-                    RecipeProfileProductId = profileId,
+                    RecipeProfileGroceryItemId = profileId,
                     ProductId = product.Id,
                     ProductName = product.Name,
                     Pack = product.Pack,
@@ -199,15 +199,15 @@ public sealed class SupermarketSendCommands(
         return warning;
     }
 
-    private static void ValidateSelection(SendSupermarketDto command, List<GroceryItem> groceries)
+    private static void ValidateSelection(SendSupermarketDto command, List<ShoppingListItem> groceries)
     {
         var ids = groceries.Select(x => x.Id).ToHashSet();
         var productIds = command.Items.Select(x => x.ProductId).ToHashSet();
-        if (command.Items.Select(x => x.GroceryItemId).Distinct().Count() != command.Items.Count || command.Items.Any(x => !ids.Contains(x.GroceryItemId)) ||
+        if (command.Items.Select(x => x.ShoppingListItemId).Distinct().Count() != command.Items.Count || command.Items.Any(x => !ids.Contains(x.ShoppingListItemId)) ||
             command.Totals.Count != productIds.Count || command.Totals.Select(x => x.ProductId).Distinct().Count() != productIds.Count || command.Totals.Any(x => !productIds.Contains(x.ProductId)))
             throw InvalidSelection();
     }
-    private static void CheckRevision(List<GroceryItem> items, string revision)
+    private static void CheckRevision(List<ShoppingListItem> items, string revision)
     {
         if (SupermarketQueries.Revision(items) != revision)
             throw new InvalidOperationError(ErrorCodes.SupermarketReviewChanged, "The groceries changed. Reopen the supermarket review.");

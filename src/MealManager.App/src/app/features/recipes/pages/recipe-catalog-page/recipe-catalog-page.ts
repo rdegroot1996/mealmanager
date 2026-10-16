@@ -1,6 +1,15 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import {
+  ApplicationRef,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { RecipesStore } from '../../state/recipes.store';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, NavigationStart, Params, Router, RouterLink } from '@angular/router';
+import { RecipeCatalogContext } from '../../state/recipe-catalog-context';
 import { RecipeCard } from '../../components/recipe-card/recipe-card';
 import { FormsModule } from '@angular/forms';
 import { PageHeader } from '../../../../shared/components/page-header/page-header';
@@ -13,7 +22,11 @@ import { AppIcon } from '../../../../shared/components/app-icon/app-icon';
 import { RecipeSearchSort } from '../../../../api/models/api-recipe-search-result';
 import { RecipeCatalogFilters } from '../../components/recipe-catalog-filters/recipe-catalog-filters';
 import { RecipeCatalogFiltersValue } from '../../components/recipe-catalog-filter-form/recipe-catalog-filter-form';
-import { RecipeCategory, recipeCategoryLabel } from '../../models/recipe-category';
+import {
+  recipeCategories,
+  RecipeCategory,
+  recipeCategoryLabel,
+} from '../../models/recipe-category';
 
 @Component({
   selector: 'app-recipe-catalog-page',
@@ -44,12 +57,26 @@ export class RecipeCatalogPage implements OnInit {
   readonly clearAllLabel = $localize`:@@common.clearAll:Clear all`;
   readonly addRecipeLabel = $localize`:@@recipes.addRecipe:Add recipe`;
   recipeStore = inject(RecipesStore);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private context = inject(RecipeCatalogContext);
+  private element = inject<ElementRef<HTMLElement>>(ElementRef);
+  private application = inject(ApplicationRef);
+  private routeRequest?: Subscription;
+  private navigationRequest?: Subscription;
+  private tagsRequest?: Subscription;
+  private restoreScroll = true;
+  private destroyed = false;
 
   private request?: Subscription;
   error = signal('');
   loading = signal(false);
   ngOnDestroy() {
+    this.destroyed = true;
     this.request?.unsubscribe();
+    this.routeRequest?.unsubscribe();
+    this.navigationRequest?.unsubscribe();
+    this.tagsRequest?.unsubscribe();
   }
   searchQuery = signal('');
   categoryFilter = signal('');
@@ -81,14 +108,91 @@ export class RecipeCatalogPage implements OnInit {
   );
 
   ngOnInit() {
-    this.applyFilters();
+    this.navigationRequest = this.router.events.subscribe((event) => {
+      if (!(event instanceof NavigationStart) || event.url.split(/[?#]/)[0] === '/recipes') return;
+      const main = this.element.nativeElement.closest('main');
+      this.context.scroll = {
+        key: JSON.stringify(this.catalogParams()),
+        top: window.innerWidth >= 800 && main ? main.scrollTop : window.scrollY,
+      };
+    });
+    let initialized = false;
+    this.routeRequest = this.route.queryParamMap.subscribe((params) => {
+      const previous = JSON.stringify(this.catalogParams());
+      this.searchQuery.set(params.get('q') ?? '');
+      const category = params.get('category') ?? '';
+      this.categoryFilter.set(
+        recipeCategories.includes(category as RecipeCategory) ? category : '',
+      );
+      this.selectedTags.set([
+        ...new Set(
+          params
+            .getAll('tag')
+            .map((tag) => tag.trim())
+            .filter(Boolean),
+        ),
+      ]);
+      this.favoriteOnly.set(params.get('favorite') === '1');
+      const sort = params.get('sort');
+      this.sortOrder.set(
+        [
+          'Name',
+          'MostPlanned',
+          'LeastPlanned',
+          'MostRecentlyPlanned',
+          'LeastRecentlyPlanned',
+        ].includes(sort ?? '')
+          ? (sort as RecipeSearchSort)
+          : 'Name',
+      );
+      this.context.queryParams = this.catalogParams();
+      if (!initialized || previous !== JSON.stringify(this.catalogParams())) this.loadRecipes();
+      initialized = true;
+    });
+  }
+
+  changeSearch(query: string) {
+    this.request?.unsubscribe();
+    this.searchQuery.set(query);
+    this.loading.set(true);
   }
 
   applyFilters() {
+    this.restoreScroll = false;
+    this.context.scroll = null;
+    this.context.queryParams = this.catalogParams();
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: this.context.queryParams,
+      replaceUrl: true,
+    });
+    this.loadRecipes();
+  }
+
+  private catalogParams(): Params {
+    const params: Params = {};
+    if (this.searchQuery()) params['q'] = this.searchQuery();
+    if (this.categoryFilter()) params['category'] = this.categoryFilter();
+    if (this.selectedTags().length) params['tag'] = this.selectedTags();
+    if (this.favoriteOnly()) params['favorite'] = '1';
+    if (this.sortOrder() !== 'Name') params['sort'] = this.sortOrder();
+    return params;
+  }
+
+  private loadRecipes() {
     this.request?.unsubscribe();
     this.error.set('');
     this.loading.set(true);
     const unfiltered = !this.searchQuery() && !this.hasActiveFilters();
+    if (!unfiltered && !this.allTags().length && !this.tagsRequest) {
+      this.tagsRequest = this.recipeStore.loadTags().subscribe({
+        next: (tags) =>
+          this.allTags.set(tags.map((tag) => tag.name).sort((a, b) => a.localeCompare(b))),
+        error: () => {
+          this.tagsRequest = undefined;
+        },
+      });
+    }
     this.request = this.recipeStore
       .loadSummaries({
         search: this.searchQuery() || undefined,
@@ -106,6 +210,24 @@ export class RecipeCatalogPage implements OnInit {
                 (a, b) => a.localeCompare(b),
               ),
             );
+          }
+          if (this.restoreScroll) {
+            this.restoreScroll = false;
+            const scroll = this.context.scroll;
+            if (scroll?.key === JSON.stringify(this.catalogParams())) {
+              // Wait for both the result view and the router's own scroll reset.
+              void this.application.whenStable().then(() => {
+                if (
+                  this.destroyed ||
+                  this.context.scroll !== scroll ||
+                  scroll.key !== JSON.stringify(this.catalogParams())
+                )
+                  return;
+                const main = this.element.nativeElement.closest('main');
+                if (window.innerWidth >= 800 && main) main.scrollTop = scroll.top;
+                else window.scrollTo(0, scroll.top);
+              });
+            }
           }
         },
         error: () => {

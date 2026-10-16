@@ -12,15 +12,11 @@ async function openUsers(page: Page) {
 
 test('an administrator can create, edit, and remove a household user', async ({ page }) => {
   await openUsers(page);
-  for (const legacyRoute of ['/users', '/settings/users', '/settings/supermarkets']) {
-    await page.goto(legacyRoute);
-    await expect(page).toHaveURL('/settings');
-  }
 
   await page.getByRole('button', { name: 'Add user' }).click();
   await page.getByLabel('Display name').fill('Household Member');
   await page.getByLabel('Email').fill('member@example.test');
-  await page.getByLabel('Temporary password').fill('Member123!');
+  await page.getByLabel('Initial password').fill('Member123!');
   await page.getByRole('button', { name: 'Create user' }).click();
   await expect(page.getByRole('dialog')).toBeHidden();
 
@@ -29,22 +25,22 @@ test('an administrator can create, edit, and remove a household user', async ({ 
     .getByRole('listitem')
     .filter({ hasText: 'Household Member' });
   await expect(row).toContainText('Member');
-  await row.getByRole('button', { name: 'Edit' }).click();
+  await row.getByRole('button', { name: 'Edit Household Member' }).click();
   await expectAlignedDialogActions(
     page.getByRole('dialog', { name: 'Edit user', exact: true }),
     'Remove user',
-    'Save changes',
+    'Save',
   );
   await page.getByLabel('Display name').fill('Household Administrator');
   await page.getByRole('checkbox', { name: /Administrator/ }).check();
-  await page.getByRole('button', { name: 'Save changes' }).click();
+  await page.getByRole('button', { name: 'Save' }).click();
 
   row = page
     .locator('app-users-page')
     .getByRole('listitem')
     .filter({ hasText: 'Household Administrator' });
   await expect(row).toContainText('Admin');
-  await row.getByRole('button', { name: 'Edit', exact: true }).click();
+  await row.getByRole('button', { name: 'Edit Household Administrator', exact: true }).click();
   await page
     .getByRole('dialog', { name: 'Edit user', exact: true })
     .getByRole('button', { name: 'Remove user', exact: true })
@@ -61,7 +57,7 @@ test('a household member cannot open user management', async ({ page }) => {
   await page.getByRole('button', { name: 'Add user' }).click();
   await page.getByLabel('Display name').fill('Household Member');
   await page.getByLabel('Email').fill('member@example.test');
-  await page.getByLabel('Temporary password').fill('Member123!');
+  await page.getByLabel('Initial password').fill('Member123!');
   await page.getByRole('button', { name: 'Create user' }).click();
 
   await page.getByRole('button', { name: 'Open account menu' }).click();

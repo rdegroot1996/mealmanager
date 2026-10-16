@@ -5,4 +5,3 @@ Remaining gaps in [product behavior](functional-overview.md) and the [technical 
 - Add pipeline validation (builds, tests, audits) when the compute budget allows.
 - Localize the install manifest description.
 - Add password changes, administrator resets with a temporary password requiring replacement, and host-level administrator recovery. Resets must clear lockout and invalidate sessions.
-- Add cooking mode that keeps the screen awake.

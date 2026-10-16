@@ -6,15 +6,16 @@
     [attr.aria-label]="label()"
     [placeholder]="placeholder()"
     [value]="value()"
-    (input)="value.set($any($event.target).value)"
-    (keyup.enter)="searched.emit()"
+    (input)="change($any($event.target).value, $any($event).isComposing)"
+    (compositionend)="change($any($event.target).value)"
+    (keydown.enter)="!$any($event).isComposing && submit($event)"
   />
   @if (value()) {
     <button
       class="btn btn-ghost btn-xs"
       type="button"
       [attr.aria-label]="clearSearchLabel(label())"
-      (click)="value.set(''); searched.emit()"
+      (click)="clear()"
     >
       <app-icon name="close" class="size-4" />
     </button>

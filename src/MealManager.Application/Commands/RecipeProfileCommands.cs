@@ -20,13 +20,13 @@ public class RecipeProfileCommands(ApplicationDbContext dbContext)
             RecipeId = recipe.Id,
             Name = command.Name,
             Servings = command.Servings,
-            Products = command.Products.Select((product, order) => new RecipeProfileProduct
+            Groceries = command.Groceries.Select((item, order) => new RecipeProfileGroceryItem
             {
                 Id = Guid.CreateVersion7(),
                 RecipeProfileId = profileId,
-                Name = product.Name,
-                Quantity = product.Quantity,
-                AtHome = product.AtHome,
+                Name = item.Name,
+                Quantity = item.Quantity,
+                AtHome = item.AtHome,
                 Order = order,
             }).ToList(),
         };
@@ -41,20 +41,20 @@ public class RecipeProfileCommands(ApplicationDbContext dbContext)
     {
         var recipe = await dbContext.Recipes
                 .Include(r => r.Profiles)
-                .ThenInclude(p => p.Products)
+                .ThenInclude(p => p.Groceries)
                 .FirstOrDefaultAsync(r => r.Profiles.Any(p => p.Id == id))
             ?? throw new NotFoundError(nameof(RecipeProfile));
         var profile = recipe.Profiles.First(p => p.Id == id);
 
-        var productIds = command.Products.Select(row => row.Id).Where(id => id != Guid.Empty).ToArray();
-        if (await dbContext.Set<RecipeProfileProduct>().AnyAsync(row => productIds.Contains(row.Id) && row.RecipeProfileId != id))
+        var groceryItemIds = command.Groceries.Select(row => row.Id).Where(id => id != Guid.Empty).ToArray();
+        if (await dbContext.Set<RecipeProfileGroceryItem>().AnyAsync(row => groceryItemIds.Contains(row.Id) && row.RecipeProfileId != id))
         {
-            throw new ValidationException("Product IDs must belong to the edited profile.");
+            throw new ValidationException("Grocery item IDs must belong to the edited profile.");
         }
 
         profile.Name = command.Name;
         profile.Servings = command.Servings;
-        UpdateProducts(profile, command.Products);
+        UpdateGroceries(profile, command.Groceries);
 
         await dbContext.SaveChangesAsync();
 
@@ -63,13 +63,13 @@ public class RecipeProfileCommands(ApplicationDbContext dbContext)
 
     public async Task DeleteRecipeProfile(Guid id)
     {
-        if (await dbContext.Plannings
-            .SelectMany(planning => planning.Entries.OfType<PlanningMeal>())
+        if (await dbContext.MealPlans
+            .SelectMany(mealPlan => mealPlan.Entries.OfType<PlannedMeal>())
             .AnyAsync(meal => meal.RecipeProfileId == id))
         {
             throw new InvalidOperationError(
                 ErrorCodes.RecipeProfileInUse,
-                "A recipe profile used by planning cannot be deleted.");
+                "A recipe profile used in a meal plan cannot be deleted.");
         }
 
         var recipe = await dbContext.Recipes
@@ -89,27 +89,27 @@ public class RecipeProfileCommands(ApplicationDbContext dbContext)
         await dbContext.SaveChangesAsync();
     }
 
-    private static void UpdateProducts(RecipeProfile profile, ICollection<RecipeProfileProductInputDto> products)
+    private static void UpdateGroceries(RecipeProfile profile, ICollection<RecipeProfileGroceryItemInputDto> groceries)
     {
-        var existingById = profile.Products.ToDictionary(product => product.Id);
-        var submittedIds = products.Where(product => product.Id != Guid.Empty)
-            .Select(product => product.Id)
+        var existingById = profile.Groceries.ToDictionary(item => item.Id);
+        var submittedIds = groceries.Where(item => item.Id != Guid.Empty)
+            .Select(item => item.Id)
             .ToHashSet();
 
-        profile.Products.RemoveAll(product => !submittedIds.Contains(product.Id));
+        profile.Groceries.RemoveAll(item => !submittedIds.Contains(item.Id));
 
-        foreach (var (dto, order) in products.Select((product, order) => (product, order)))
+        foreach (var (dto, order) in groceries.Select((item, order) => (item, order)))
         {
-            if (dto.Id != Guid.Empty && existingById.TryGetValue(dto.Id, out var product))
+            if (dto.Id != Guid.Empty && existingById.TryGetValue(dto.Id, out var item))
             {
-                product.Name = dto.Name;
-                product.Quantity = dto.Quantity;
-                product.AtHome = dto.AtHome;
-                product.Order = order;
+                item.Name = dto.Name;
+                item.Quantity = dto.Quantity;
+                item.AtHome = dto.AtHome;
+                item.Order = order;
             }
             else
             {
-                profile.Products.Add(new RecipeProfileProduct
+                profile.Groceries.Add(new RecipeProfileGroceryItem
                 {
                     Id = dto.Id == Guid.Empty ? Guid.CreateVersion7() : dto.Id,
                     RecipeProfileId = profile.Id,

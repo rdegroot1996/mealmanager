@@ -2,9 +2,9 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { EditRecipePage } from './edit-recipe-page';
 import { provideRouter } from '@angular/router';
-import { provideHttpClient } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 describe('EditRecipePage', () => {
   let component: EditRecipePage;
@@ -60,13 +60,16 @@ describe('EditRecipePage', () => {
     expect(component.recipe()!.baseServings).toBe(servings);
   });
 
-  it('blocks an invalid recipe save with focused validation feedback', () => {
+  it('blocks an invalid recipe save and focuses the first invalid field', async () => {
     component.ngOnInit();
 
     component.saveRecipe();
+    fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(component.validationErrors()).toContain('Recipe name is required.');
     expect(component.saving()).toBe(false);
+    expect(document.activeElement?.id).toBe('recipe-name');
   });
 
   it('allows a recipe without ingredients or preparation steps', () => {
@@ -89,7 +92,7 @@ describe('EditRecipePage', () => {
     expect(save).toHaveBeenCalledWith(expect.objectContaining({ ingredients: [], steps: [] }));
   });
 
-  it('renumbers steps after a drag-and-drop reorder', () => {
+  it('renumbers steps after moving an item', () => {
     component.recipe.set({
       id: 'recipe-1',
       name: 'Soup',
@@ -106,7 +109,7 @@ describe('EditRecipePage', () => {
       ],
     });
 
-    component.dropStep({ previousIndex: 1, currentIndex: 0 } as never);
+    component.moveStep(1, 0);
 
     expect(component.recipe()!.steps).toEqual([
       { id: 'second', description: 'Second', order: 0 },
@@ -145,7 +148,7 @@ describe('EditRecipePage', () => {
     ];
     fixture.detectChanges();
     const handle = fixture.nativeElement.querySelector(
-      'button[aria-label^="Reorder step 1"]',
+      'button[aria-label="Move step 1 down"]',
     ) as HTMLButtonElement;
     handle.focus();
     handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
@@ -155,13 +158,14 @@ describe('EditRecipePage', () => {
       { id: 'second', order: 0 },
       { id: 'first', order: 1 },
     ]);
-    expect(document.activeElement).toBe(handle);
-    expect(handle.getAttribute('aria-label')).toContain('Reorder step 2');
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('Move step 2 up');
+    expect(handle.getAttribute('aria-label')).toBe('Move step 2 down');
+    expect(handle.disabled).toBe(true);
     handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
     expect(component.recipe()!.steps[1].id).toBe('first');
   });
 
-  it('renumbers ingredients after a drag-and-drop reorder', () => {
+  it('renumbers ingredients after moving an item', () => {
     component.recipe.set({
       id: 'recipe-1',
       name: 'Soup',
@@ -178,7 +182,7 @@ describe('EditRecipePage', () => {
       steps: [],
     });
 
-    component.dropIngredient({ previousIndex: 1, currentIndex: 0 } as never);
+    component.moveIngredient(1, 0);
 
     expect(component.recipe()!.ingredients).toEqual([
       { id: 'second', name: 'Salt', quantity: 1, unit: 'tsp', order: 0 },
@@ -205,7 +209,7 @@ describe('EditRecipePage', () => {
     fixture.detectChanges();
 
     const handle = fixture.nativeElement.querySelector(
-      'button[aria-label^="Reorder Water"]',
+      'button[aria-label="Move Water down"]',
     ) as HTMLButtonElement;
     handle.focus();
     handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
@@ -216,7 +220,8 @@ describe('EditRecipePage', () => {
       { name: 'Salt', order: 0 },
       { name: 'Water', order: 1 },
     ]);
-    expect(document.activeElement).toBe(handle);
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('Move Water up');
+    expect(handle.disabled).toBe(true);
   });
 
   it('keeps the editor open and shows a save error from the API', () => {
@@ -273,6 +278,7 @@ describe('EditRecipePage', () => {
     expect(component.recipe()!.id).toBe('recipe-1');
     expect(navigate).toHaveBeenCalledWith(['/recipes', 'recipe-1', 'edit'], {
       replaceUrl: true,
+      queryParams: { photos: '1', new: '1' },
     });
     expect(fixture.nativeElement.textContent).not.toContain('Save the recipe first');
 
@@ -606,5 +612,42 @@ describe('EditRecipePage', () => {
     );
     component.recipe()!.notes = 'Changed';
     expect(component.hasUnsavedChanges()).toBe(true);
+  });
+  it('links server field errors to the submitted ingredient and focuses the first issue', async () => {
+    component.ngOnInit();
+    component.recipe()!.name = 'Soup';
+    component.addIngredient();
+    component.recipe()!.ingredients[0].name = 'Carrots';
+    vi.spyOn(component.recipeStore, 'saveRecipe').mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 400,
+            error: {
+              code: 'ValidationError',
+              errors: { 'Ingredients[0].Unit': ['Invalid unit'], 'Tags[0]': ['Invalid tag'] },
+            },
+          }),
+      ),
+    );
+    component.saveRecipe();
+    await fixture.whenStable();
+    const input = fixture.nativeElement.querySelector('#ingredient-unit-0') as HTMLInputElement;
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(input.getAttribute('aria-describedby')).toBe('ingredient-unit-0-error');
+    expect(component.validationIssues()).toEqual([
+      { id: 'ingredient-unit-0', message: 'Check this field and try again.' },
+      { id: 'recipe-tags', message: 'Check this field and try again.' },
+    ]);
+    const link = fixture.nativeElement.querySelector(
+      '#recipe-validation button',
+    ) as HTMLButtonElement;
+    expect(link).not.toBeNull();
+    link.click();
+    await fixture.whenStable();
+    expect(document.activeElement).toBe(input);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await fixture.whenStable();
+    expect(input.getAttribute('aria-invalid')).toBe('false');
   });
 });

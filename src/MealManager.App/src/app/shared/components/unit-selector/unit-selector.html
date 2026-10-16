@@ -1,7 +1,10 @@
 <div class="input h-11 w-full gap-0 border-base-300 bg-base-100 px-0">
   <input
     type="text"
+    [required]="required()"
     [id]="controlId()"
+    [attr.aria-invalid]="invalid()"
+    [attr.aria-describedby]="describedBy()"
     class="h-full min-w-0 flex-1 bg-transparent pl-3 max-[799px]:text-base"
     [ngModel]="displayUnit(unit())"
     (ngModelChange)="unit.set($event)"
