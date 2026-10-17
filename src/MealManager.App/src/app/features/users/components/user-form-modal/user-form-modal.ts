@@ -5,22 +5,37 @@ import { ApiUser } from '../../../../api/models/api-user';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { FormField } from '../../../../shared/components/form-field/form-field';
 import { Modal } from '../../../../shared/components/modal/modal';
+import { ConfirmationModal } from '../../../../shared/components/confirmation-modal/confirmation-modal';
 import { apiErrorMessage } from '../../../../shared/services/api-error-message';
 import { ToastService } from '../../../../shared/services/toast.service';
 import { UsersStore } from '../../state/users.store';
 
 @Component({
   selector: 'app-user-form-modal',
-  imports: [AppIcon, FormsModule, Modal, FormField],
+  imports: [ConfirmationModal, AppIcon, FormsModule, Modal, FormField],
   templateUrl: './user-form-modal.html',
 })
 export class UserFormModal {
+  private savedDraft = '';
+  readonly discardModal = viewChild.required<ConfirmationModal>('discardModal');
+  readonly beforeDismiss = () =>
+    this.draftSnapshot() === this.savedDraft || this.discardModal().confirmDiscard();
+  private draftSnapshot() {
+    return JSON.stringify([
+      this.displayName().trim(),
+      this.email().trim(),
+      !!this.password(),
+      this.isAdmin(),
+    ]);
+  }
+
   readonly emailCannotChange = $localize`:@@users.emailCannotChange:Email addresses cannot be changed.`;
   ngOnDestroy() {
     this.endSession();
   }
   private session = 0;
   endSession() {
+    this.password.set('');
     ++this.session;
   }
   private readonly store = inject(UsersStore);
@@ -50,6 +65,7 @@ export class UserFormModal {
     this.isAdmin.set(user?.isAdmin ?? false);
     this.saving.set(false);
     this.error.set('');
+    this.savedDraft = this.draftSnapshot();
     this.modal().open();
   }
 

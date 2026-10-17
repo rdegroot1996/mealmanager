@@ -12,7 +12,7 @@ public class RecipeProfileQueries(ApplicationDbContext dbContext)
         var recipe = await dbContext.Recipes
                 .AsNoTracking()
                 .Include(r => r.Profiles)
-                    .ThenInclude(p => p.Products)
+                    .ThenInclude(p => p.Groceries)
                 .FirstOrDefaultAsync(r => r.Profiles.Any(p => p.Id == id))
             ?? throw new NotFoundError(nameof(RecipeProfile));
 

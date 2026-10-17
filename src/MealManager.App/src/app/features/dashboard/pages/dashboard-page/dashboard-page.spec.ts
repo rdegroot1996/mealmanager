@@ -45,12 +45,12 @@ describe('DashboardPage', () => {
     expect(timeOfDayGreeting(hour as number)).toBe(greeting);
   });
 
-  it('orders upcoming meals directly after active planning', () => {
+  it('orders upcoming meals directly after active meal plan', () => {
     const children = fixture.nativeElement.querySelectorAll(
-      'app-active-planning, app-upcoming-meals, app-favorite-recipes',
+      'app-active-meal-plan, app-upcoming-meals, app-favorite-recipes',
     ) as NodeListOf<HTMLElement>;
     const widgets = Array.from(children).map((element) => element.tagName.toLowerCase());
 
-    expect(widgets).toEqual(['app-active-planning', 'app-upcoming-meals', 'app-favorite-recipes']);
+    expect(widgets).toEqual(['app-active-meal-plan', 'app-upcoming-meals', 'app-favorite-recipes']);
   });
 });

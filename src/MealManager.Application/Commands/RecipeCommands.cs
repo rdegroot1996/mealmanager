@@ -59,7 +59,7 @@ public class RecipeCommands(
                     RecipeId = recipeId,
                     Name = "Default",
                     Servings = command.BaseServings,
-                    Products = [],
+                    Groceries = [],
                 },
             ],
         };
@@ -116,13 +116,13 @@ public class RecipeCommands(
 
     public async Task DeleteRecipe(Guid id)
     {
-        if (await dbContext.Plannings
-            .SelectMany(planning => planning.Entries.OfType<PlanningMeal>())
+        if (await dbContext.MealPlans
+            .SelectMany(mealPlan => mealPlan.Entries.OfType<PlannedMeal>())
             .AnyAsync(meal => meal.RecipeId == id))
         {
             throw new InvalidOperationError(
                 ErrorCodes.RecipeInUse,
-                "A recipe used by planning cannot be deleted.");
+                "A recipe used in a meal plan cannot be deleted.");
         }
 
         var recipe = await dbContext.Recipes

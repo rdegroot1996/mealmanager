@@ -12,7 +12,13 @@ export class Modal {
   size = input<'standard' | 'wide'>('standard');
   showClose = input(true);
   labelledBy = input<string | null>(null);
-  dismissOnBackdrop = input(false);
+  dismissOnBackdrop = input(true);
+  busy = input(false);
+  beforeDismiss = input<(() => boolean | Promise<boolean>) | null>(null);
+  private dismissPending: number | null = null;
+  private session = 0;
+  private backdropPointer: number | null = null;
+  private backdropClick = false;
   closed = output<void>();
   readonly titleId = `modal-title-${++Modal.nextId}`;
   private previouslyFocused: HTMLElement | null = null;
@@ -23,6 +29,8 @@ export class Modal {
   open(initialFocus: 'control' | 'title' = 'control') {
     const dialog = this.dialog().nativeElement;
     if (dialog.open) return;
+    ++this.session;
+    this.resetBackdrop();
     this.previouslyFocused = document.activeElement as HTMLElement | null;
     const title = dialog.querySelector<HTMLElement>(`#${this.titleId}`);
     // Set native initial focus before showModal so editing never summons a keyboard.
@@ -53,6 +61,7 @@ export class Modal {
   }
 
   close() {
+    ++this.session;
     const dialog = this.dialog().nativeElement;
     if (dialog.open) dialog.close();
   }
@@ -63,16 +72,51 @@ export class Modal {
       ?.focus({ preventScroll: true });
   }
 
-  cancel() {
-    this.close();
+  async cancel() {
+    const session = this.session;
+    if (this.busy() || this.dismissPending === session) return;
+    this.dismissPending = session;
+    try {
+      const guard = this.beforeDismiss();
+      const allowed = !guard || (await guard());
+      if (allowed && !this.busy() && session === this.session) this.close();
+    } finally {
+      if (this.dismissPending === session) this.dismissPending = null;
+    }
+  }
+
+  onCancel(event: Event) {
+    event.preventDefault();
+    void this.cancel();
   }
 
   onBackdropClick(event: MouseEvent) {
-    if (this.dismissOnBackdrop() && event.target === this.dialog().nativeElement) this.cancel();
+    const dismiss = this.backdropClick;
+    this.resetBackdrop();
+    if (dismiss && this.dismissOnBackdrop() && event.target === this.dialog().nativeElement)
+      void this.cancel();
+  }
+
+  onPointerDown(event: PointerEvent) {
+    this.resetBackdrop();
+    if (event.button === 0 && event.target === this.dialog().nativeElement)
+      this.backdropPointer = event.pointerId;
+  }
+
+  onPointerUp(event: PointerEvent) {
+    this.backdropClick =
+      this.backdropPointer === event.pointerId && event.target === this.dialog().nativeElement;
+    this.backdropPointer = null;
+  }
+
+  resetBackdrop() {
+    this.backdropPointer = null;
+    this.backdropClick = false;
   }
 
   restoreFocus() {
-    if (!document.querySelector('dialog[open]')) {
+    const topDialog = [...document.querySelectorAll('dialog[open]')].at(-1);
+    if (!topDialog || this.previouslyFocused?.closest('dialog') === topDialog) {
       this.previouslyFocused?.focus({ preventScroll: true });
     }
     this.previouslyFocused = null;

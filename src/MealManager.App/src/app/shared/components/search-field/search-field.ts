@@ -12,5 +12,26 @@ export class SearchField {
   value = model('');
   label = input($localize`:@@common.search:Search`);
   placeholder = input($localize`:@@shared.searchField.search:Search...`);
+  autoSearch = input(false);
   searched = output<void>();
+  private timer?: ReturnType<typeof setTimeout>;
+  change(value: string, composing = false) {
+    this.value.set(value);
+    clearTimeout(this.timer);
+    if (!this.autoSearch() || composing) return;
+    if (!value) this.submit();
+    else this.timer = setTimeout(() => this.submit(), 250);
+  }
+  submit(event?: Event) {
+    event?.preventDefault();
+    clearTimeout(this.timer);
+    this.searched.emit();
+  }
+  clear() {
+    this.value.set('');
+    this.submit();
+  }
+  ngOnDestroy() {
+    clearTimeout(this.timer);
+  }
 }

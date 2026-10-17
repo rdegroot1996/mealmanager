@@ -94,11 +94,11 @@ public partial class RecipeControllerTests(CustomWebApplicationFactory factory) 
             EndDate = today,
         });
         var cycle = (await cycleResponse.Content.ReadFromJsonAsync<PlanningCycleDto>(JsonOptions))!;
-        var planning = (await HttpClient.GetFromJsonAsync<PlanningDto>(
-            $"/api/planning/cycle/{cycle.Id}", JsonOptions))!;
-        (await HttpClient.PostAsJsonAsync("/api/planning-meals", new AddPlanningMealDto
+        var mealPlan = (await HttpClient.GetFromJsonAsync<MealPlanDto>(
+            $"/api/meal-plans/cycle/{cycle.Id}", JsonOptions))!;
+        (await HttpClient.PostAsJsonAsync("/api/planned-meals", new AddPlannedMealDto
         {
-            PlanningId = planning.Id,
+            MealPlanId = mealPlan.Id,
             RecipeId = recipe.Id,
             RecipeProfileId = Assert.Single(recipe.Profiles).Id,
             Date = today,
@@ -124,8 +124,8 @@ public partial class RecipeControllerTests(CustomWebApplicationFactory factory) 
         });
         cycleResponse.EnsureSuccessStatusCode();
         var cycle = (await cycleResponse.Content.ReadFromJsonAsync<PlanningCycleDto>(JsonOptions))!;
-        var planning = (await HttpClient.GetFromJsonAsync<PlanningDto>(
-            $"/api/planning/cycle/{cycle.Id}", JsonOptions))!;
+        var mealPlan = (await HttpClient.GetFromJsonAsync<MealPlanDto>(
+            $"/api/meal-plans/cycle/{cycle.Id}", JsonOptions))!;
 
         async Task<RecipeDto> CreateFavorite(string name)
         {
@@ -138,9 +138,9 @@ public partial class RecipeControllerTests(CustomWebApplicationFactory factory) 
 
         async Task AddMeal(RecipeDto recipe, DateOnly date)
         {
-            var response = await HttpClient.PostAsJsonAsync("/api/planning-meals", new AddPlanningMealDto
+            var response = await HttpClient.PostAsJsonAsync("/api/planned-meals", new AddPlannedMealDto
             {
-                PlanningId = planning.Id,
+                MealPlanId = mealPlan.Id,
                 RecipeId = recipe.Id,
                 RecipeProfileId = Assert.Single(recipe.Profiles).Id,
                 Date = date,

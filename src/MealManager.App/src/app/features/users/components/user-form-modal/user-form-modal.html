@@ -1,4 +1,4 @@
-<app-modal #modal (closed)="endSession()">
+<app-modal #modal [beforeDismiss]="beforeDismiss" [busy]="saving()" (closed)="endSession()">
   <h2 modal-title>
     @if (isEdit()) {
       <ng-container i18n="@@users.editUser">Edit user</ng-container>
@@ -46,8 +46,8 @@
     @if (!isEdit()) {
       <app-form-field
         controlId="user-password"
-        i18n-label="@@users.userFormModal.template.labelTemporaryPassword"
-        label="Temporary password"
+        i18n-label="@@users.initialPassword"
+        label="Initial password"
         i18n-hint="@@users.passwordHint"
         hint="At least 6 characters."
         [required]="true"
@@ -78,10 +78,8 @@
         <span class="block font-medium" i18n="@@users.userFormModal.template.administrator"
           >Administrator</span
         >
-        <span
-          class="text-sm text-base-content/75"
-          i18n="@@users.userFormModal.template.canCreateEditAndRemoveUsers"
-          >Can create, edit, and remove users.</span
+        <span class="text-sm text-base-content/75" i18n="@@users.administratorSettingsScope"
+          >Manages users and settings.</span
         >
         @if (isCurrentUser()) {
           <span
@@ -115,10 +113,12 @@
       @if (saving()) {
         <ng-container i18n="@@common.saving">Saving…</ng-container>
       } @else if (isEdit()) {
-        <ng-container i18n="@@common.saveChanges">Save changes</ng-container>
+        <ng-container i18n="@@common.save">Save</ng-container>
       } @else {
         <ng-container i18n="@@users.createUser">Create user</ng-container>
       }
     </button>
   </div>
 </app-modal>
+
+<app-confirmation-modal #discardModal />

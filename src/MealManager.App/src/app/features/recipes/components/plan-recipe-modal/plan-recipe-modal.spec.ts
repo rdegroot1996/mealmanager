@@ -21,8 +21,8 @@ describe('PlanRecipeModal', () => {
       previousPlanningCycleId: null,
       nextPlanningCycleId: 'active',
     });
-    component.planningStore.activePlanning.set({
-      id: 'history-planning',
+    component.mealPlanStore.activeMealPlan.set({
+      id: 'history-mealPlan',
       planningCycleId: 'history',
       entries: [],
       notes: [],
@@ -39,15 +39,15 @@ describe('PlanRecipeModal', () => {
       nextPlanningCycleId: null,
     });
     http
-      .expectOne('/api/planning/cycle/active')
-      .flush({ id: 'active-planning', planningCycleId: 'active', entries: [], notes: [] });
+      .expectOne('/api/meal-plans/cycle/active')
+      .flush({ id: 'active-meal-plan', planningCycleId: 'active', entries: [], notes: [] });
     expect(component.cycleStore.currentCycle()?.id).toBe('history');
-    expect(component.planningStore.activePlanning()?.id).toBe('history-planning');
+    expect(component.mealPlanStore.activeMealPlan()?.id).toBe('history-mealPlan');
     expect(component.days()[0].date).toBe('2099-09-08');
     expect(component.selectedDate()).toBe('2099-09-08');
     component.planRecipe();
-    const request = http.expectOne('/api/planning-meals');
-    expect(request.request.body.planningId).toBe('active-planning');
+    const request = http.expectOne('/api/planned-meals');
+    expect(request.request.body.mealPlanId).toBe('active-meal-plan');
     request.flush({ id: 'new-meal' });
     expect(success).toHaveBeenCalledWith('Meal added to planner.');
     http.verify();

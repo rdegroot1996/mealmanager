@@ -17,7 +17,7 @@ public sealed class RecipeDiscoveryQueries(ApplicationDbContext dbContext)
         if (options.Category.HasValue) query = query.Where(recipe => recipe.Category == options.Category);
         foreach (var tag in options.Tags)
         {
-            if (string.IsNullOrWhiteSpace(tag)) throw new ValidationException("Tags must contain non-empty label names.");
+            if (string.IsNullOrWhiteSpace(tag)) throw new ValidationException("Tags must contain non-empty tag names.");
             query = query.Where(recipe => recipe.Tags.Any(value => value.Name == tag));
         }
         if (!string.IsNullOrWhiteSpace(options.Search))

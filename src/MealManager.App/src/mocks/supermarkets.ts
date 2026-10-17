@@ -1,6 +1,6 @@
 import { ApiPicnicConnection } from '../app/api/models/api-picnic';
 import { http, HttpResponse } from 'msw';
-import { ApiGroceryList } from '../app/api/models/api-groceries';
+import { ApiShoppingList } from '../app/api/models/api-shopping-list';
 import {
   SupermarketProviderId,
   ApiSupermarketProduct,
@@ -89,7 +89,7 @@ resetSupermarkets();
 const problem = (code: string, detail: string, status = 400) =>
   HttpResponse.json({ code, detail }, { status });
 export function supermarketHandlers(context: {
-  lists: () => Record<string, ApiGroceryList>;
+  lists: () => Record<string, ApiShoppingList>;
   access: (admin: boolean) => boolean;
   group: (id: string | null) => string;
   unreviewed: (cycle: string) => number;
@@ -100,10 +100,8 @@ export function supermarketHandlers(context: {
     const list = context.lists()[id];
     return list
       ? [
-          ...list.planningMealGroceries.flatMap((x) =>
-            [...x.groceries].sort((a, b) => a.order - b.order),
-          ),
-          ...[...list.groceries].sort((a, b) => a.order - b.order),
+          ...list.mealGroups.flatMap((x) => [...x.items].sort((a, b) => a.order - b.order)),
+          ...[...list.items].sort((a, b) => a.order - b.order),
         ]
       : null;
   };
@@ -117,7 +115,7 @@ export function supermarketHandlers(context: {
             x.name,
             x.quantity,
             x.checked,
-            x.recipeProfileProductId,
+            x.recipeProfileGroceryItemId,
           ]),
         ),
       ),
@@ -253,13 +251,15 @@ export function supermarketHandlers(context: {
         revision: await revision(cycle),
         unreviewedMeals: context.unreviewed(cycle),
         items: items.map((x) => ({
-          groceryItemId: x.id,
-          profileProductId: x.recipeProfileProductId ?? null,
+          shoppingListItemId: x.id,
+          recipeProfileGroceryItemId: x.recipeProfileGroceryItemId ?? null,
           name: x.name,
           quantity: x.quantity,
           checked: x.checked,
-          group: context.group(x.planningMealId),
-          product: x.recipeProfileProductId ? (mappings[x.recipeProfileProductId] ?? null) : null,
+          group: context.group(x.plannedMealId),
+          product: x.recipeProfileGroceryItemId
+            ? (mappings[x.recipeProfileGroceryItemId] ?? null)
+            : null,
         })),
       };
       return HttpResponse.json(review);
@@ -292,10 +292,10 @@ export function supermarketHandlers(context: {
       if (
         !data.items?.length ||
         data.items.length > 500 ||
-        new Set(data.items.map((x) => x.groceryItemId)).size !== data.items.length ||
+        new Set(data.items.map((x) => x.shoppingListItemId)).size !== data.items.length ||
         data.items.some(
           (x) =>
-            !groceries.some((g) => g.id === x.groceryItemId) ||
+            !groceries.some((g) => g.id === x.shoppingListItemId) ||
             !Number.isInteger(x.quantity) ||
             x.quantity < 1 ||
             x.quantity > 999,
@@ -323,8 +323,8 @@ export function supermarketHandlers(context: {
         return invalid();
       const remembered = new Map<string, string>();
       for (const selection of data.items) {
-        const source = groceries.find((x) => x.id === selection.groceryItemId)!;
-        const slot = source.recipeProfileProductId;
+        const source = groceries.find((x) => x.id === selection.shoppingListItemId)!;
+        const slot = source.recipeProfileGroceryItemId;
         if (slot && (selection.remember || !mappings[slot])) {
           if (remembered.has(slot) && remembered.get(slot) !== selection.productId)
             return invalid();
@@ -357,19 +357,19 @@ export function supermarketHandlers(context: {
           quantity: total.quantity,
           outcome,
           reason: outcome === 'Added' ? null : outcome === 'Failed' ? 'Rejected' : 'Uncertain',
-          groceryItemIds: sources.map((x) => x.groceryItemId),
+          shoppingListItemIds: sources.map((x) => x.shoppingListItemId),
           localWarning: null,
         });
         if (outcome === 'Unknown') stopped = true;
         if (outcome === 'Added')
           for (const source of sources) {
-            const item = groceries.find((x) => x.id === source.groceryItemId)!;
+            const item = groceries.find((x) => x.id === source.shoppingListItemId)!;
             item.checked = true;
             if (
-              item.recipeProfileProductId &&
-              (source.remember || !mappings[item.recipeProfileProductId])
+              item.recipeProfileGroceryItemId &&
+              (source.remember || !mappings[item.recipeProfileGroceryItemId])
             )
-              mappings[item.recipeProfileProductId] = product;
+              mappings[item.recipeProfileGroceryItemId] = product;
           }
       }
       return HttpResponse.json(result);

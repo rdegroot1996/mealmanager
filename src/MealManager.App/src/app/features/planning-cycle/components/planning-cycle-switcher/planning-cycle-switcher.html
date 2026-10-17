@@ -27,6 +27,17 @@
       <app-icon name="chevron_right" class="size-5" />
     </button>
   </div>
+  @if (cycle.nextPlanningCycleId) {
+    <button
+      type="button"
+      class="btn btn-ghost btn-sm min-h-11 w-full"
+      [disabled]="disabled() || pending()"
+      (click)="returnToActive()"
+      i18n="@@planningCycle.returnActive"
+    >
+      Return to active cycle
+    </button>
+  }
 }
 @if (pending()) {
   <p class="px-3 pb-3 text-xs text-base-content/75" role="status" i18n="@@common.loading">

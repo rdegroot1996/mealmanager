@@ -39,7 +39,7 @@ describe('RecipePage', () => {
     expect(first.cancelled).toBe(true);
     http
       .expectOne('/api/recipe-profiles/second')
-      .flush({ id: 'second', name: 'Second', servings: 3, products: [] });
+      .flush({ id: 'second', name: 'Second', servings: 3, groceries: [] });
     expect(component.selectedProfileId()).toBe('second');
   });
 
@@ -57,7 +57,7 @@ describe('RecipePage', () => {
       id: 'profile-1',
       name: 'Default',
       servings: 2,
-      products: [],
+      groceries: [],
     };
     const updated: ApiRecipeProfile = { ...original, name: 'Family', servings: 4 };
     const open = vi.fn();
@@ -79,7 +79,7 @@ describe('RecipePage', () => {
   });
 
   it('keeps a newer profile selection when an earlier profile save finishes', () => {
-    const original: ApiRecipeProfile = { id: 'first', name: 'First', servings: 2, products: [] };
+    const original: ApiRecipeProfile = { id: 'first', name: 'First', servings: 2, groceries: [] };
     component.profile.set(original);
     component.selectedProfileId.set(original.id);
     const open = vi.fn();
@@ -92,7 +92,7 @@ describe('RecipePage', () => {
     onSave({ ...original, name: 'Updated' }).subscribe();
     const save = http.expectOne('/api/recipe-profiles/first');
     component.selectProfile('second');
-    const second: ApiRecipeProfile = { id: 'second', name: 'Second', servings: 4, products: [] };
+    const second: ApiRecipeProfile = { id: 'second', name: 'Second', servings: 4, groceries: [] };
     http.expectOne('/api/recipe-profiles/second').flush(second);
     save.flush({ ...original, name: 'Updated' });
     expect(component.profile()).toEqual(second);
@@ -170,7 +170,7 @@ describe('RecipePage', () => {
     expect(removeButton).toBeUndefined();
   });
 
-  it('shows all-history planning statistics beside the recipe metadata', () => {
+  it('shows all-history meal plan statistics beside the recipe metadata', () => {
     const recipe = createRecipe();
     recipe.planningStatistics = { timesPlanned: 3, lastPlanned: '2026-08-28' };
     component.recipeStore.activeRecipe.set(recipe);
@@ -185,7 +185,7 @@ describe('RecipePage', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Never');
   });
 
-  it('shows empty states when ingredients and preparation steps are absent', () => {
+  it('keeps lightweight recipes ready to plan without empty cooking sections', () => {
     const recipe = createRecipe();
     component.recipeStore.activeRecipe.set(recipe);
     component.profile.set(recipe.profiles[0]);
@@ -194,11 +194,11 @@ describe('RecipePage', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain(
-      'No ingredients have been added to this recipe.',
+      'You can plan this recipe without ingredients or steps.',
     );
-    expect(fixture.nativeElement.textContent).toContain(
-      'No preparation steps have been added to this recipe.',
-    );
+    expect(fixture.nativeElement.querySelector('#start-cooking')).toBeNull();
+    expect(fixture.nativeElement.querySelector('#recipe-ingredients-title')).toBeNull();
+    expect(fixture.nativeElement.querySelector('#recipe-steps-title')).toBeNull();
     expect(
       fixture.nativeElement.querySelector('[data-testid="profile-selection"] app-profile-select'),
     ).not.toBeNull();
@@ -226,7 +226,7 @@ describe('RecipePage', () => {
     fixture.detectChanges();
 
     const button = fixture.nativeElement.querySelector(
-      'button[aria-label="Add to favorites"]',
+      'button[aria-label="Add Pasta to favorites"]',
     ) as HTMLButtonElement;
     expect(button.getAttribute('aria-pressed')).toBe('false');
     expect(button.classList).toContain('btn-circle');
@@ -251,7 +251,7 @@ describe('RecipePage', () => {
 
     expect(component.recipe()?.isFavorite).toBe(true);
     expect(
-      fixture.nativeElement.querySelector('button[aria-label="Remove from favorites"]'),
+      fixture.nativeElement.querySelector('button[aria-label="Remove Pasta from favorites"]'),
     ).not.toBeNull();
   });
 
@@ -280,10 +280,40 @@ describe('RecipePage', () => {
     fixture.detectChanges();
 
     const button = Array.from<HTMLButtonElement>(
-      fixture.nativeElement.querySelectorAll('button'),
-    ).find((candidate) => candidate.textContent?.trim() === 'Edit');
-    expect(button?.classList).toContain('btn-sm');
+      fixture.nativeElement.querySelectorAll(
+        'section[aria-labelledby="recipe-groceries-title"] button',
+      ),
+    ).find((candidate) => candidate.textContent?.trim() === 'Edit profile');
+    expect(button?.classList).toContain('min-h-11');
     expect(button?.querySelector('app-icon[name="edit"]')).not.toBeNull();
+  });
+
+  it('renders step content without template indentation while preserving deliberate line breaks', () => {
+    const recipe = createRecipe();
+    recipe.steps = [{ id: 'step', description: 'Stir thoroughly.\nThen serve.', order: 0 }];
+    component.recipeStore.activeRecipe.set(recipe);
+    component.profile.set(recipe.profiles[0]);
+    component.loading.set(false);
+    fixture.detectChanges();
+    expect(
+      fixture.nativeElement.querySelector('[aria-labelledby="recipe-steps-title"] p').textContent,
+    ).toBe('Stir thoroughly.\nThen serve.');
+  });
+
+  it('offers profile creation only inside the profile context menu', () => {
+    const recipe = createRecipe();
+    component.recipeStore.activeRecipe.set(recipe);
+    component.profile.set(recipe.profiles[0]);
+    component.loading.set(false);
+    fixture.detectChanges();
+    const selection = fixture.nativeElement.querySelector(
+      '[data-testid="profile-selection"]',
+    ) as HTMLElement;
+    const add = [...selection.querySelectorAll('button')].filter(
+      (button) => button.textContent?.trim() === 'Add profile',
+    );
+    expect(add).toHaveLength(1);
+    expect(add[0].closest('app-action-dialog')).not.toBeNull();
   });
 
   it('uses outlined destructive actions without duplicate menu dividers', () => {
@@ -304,7 +334,7 @@ describe('RecipePage', () => {
 
   it('groups profile groceries and updates both sections when the profile changes', () => {
     const recipe = createRecipe();
-    recipe.profiles[0].products = [
+    recipe.profiles[0].groceries = [
       { id: 'salt', name: 'Salt', quantity: 1, atHome: true },
       { id: 'pasta', name: 'Pasta', quantity: 2, atHome: false },
       { id: 'oil', name: 'Oil', quantity: 1, atHome: true },
@@ -337,7 +367,7 @@ describe('RecipePage', () => {
 
     component.profile.set({
       ...recipe.profiles[1],
-      products: [{ id: 'rice', name: 'Rice', quantity: 1, atHome: false }],
+      groceries: [{ id: 'rice', name: 'Rice', quantity: 1, atHome: false }],
     });
     fixture.detectChanges();
     expect(sections()).toHaveLength(1);
@@ -347,7 +377,7 @@ describe('RecipePage', () => {
 
     component.profile.set({
       ...recipe.profiles[1],
-      products: [{ id: 'salt', name: 'Salt', quantity: 1, atHome: true }],
+      groceries: [{ id: 'salt', name: 'Salt', quantity: 1, atHome: true }],
     });
     fixture.detectChanges();
     expect(sections()).toHaveLength(1);
@@ -367,8 +397,8 @@ describe('RecipePage', () => {
       ingredients: [],
       steps: [],
       profiles: [
-        { id: 'profile-1', name: 'Default', servings: 2, products: [] },
-        { id: 'profile-2', name: 'Family', servings: 4, products: [] },
+        { id: 'profile-1', name: 'Default', servings: 2, groceries: [] },
+        { id: 'profile-2', name: 'Family', servings: 4, groceries: [] },
       ],
     };
   }

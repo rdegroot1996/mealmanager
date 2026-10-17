@@ -19,6 +19,13 @@
       Retry
     </button>
   </div>
+} @else if (recipe() && profile() && cooking()) {
+  <app-cooking-view
+    [recipe]="recipe()!"
+    [profile]="profile()!"
+    [ingredients]="scaledIngredients()"
+    (closed)="exitCooking()"
+  />
 } @else if (recipe()) {
   <app-plan-recipe-modal
     [recipe]="recipe()!"
@@ -28,11 +35,15 @@
   <app-profile-form-modal #profileFormModal />
   <app-confirmation-modal #confirmationModal />
   <app-page-header>
-    <a page-content class="flex items-center gap-1" [routerLink]="['/recipes']">
+    <a
+      page-content
+      class="flex items-center gap-1"
+      [routerLink]="returnContext.route || '/recipes'"
+      [queryParams]="returnContext.route ? {} : catalogContext.queryParams"
+      (click)="returnContext.requestRestore()"
+    >
       <app-icon name="chevron_left" class="size-5" />
-      <span class="text-sm" i18n="@@recipes.recipePage.template.backToRecipes2"
-        >Back to Recipes</span
-      >
+      <span class="text-sm">{{ backLabel }}</span>
     </a>
     <app-action-dialog
       page-actions
@@ -42,7 +53,7 @@
       <li>
         <a class="btn btn-ghost h-auto" [routerLink]="['/recipes', recipe()!.id, 'edit']">
           <app-icon name="edit" class="size-5" />
-          <ng-container i18n="@@recipes.recipePage.editRecipe">Edit Recipe</ng-container></a
+          <ng-container i18n="@@recipes.recipePage.editRecipe">Edit recipe</ng-container></a
         >
       </li>
 
@@ -95,34 +106,32 @@
         }
       </div>
       <div class="mt-5" data-testid="profile-selection">
-        <div class="flex items-center justify-between gap-2">
-          <span class="text-xs font-semibold" i18n="@@common.profile">Profile</span>
-          <button
-            class="btn btn-ghost btn-sm min-h-11 gap-1 px-2 font-normal text-primary"
-            type="button"
-            (click)="openNewProfile()"
-          >
-            <app-icon name="add" class="size-4" />
-            <ng-container i18n="@@recipes.addProfile">Add Profile</ng-container>
-          </button>
-        </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-end gap-2">
           <app-profile-select
-            class="min-w-0 flex-1 [&_.fieldset]:p-0"
-            [showLabel]="false"
+            class="min-w-0 flex-1"
             [profiles]="recipe()!.profiles"
             [selectedProfileId]="selectedProfileId()"
             (selectedProfileIdChange)="selectProfile($event)"
           />
           <app-action-dialog
+            class="mb-1"
             [compact]="false"
             label="More profile actions"
             i18n-label="@@recipes.recipePage.template.labelMoreProfileActions"
+            title="Profiles"
+            i18n-title="@@recipes.profiles"
           >
+            <p action-context class="text-sm">{{ profile()?.name }}</p>
+            <li>
+              <button class="btn btn-ghost h-auto" type="button" (click)="openNewProfile()">
+                <app-icon name="add" class="size-5" />
+                <span i18n="@@recipes.addProfile">Add profile</span>
+              </button>
+            </li>
             <li>
               <button class="btn btn-ghost h-auto" type="button" (click)="openEditProfile()">
                 <app-icon name="edit" class="size-5" /><span i18n="@@recipes.editProfile"
-                  >Edit Profile</span
+                  >Edit profile</span
                 >
               </button>
             </li>
@@ -150,108 +159,141 @@
           (click)="planRecipeModal.open()"
           i18n="@@recipes.recipePage.template.addToPlanner"
         >
-          Add to Planner
+          Add to planner
         </button>
       </div>
     </div>
   </div>
   @if (profile()) {
-    <div class="mt-10 grid grid-cols-1 gap-10 min-[800px]:mt-12 lg:grid-cols-3 lg:gap-12">
-      <section aria-labelledby="recipe-ingredients-title" class="col-span-1">
-        <div class="flex flex-col gap-4">
-          <h2 id="recipe-ingredients-title" class="app-section-title">
-            <ng-container i18n="@@recipes.ingredients">Ingredients</ng-container>
-          </h2>
-          <p
-            class="grow-0 text-sm text-base-content/75"
-            i18n="@@recipes.recipePage.template.servingsRecipeBase"
-          >
-            {{ profile()?.servings }} servings (recipe base: {{ recipe()?.baseServings }})
-          </p>
-          <table class="table w-full table-fixed text-base leading-6 [&_td]:px-0">
-            <tbody>
-              @for (ingredient of scaledIngredients(); track ingredient.id) {
-                <tr>
-                  <td class="align-top break-words [overflow-wrap:anywhere]">
-                    {{ ingredient.name }}
-                  </td>
-                  <td class="w-2/5 align-top text-right break-words [overflow-wrap:anywhere]">
-                    {{ formatQuantity(ingredient) }} {{ displayUnit(ingredient.unit) }}
-                  </td>
-                </tr>
-              } @empty {
-                <tr>
-                  <td
-                    colspan="2"
-                    class="py-0 text-sm leading-[21px] text-base-content/75"
-                    i18n="@@recipes.recipePage.template.noIngredientsHaveBeenAddedToThis"
-                  >
-                    No ingredients have been added to this recipe.
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </section>
-      <section aria-labelledby="recipe-steps-title" class="col-span-1 lg:col-span-2">
-        <div class="flex flex-col gap-4">
-          <h2 id="recipe-steps-title" class="app-section-title">
-            <ng-container i18n="@@recipes.steps">Steps</ng-container>
-          </h2>
-          <div class="flex flex-col gap-5">
-            @for (step of recipe()?.steps; track step.id) {
-              <div class="flex items-start gap-3">
-                <div
-                  class="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary font-medium text-secondary-content"
-                >
-                  {{ $index + 1 }}
-                </div>
-                <p
-                  class="mt-1 min-w-0 flex-1 whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
-                >
-                  {{ step.description }}
-                </p>
+    @if (recipe()!.ingredients.length || recipe()!.steps.length) {
+      <ng-template #cookAction>
+        <button id="start-cooking" type="button" class="btn btn-secondary" (click)="startCooking()">
+          <span i18n="@@cooking.mode">Cooking mode</span>
+        </button>
+      </ng-template>
+      <div
+        class="mt-10 grid grid-cols-1 gap-10 min-[800px]:mt-12 lg:gap-12"
+        [class]="recipe()!.ingredients.length && recipe()!.steps.length ? 'lg:grid-cols-3' : ''"
+      >
+        @if (recipe()!.ingredients.length) {
+          <section aria-labelledby="recipe-ingredients-title" class="col-span-1">
+            <div class="flex flex-col gap-4">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <h2 id="recipe-ingredients-title" class="app-section-title">
+                  <ng-container i18n="@@recipes.ingredients">Ingredients</ng-container>
+                </h2>
+                <ng-container [ngTemplateOutlet]="cookAction" />
               </div>
-            } @empty {
               <p
-                class="text-sm leading-[21px] text-base-content/75"
-                i18n="@@recipes.recipePage.template.noPreparationStepsHaveBeenAddedTo"
+                class="grow-0 text-sm text-base-content/75"
+                i18n="@@recipes.recipePage.template.servingsRecipeBase"
               >
-                No preparation steps have been added to this recipe.
+                {{ profile()?.servings }} servings (recipe base: {{ recipe()?.baseServings }})
               </p>
-            }
-          </div>
-        </div>
-      </section>
-    </div>
+              <table class="table w-full table-fixed text-base leading-6 [&_td]:px-0">
+                <tbody>
+                  @for (ingredient of scaledIngredients(); track ingredient.id) {
+                    <tr>
+                      <td class="align-top break-words [overflow-wrap:anywhere]">
+                        {{ ingredient.name }}
+                      </td>
+                      <td class="w-2/5 align-top text-right break-words [overflow-wrap:anywhere]">
+                        {{ formatQuantity(ingredient) }} {{ displayUnit(ingredient.unit) }}
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td
+                        colspan="2"
+                        class="py-0 text-sm leading-[21px] text-base-content/75"
+                        i18n="@@recipes.recipePage.template.noIngredientsHaveBeenAddedToThis"
+                      >
+                        No ingredients have been added to this recipe.
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+        }
+        @if (recipe()!.steps.length) {
+          <section
+            aria-labelledby="recipe-steps-title"
+            [class]="recipe()!.ingredients.length ? 'col-span-1 lg:col-span-2' : 'col-span-1'"
+          >
+            <div class="flex flex-col gap-4">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <h2 id="recipe-steps-title" class="app-section-title">
+                  <ng-container i18n="@@recipes.steps">Steps</ng-container>
+                </h2>
+                @if (!recipe()!.ingredients.length) {
+                  <ng-container [ngTemplateOutlet]="cookAction" />
+                }
+              </div>
+              <div class="flex flex-col gap-5">
+                @for (step of recipe()?.steps; track step.id) {
+                  <div class="flex items-start gap-3">
+                    <div
+                      class="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary font-medium text-secondary-content"
+                    >
+                      {{ $index + 1 }}
+                    </div>
+                    <p
+                      class="mt-1 min-w-0 flex-1 whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
+                      [textContent]="step.description"
+                    ></p>
+                  </div>
+                } @empty {
+                  <p
+                    class="text-sm leading-[21px] text-base-content/75"
+                    i18n="@@recipes.recipePage.template.noPreparationStepsHaveBeenAddedTo"
+                  >
+                    No preparation steps have been added to this recipe.
+                  </p>
+                }
+              </div>
+            </div>
+          </section>
+        }
+      </div>
+    } @else {
+      <p class="mt-8 text-sm text-base-content/75" i18n="@@recipes.planWithoutCookingContent">
+        You can plan this recipe without ingredients or steps.
+      </p>
+    }
     <section
       aria-labelledby="recipe-groceries-title"
       class="mt-10 w-full border-t border-base-300 pt-8 min-[800px]:mt-12"
     >
-      <div class="flex flex-col gap-4">
-        <div class="flex">
-          <div class="min-w-0">
-            <h2 id="recipe-groceries-title" class="app-section-title">
-              <ng-container i18n="@@common.groceries">Groceries</ng-container>
-            </h2>
-            <p class="mt-1 text-sm text-base-content/75">
-              {{ profile()!.name }} · {{ profile()!.servings }}
-              <span i18n="@@common.servingsLowercase">servings</span>
-            </p>
+      <div class="flex flex-col gap-6">
+        <div>
+          <div class="flex">
+            <div class="min-w-0">
+              <h2 id="recipe-groceries-title" class="app-section-title">
+                <ng-container i18n="@@common.groceries">Groceries</ng-container>
+              </h2>
+              <p class="mt-1 text-sm text-base-content/75">
+                {{ profile()!.name }} · {{ profile()!.servings }}
+                <span i18n="@@common.servingsLowercase">servings</span>
+              </p>
+            </div>
+            <button
+              class="btn btn-ghost btn-sm min-h-11 ml-auto shrink-0 text-primary"
+              (click)="openEditProfile()"
+            >
+              <app-icon name="edit" class="size-4" />
+              <ng-container i18n="@@recipes.editProfile">Edit profile</ng-container>
+            </button>
           </div>
-          <button class="btn btn-secondary btn-sm ml-auto shrink-0" (click)="openEditProfile()">
-            <app-icon name="edit" class="size-4" />
-            <ng-container i18n="@@recipes.recipePage.template.editGroceries">Edit</ng-container>
-          </button>
         </div>
         @for (section of grocerySections(); track section.name) {
-          <section class="mt-2" [attr.aria-label]="section.name">
+          <section [attr.aria-label]="section.name">
             @if (section.showHeading) {
-              <h3 class="app-subsection-title mb-3">{{ section.name }}</h3>
+              <h3 class="app-subsection-title mb-2">{{ section.name }}</h3>
             }
             <ul class="divide-y divide-base-300">
-              @for (item of section.products; track item.id) {
+              @for (item of section.groceries; track item.id) {
                 <li class="flex min-h-12 min-w-0 items-center gap-3 py-2 text-sm">
                   <span class="min-w-0 flex-1 break-words [overflow-wrap:anywhere]">{{
                     item.name

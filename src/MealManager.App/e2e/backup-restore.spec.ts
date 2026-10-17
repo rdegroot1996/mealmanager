@@ -105,5 +105,5 @@ test('a stopped complete-data backup restores recipes, photos, accounts, and ses
   expect(restoredPhoto.ok()).toBe(true);
   expect(await restoredPhoto.body()).toEqual(originalPhoto);
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Household favorites' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Favorites' })).toBeVisible();
 });

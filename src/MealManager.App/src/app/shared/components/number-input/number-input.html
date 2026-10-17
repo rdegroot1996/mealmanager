@@ -16,6 +16,7 @@
   <input
     class="h-full min-w-0 flex-1 bg-transparent text-center tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none max-[799px]:text-base"
     type="number"
+    [required]="required()"
     [id]="controlId()"
     [min]="minimum()"
     [attr.max]="maximum()"

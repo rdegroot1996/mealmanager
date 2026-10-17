@@ -35,14 +35,14 @@ test('notes and categories persist, and frequency includes future meals without 
     steps: [],
   });
   const cycle = await post('/api/planning-cycles', { startDate: today, endDate: tomorrow });
-  const planning = await (await page.request.get(`/api/planning/cycle/${cycle.id}`)).json();
+  const mealPlan = await (await page.request.get(`/api/meal-plans/cycle/${cycle.id}`)).json();
   for (const [recipe, date] of [
     [past, today],
     [future, tomorrow],
     [future, tomorrow],
   ] as const) {
-    await post('/api/planning-meals', {
-      planningId: planning.id,
+    await post('/api/planned-meals', {
+      mealPlanId: mealPlan.id,
       date,
       recipeId: recipe.id,
       recipeProfileId: recipe.profiles[0].id,
@@ -73,9 +73,9 @@ test('shopping autocomplete keeps its panel while querying and respects dismissa
     data: { startDate: today, endDate: today },
   });
   expect(response.ok()).toBe(true);
-  await navigateTo(page, 'Groceries');
+  await navigateTo(page, 'Shopping list');
   await page.getByRole('button', { name: 'Add item', exact: true }).click();
-  await page.route('**/api/grocery-lists/suggestions?*', async (route) => {
+  await page.route('**/api/shopping-lists/suggestions?*', async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 600));
     await route.continue();
   });
@@ -89,7 +89,7 @@ test('shopping autocomplete keeps its panel while querying and respects dismissa
   await input.fill('Milk');
   await expect(panel.getByRole('status')).toContainText('Searching');
   const completed = page.waitForResponse(
-    (response) => response.url().includes('/api/grocery-lists/suggestions') && response.ok(),
+    (response) => response.url().includes('/api/shopping-lists/suggestions') && response.ok(),
   );
   await input.press('Escape');
   await completed;

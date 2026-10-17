@@ -16,7 +16,7 @@ test.describe.serial('major meal-planning journey', () => {
     await page.getByRole('button', { name: 'Add recipe', exact: true }).click();
     await page.getByLabel('Recipe name', { exact: true }).fill('Phone draft');
     for (let index = 0; index < 3; index++) {
-      await page.getByRole('button', { name: 'Add Ingredient', exact: true }).click();
+      await page.getByRole('button', { name: 'Add ingredient', exact: true }).click();
     }
     await page.locator('#ingredient-quantity-2').focus();
     const field = await page.locator('#ingredient-quantity-2').boundingBox();
@@ -29,7 +29,7 @@ test.describe.serial('major meal-planning journey', () => {
     await expect(page).toHaveURL('/recipes/new');
   });
 
-  test('manages recipes, planning, groceries, and historical cycles through the production UI', async ({
+  test('manages recipes, meal plans, groceries, and historical cycles through the production UI', async ({
     page,
   }) => {
     page.setDefaultTimeout(10_000);
@@ -37,8 +37,8 @@ test.describe.serial('major meal-planning journey', () => {
     let recipePath = '';
 
     await test.step('create and enrich a recipe', async () => {
-      await expect(page.getByRole('heading', { name: 'Active Planning' })).toBeVisible();
-      await expect(page.getByRole('heading', { name: 'Household favorites' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Active cycle' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Favorites' })).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Coming up' })).toBeVisible();
       await expect(page.getByTestId('upcoming-day-preview')).toHaveCount(7);
       await page.getByRole('link', { name: 'All recipes' }).click();
@@ -50,7 +50,7 @@ test.describe.serial('major meal-planning journey', () => {
       await expect(page).toHaveURL('/recipes/new');
       await expect(page.getByLabel('Recipe name')).toHaveValue('E2E Pasta');
       await page.getByRole('spinbutton', { name: 'Base servings', exact: true }).fill('2');
-      await page.getByText('Base servings', { exact: true }).click();
+      await page.locator('label[for="recipe-base-servings"]').click();
       await expect(
         page.getByRole('spinbutton', { name: 'Base servings', exact: true }),
       ).toBeFocused();
@@ -62,44 +62,44 @@ test.describe.serial('major meal-planning journey', () => {
       await page.getByRole('button', { name: 'Add', exact: true }).click();
       await page.getByLabel('Search or add a tag').fill('Italian');
       await page.getByRole('button', { name: 'Add', exact: true }).click();
-      await page.getByRole('button', { name: 'Add Ingredient' }).click();
+      await page.getByRole('button', { name: 'Add ingredient' }).click();
       await page.getByLabel('Ingredient name').fill('Pasta');
       await page.getByRole('textbox', { name: 'Quantity', exact: true }).fill('2');
-      await page.getByRole('button', { name: 'Add Ingredient' }).click();
+      await page.getByRole('button', { name: 'Add ingredient' }).click();
       await page.getByLabel('Ingredient name').nth(1).fill('Salt');
-      await dragHandleTo(
-        page,
-        page.getByRole('button', { name: /Reorder Salt/ }),
-        page.getByLabel('Ingredient name').first(),
-      );
+      await page.getByRole('button', { name: 'Move Salt up', exact: true }).click();
       await expect(page.getByLabel('Ingredient name').first()).toHaveValue('Salt');
-      await page.getByRole('button', { name: 'Add Step' }).click();
+      await page.getByRole('button', { name: 'Add step' }).click();
       await page.locator('#step-description-0').fill('Boil the pasta.');
-      await page.getByRole('button', { name: 'Add Step' }).click();
+      await page.getByRole('button', { name: 'Add step' }).click();
       await page.locator('#step-description-1').fill('Serve the pasta.');
       const stepHandle = page.getByRole('button', {
-        name: 'Reorder step 2. Use arrow keys or drag.',
+        name: 'Move step 2 up',
         exact: true,
       });
       await stepHandle.focus();
       await page.keyboard.press('ArrowUp');
       await expect(page.locator('#step-description-0')).toHaveValue('Serve the pasta.');
       await expect(
-        page.getByRole('button', { name: 'Reorder step 1. Use arrow keys or drag.', exact: true }),
+        page.getByRole('button', { name: 'Move step 1 down', exact: true }),
       ).toBeFocused();
       await page.keyboard.press('ArrowDown');
       await expect(page.locator('#step-description-0')).toHaveValue('Boil the pasta.');
       await page.getByRole('button', { name: 'Remove step 1', exact: true }).click();
       await expect(page.locator('#step-description-0')).toHaveValue('Serve the pasta.');
-      await page.getByRole('button', { name: 'Add Step', exact: true }).click();
+      await page.getByRole('button', { name: 'Add step', exact: true }).click();
       await page.locator('#step-description-1').fill('Boil the pasta.');
       await page.locator('app-page-header').getByRole('button', { name: 'Save' }).click();
 
-      await expect(page).toHaveURL(/\/recipes\/[0-9a-f-]+\/edit$/);
+      await expect(page).toHaveURL(/\/recipes\/[0-9a-f-]+\/edit(?:\?new=1)?$/);
       recipePath = new URL(page.url()).pathname.replace(/\/edit$/, '');
       await expect(page.getByLabel('Recipe name')).toHaveValue('E2E Pasta');
-      await expect(page.getByText('Quick')).toBeVisible();
-      await expect(page.getByText('Italian')).toBeVisible();
+      await expect(
+        page.getByRole('group', { name: 'Tags', exact: true }).getByText('Quick'),
+      ).toBeVisible();
+      await expect(
+        page.getByRole('group', { name: 'Tags', exact: true }).getByText('Italian'),
+      ).toBeVisible();
 
       await expect(page.getByRole('button', { name: 'Add image' })).toBeVisible();
       await page.locator('input[type="file"]').setInputFiles({
@@ -119,7 +119,7 @@ test.describe.serial('major meal-planning journey', () => {
         .poll(() => recipeImage.evaluate((image) => (image as HTMLImageElement).naturalWidth))
         .toBeGreaterThan(0);
       await expect(page).toHaveURL(recipePath);
-      const ingredients = page.getByRole('heading', { name: 'Ingredients' }).locator('..');
+      const ingredients = page.getByRole('region', { name: 'Ingredients', exact: true });
       await expect(ingredients.getByRole('row').first()).toContainText('Salt');
       await expect(ingredients.getByRole('row').nth(1)).toContainText('Pasta');
       await expect(
@@ -128,27 +128,46 @@ test.describe.serial('major meal-planning journey', () => {
     });
 
     await test.step('configure reusable recipe profiles', async () => {
-      await page.getByRole('button', { name: 'Add Profile' }).click();
+      await page.getByRole('button', { name: 'More profile actions', exact: true }).click();
+      await page
+        .getByRole('dialog', { name: 'Profiles', exact: true })
+        .getByRole('button', { name: 'Add profile' })
+        .click();
       dialog = page.locator('dialog[open]');
-      await dialog.getByLabel('Profile Name').fill('Family');
+      await dialog.getByLabel('Profile name').fill('Family');
       await dialog.getByRole('spinbutton', { name: 'Servings', exact: true }).fill('4');
       await dialog.getByRole('button', { name: 'Add', exact: true }).click();
       await expectDialogToClose(page);
 
       await page.getByRole('button', { name: 'More profile actions', exact: true }).click();
-      await page.getByRole('button', { name: 'Edit Profile' }).click();
+      await page
+        .getByRole('dialog', { name: 'Profiles', exact: true })
+        .getByRole('button', { name: 'Edit profile' })
+        .click();
       dialog = page.locator('dialog[open]');
-      await dialog.getByLabel('Profile Name').fill('Family meal');
+      await dialog.getByLabel('Profile name').fill('Family meal');
       await dialog.getByRole('spinbutton', { name: 'Servings', exact: true }).fill('5');
+      await page.mouse.click(4, 4);
+      const discard = page.getByRole('dialog', { name: 'Discard unsaved changes?', exact: true });
+      await expect(discard).toBeVisible();
+      await discard.getByRole('button', { name: 'Keep editing', exact: true }).click();
+      await expect(dialog.getByLabel('Profile name')).toHaveValue('Family meal');
       await dialog.getByRole('button', { name: 'Save' }).click();
       await expectDialogToClose(page);
 
-      await page.getByRole('button', { name: 'Add Profile', exact: true }).click();
-      await page.locator('dialog[open]').getByLabel('Profile Name').fill('Temporary');
+      await page.getByRole('button', { name: 'More profile actions', exact: true }).click();
+      await page
+        .getByRole('dialog', { name: 'Profiles', exact: true })
+        .getByRole('button', { name: 'Add profile', exact: true })
+        .click();
+      await page.locator('dialog[open]').getByLabel('Profile name').fill('Temporary');
       await page.locator('dialog[open]').getByRole('button', { name: 'Add', exact: true }).click();
       await expectDialogToClose(page);
       await page.getByRole('button', { name: 'More profile actions', exact: true }).click();
-      await page.getByRole('button', { name: 'Edit Profile', exact: true }).click();
+      await page
+        .getByRole('dialog', { name: 'Profiles', exact: true })
+        .getByRole('button', { name: 'Edit profile', exact: true })
+        .click();
       await expect(
         page.locator('dialog[open]').getByRole('button', { name: 'Remove profile', exact: true }),
       ).toHaveCount(0);
@@ -158,7 +177,7 @@ test.describe.serial('major meal-planning journey', () => {
         .click();
       await page.getByRole('button', { name: 'More profile actions', exact: true }).click();
       const profileActions = page.getByRole('dialog', {
-        name: 'More profile actions',
+        name: 'Profiles',
         exact: true,
       });
       await expect(
@@ -176,13 +195,31 @@ test.describe.serial('major meal-planning journey', () => {
         .getByRole('combobox', { name: 'Profile', exact: true })
         .selectOption({ label: 'Family meal (5 servings)' });
 
-      await page.getByRole('button', { name: 'Edit' }).click();
+      await page
+        .getByRole('region', { name: 'Groceries', exact: true })
+        .getByRole('button', { name: 'Edit profile', exact: true })
+        .click();
       dialog = page.locator('dialog[open]');
-      await expect(dialog.getByText('This profile has no grocery products yet.')).toBeVisible();
+      await expect(
+        dialog.getByRole('heading', { name: 'Groceries for this profile', exact: true }),
+      ).toBeVisible();
+      await expect(dialog.getByText('No groceries yet.', { exact: true })).toHaveCount(2);
       await dialog.getByRole('button', { name: 'Add item to Needed' }).click();
       const addItem = page.getByRole('dialog', { name: 'Add grocery item', exact: true });
       await addItem.getByRole('textbox', { name: 'Item name', exact: true }).fill('Pasta sauce');
       await addItem.getByRole('spinbutton', { name: 'Quantity', exact: true }).fill('2');
+      await page.mouse.click(4, 4);
+      const discardItem = page.getByRole('dialog', {
+        name: 'Discard unsaved changes?',
+        exact: true,
+      });
+      await expect(discardItem).toBeVisible();
+      // Outside the confirmation means Keep editing, not dismissal of the parent.
+      await page.mouse.click(4, 4);
+      await expect(discardItem).toBeHidden();
+      await expect(addItem.getByRole('textbox', { name: 'Item name', exact: true })).toHaveValue(
+        'Pasta sauce',
+      );
       await addItem.getByRole('button', { name: 'Add', exact: true }).click();
       await dialog.getByRole('button', { name: 'Save', exact: true }).click();
       await expectDialogToClose(page);
@@ -192,21 +229,20 @@ test.describe.serial('major meal-planning journey', () => {
           .getByText('Pasta sauce', { exact: true }),
       ).toBeVisible();
 
-      await page.getByRole('button', { name: 'Add to favorites' }).click();
-      await expect(page.getByRole('button', { name: 'Remove from favorites' })).toHaveAttribute(
-        'aria-pressed',
-        'true',
-      );
+      await page.getByRole('button', { name: 'Add E2E Pasta to favorites' }).click();
+      await expect(
+        page.getByRole('button', { name: 'Remove E2E Pasta from favorites' }),
+      ).toHaveAttribute('aria-pressed', 'true');
 
       await page.goto('/');
-      await expect(page.getByRole('heading', { name: 'Household favorites' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Favorites' })).toBeVisible();
       await expect(page.getByRole('link', { name: 'Open recipe E2E Pasta' })).toBeVisible();
       await page.reload();
       await expect(page.getByRole('link', { name: 'Open recipe E2E Pasta' })).toBeVisible();
     });
 
     await test.step('plan meals and commit their groceries', async () => {
-      await navigateTo(page, 'Planning');
+      await navigateTo(page, 'Planner');
       await expect(page.getByText('No planning cycle yet')).toBeVisible();
       await page.getByRole('button', { name: 'Start first cycle' }).click();
       dialog = page.locator('dialog[open]');
@@ -229,62 +265,75 @@ test.describe.serial('major meal-planning journey', () => {
       await expectDialogToClose(page);
 
       await page.goto(recipePath);
-      await page.getByRole('button', { name: 'Add to Planner' }).click();
+      await page.getByRole('button', { name: 'Add to planner' }).click();
       dialog = page.locator('dialog[open]');
       await dialog.getByLabel('Day').selectOption('2099-08-20');
-      await dialog.getByRole('button', { name: 'Add to Planner' }).click();
+      await dialog.getByRole('button', { name: 'Add to planner' }).click();
       await expectDialogToClose(page);
 
-      await navigateTo(page, 'Planning');
+      await navigateTo(page, 'Planner');
       await expect(
         page.getByRole('link', { name: 'View recipe E2E Pasta', exact: true }),
       ).toBeVisible();
       await addMealButtons.first().click();
       dialog = page.locator('dialog[open]');
       await dialog.getByRole('button', { name: 'E2E Pasta' }).click();
-      await dialog.getByRole('button', { name: 'Add Meal', exact: true }).click();
+      await dialog.getByRole('button', { name: 'Add meal', exact: true }).click();
       await expectDialogToClose(page);
 
       await page.getByRole('button', { name: 'Add note', exact: true }).first().click();
       dialog = page.locator('dialog[open]');
       await dialog.getByPlaceholder('Enter your note...').fill('Family dinner');
-      await dialog.getByRole('button', { name: 'Add Note' }).click();
+      await dialog.getByRole('button', { name: 'Add note' }).click();
       await expectDialogToClose(page);
       await expect(page.getByText('Family dinner')).toBeVisible();
 
-      await page.getByRole('button', { name: 'Add groceries for E2E Pasta' }).last().click();
+      await page.getByRole('button', { name: 'Review groceries for E2E Pasta' }).last().click();
       dialog = page.locator('dialog[open]');
-      await expect(dialog.getByText('This profile has no grocery products.')).toBeVisible();
-      await expect(dialog.getByRole('link', { name: 'Edit this recipe profile' })).toBeVisible();
-      await dialog.getByRole('button', { name: 'Add meal groceries to cart' }).click();
+      await expect(
+        dialog.getByText(
+          'Changes are for this time only. You can also save them to the profile below.',
+          { exact: true },
+        ),
+      ).toBeVisible();
+      await expect(dialog.getByText('No groceries yet.', { exact: true })).toHaveCount(2);
+      await dialog.getByRole('button', { name: 'Confirm nothing to buy' }).click();
       await expectDialogToClose(page);
 
       await page
-        .locator('app-planning-meal-row')
+        .locator('app-planned-meal-row')
         .filter({ has: page.getByTestId('meal-status') })
         .getByRole('button', { name: 'More actions for E2E Pasta' })
         .last()
         .click();
       await page.getByRole('button', { name: 'Change profile' }).click();
-      dialog = page.getByRole('dialog', { name: 'Change Profile', exact: true });
+      dialog = page.getByRole('dialog', { name: 'Change profile', exact: true });
       await dialog.getByLabel('Profile').selectOption({ label: 'Family meal (5 servings)' });
-      await dialog.getByRole('button', { name: 'Change Profile', exact: true }).click();
+      await expect(dialog.getByRole('status')).toContainText(
+        "removes this meal's shopping selection",
+      );
+      await dialog.getByRole('button', { name: 'Change profile', exact: true }).click();
       await expectDialogToClose(page);
 
-      await navigateTo(page, 'Groceries');
+      await navigateTo(page, 'Shopping list');
       await expect(
-        page.getByRole('status').filter({ hasText: 'planned meals have not been added' }),
+        page
+          .getByRole('status')
+          .filter({ hasText: /Groceries for \d+ meals haven't been reviewed yet\./ }),
       ).toBeVisible({
         timeout: 15_000,
       });
-      await navigateTo(page, 'Planning');
-      await page.getByRole('button', { name: 'Add groceries for E2E Pasta' }).last().click();
+      await navigateTo(page, 'Planner');
+      await page.getByRole('button', { name: 'Review groceries for E2E Pasta' }).last().click();
       dialog = page.locator('dialog[open]');
       await dialog.getByLabel('Select Pasta sauce').uncheck();
-      await dialog.getByRole('button', { name: 'Add meal groceries to cart' }).click();
+      await dialog.getByRole('button', { name: 'Confirm nothing to buy' }).click();
       await expectDialogToClose(page);
       await page.reload();
-      await page.getByRole('button', { name: 'Edit groceries for E2E Pasta' }).last().click();
+      await page
+        .getByRole('button', { name: 'Edit grocery selection for E2E Pasta' })
+        .last()
+        .click();
       dialog = page.locator('dialog[open]');
       await expect(dialog.getByLabel('Select Pasta sauce')).not.toBeChecked();
       await dialog.getByLabel('Select Pasta sauce').check();
@@ -311,26 +360,29 @@ test.describe.serial('major meal-planning journey', () => {
       await expect(dialog.getByRole('checkbox', { name: /^Select / }).first()).toHaveAccessibleName(
         'Select Basil',
       );
-      await dialog.getByRole('button', { name: 'Add meal groceries to cart' }).click();
+      await dialog.getByRole('button', { name: 'Update shopping list' }).click();
       await expectDialogToClose(page);
 
       await page
-        .locator('app-planning-meal-row')
+        .locator('app-planned-meal-row')
         .filter({ has: page.getByTestId('meal-status') })
         .getByRole('button', { name: 'More actions for E2E Pasta' })
         .last()
         .click();
       await page.getByRole('button', { name: 'Plan leftovers' }).click();
-      dialog = page.getByRole('dialog', { name: 'Plan Leftovers', exact: true });
+      dialog = page.getByRole('dialog', { name: 'Plan leftovers', exact: true });
       await dialog.getByLabel('Day').selectOption('2099-08-21');
-      await dialog.getByRole('button', { name: 'Plan Leftovers', exact: true }).click();
+      await dialog.getByRole('button', { name: 'Plan leftovers', exact: true }).click();
       await expectDialogToClose(page);
       const leftoverDay = page.getByRole('region', { name: /Friday 21 Aug/ });
       await expect(leftoverDay.getByText('Leftovers from Thursday', { exact: true })).toBeVisible();
       await expect(leftoverDay.getByRole('button', { name: /groceries for/ })).toHaveCount(0);
 
       await page.reload();
-      await page.getByRole('button', { name: 'Edit groceries for E2E Pasta' }).last().click();
+      await page
+        .getByRole('button', { name: 'Edit grocery selection for E2E Pasta' })
+        .last()
+        .click();
       dialog = page.locator('dialog[open]');
       await expect(dialog.getByLabel('Select Tomato sauce')).toBeChecked();
       await expect(dialog.getByRole('checkbox', { name: /^Select / }).first()).toHaveAccessibleName(
@@ -347,12 +399,12 @@ test.describe.serial('major meal-planning journey', () => {
     });
 
     await test.step('shop and finish a historical cycle', async () => {
-      await navigateTo(page, 'Groceries');
+      await navigateTo(page, 'Shopping list');
       await expect(page.getByRole('checkbox', { name: 'Tomato sauce', exact: true })).toBeVisible();
       const mealGrocery = page.getByRole('checkbox', { name: 'Tomato sauce', exact: true });
       await expect(
         page
-          .locator('app-grocery-item-row')
+          .locator('app-shopping-list-item-row')
           .filter({ has: mealGrocery })
           .getByText('3×', { exact: true }),
       ).toBeVisible();
@@ -368,7 +420,7 @@ test.describe.serial('major meal-planning journey', () => {
       await page.getByRole('button', { name: 'Remove item' }).click();
       await expect(page.getByRole('checkbox', { name: 'Coffee', exact: true })).toHaveCount(0);
 
-      await navigateTo(page, 'Planning');
+      await navigateTo(page, 'Planner');
       await page.getByRole('button', { name: 'Start new cycle' }).click();
       dialog = page.locator('dialog[open]');
       await dialog.getByLabel('Start date').fill('2099-08-22');
@@ -376,7 +428,7 @@ test.describe.serial('major meal-planning journey', () => {
       await dialog.getByRole('button', { name: 'Start cycle' }).click();
       await expectDialogToClose(page);
       await page.getByRole('button', { name: 'Previous cycle', exact: true }).click();
-      await expect(page.getByText('Historical planning is read-only.')).toBeVisible();
+      await expect(page.getByText('Historical meal plan is read-only.')).toBeVisible();
       await expect(page.getByRole('button', { name: 'Add meal', exact: true })).toHaveCount(0);
       await expect(page.getByRole('button', { name: /groceries for/ })).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'Edit range', exact: true })).toHaveCount(0);
@@ -385,7 +437,7 @@ test.describe.serial('major meal-planning journey', () => {
         1,
       );
 
-      await navigateTo(page, 'Groceries');
+      await navigateTo(page, 'Shopping list');
       await expect(page.getByRole('checkbox', { name: 'Tomato sauce', exact: true })).toBeVisible();
       await page.getByRole('button', { name: 'Add item', exact: true }).click();
       await newItem.getByLabel('Item name').fill('Historical coffee');
@@ -395,21 +447,21 @@ test.describe.serial('major meal-planning journey', () => {
       ).toBeVisible();
 
       await page.goto('/');
-      await expect(page.getByRole('heading', { name: 'Active Planning' })).toBeVisible();
-      await navigateTo(page, 'Planning');
-      await expect(page.getByText('Historical planning is read-only.')).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Active cycle' })).toBeVisible();
+      await navigateTo(page, 'Planner');
+      await expect(page.getByText('Historical meal plan is read-only.')).toBeVisible();
 
       await page.goto(recipePath);
-      await page.getByRole('button', { name: 'Add to Planner' }).click();
+      await page.getByRole('button', { name: 'Add to planner' }).click();
       dialog = page.locator('dialog[open]');
       await dialog.getByLabel('Day').selectOption('2099-08-22');
       await expect(dialog.getByLabel('Day').locator('option[value="2099-08-20"]')).toHaveCount(0);
-      await dialog.getByRole('button', { name: 'Add to Planner' }).click();
+      await dialog.getByRole('button', { name: 'Add to planner' }).click();
       await expectDialogToClose(page);
-      await navigateTo(page, 'Planning');
-      await expect(page.getByText('Historical planning is read-only.')).toBeVisible();
+      await navigateTo(page, 'Planner');
+      await expect(page.getByText('Historical meal plan is read-only.')).toBeVisible();
       await page.getByRole('button', { name: 'Next cycle', exact: true }).click();
-      await expect(page.getByText('Historical planning is read-only.')).toBeHidden();
+      await expect(page.getByText('Historical meal plan is read-only.')).toBeHidden();
       await expect(
         page.getByRole('link', { name: 'View recipe E2E Pasta', exact: true }),
       ).toBeVisible();

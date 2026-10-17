@@ -245,16 +245,16 @@ public class PlanningCycleControllerTests(CustomWebApplicationFactory factory) :
         Assert.NotNull(cycle);
 
         var groceryResponse = await HttpClient.PostAsJsonAsync(
-            $"/api/grocery-lists/cycle/{cycle.Id}/items",
-            new AddManualGroceryItemDto { Name = "Coffee", Quantity = 1 });
+            $"/api/shopping-lists/cycle/{cycle.Id}/items",
+            new AddManualShoppingListItemDto { Name = "Coffee", Quantity = 1 });
         groceryResponse.EnsureSuccessStatusCode();
 
         var deleteResponse = await HttpClient.DeleteAsync($"/api/planning-cycles/{cycle.Id}");
 
         Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await HttpClient.GetAsync($"/api/planning-cycles/{cycle.Id}")).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await HttpClient.GetAsync($"/api/planning/cycle/{cycle.Id}")).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await HttpClient.GetAsync($"/api/grocery-lists/cycle/{cycle.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await HttpClient.GetAsync($"/api/meal-plans/cycle/{cycle.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await HttpClient.GetAsync($"/api/shopping-lists/cycle/{cycle.Id}")).StatusCode);
     }
 
     [Fact]

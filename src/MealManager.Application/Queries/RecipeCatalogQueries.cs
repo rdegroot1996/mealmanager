@@ -12,7 +12,7 @@ public sealed class RecipeCatalogQueries(ApplicationDbContext dbContext)
         DiscoveryCursor.ValidatePageSize(options.PageSize);
         if (options.Category.HasValue && !Enum.IsDefined(options.Category.Value))
             throw new ValidationException("Recipe category is invalid.");
-        if (options.Tags.Any(string.IsNullOrWhiteSpace)) throw new ValidationException("Tags must contain non-empty label names.");
+        if (options.Tags.Any(string.IsNullOrWhiteSpace)) throw new ValidationException("Tags must contain non-empty tag names.");
         var tags = options.Tags.Distinct().Order(StringComparer.Ordinal).ToArray();
         var scope = DiscoveryCursor.Scope(new { kind = "recipes", options.Category, tags, options.Favorite });
         var key = DiscoveryCursor.Decode(options.Cursor, scope);

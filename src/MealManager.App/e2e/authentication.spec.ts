@@ -28,11 +28,11 @@ test('primary navigation works on a phone viewport', async ({ page }) => {
   await expect(page).toHaveURL('/recipes');
   await expect(page.getByRole('button', { name: 'Add recipe' })).toBeVisible();
 
-  await page.getByRole('link', { name: 'Planning', exact: true }).last().click();
-  await expect(page).toHaveURL('/planning');
+  await page.getByRole('link', { name: 'Planner', exact: true }).last().click();
+  await expect(page).toHaveURL('/planner');
   await expect(page.getByText('No planning cycle yet')).toBeVisible();
 
-  await page.getByRole('link', { name: 'Groceries', exact: true }).last().click();
-  await expect(page).toHaveURL('/groceries');
+  await page.getByRole('link', { name: 'Shopping list', exact: true }).last().click();
+  await expect(page).toHaveURL('/shopping-list');
   await expect(page.getByText('No planning cycle yet')).toBeVisible();
 });

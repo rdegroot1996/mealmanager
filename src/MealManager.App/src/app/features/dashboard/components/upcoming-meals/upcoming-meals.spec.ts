@@ -85,10 +85,10 @@ describe('UpcomingMeals', () => {
       fixture.nativeElement.querySelectorAll('[data-testid="upcoming-day-preview"]'),
     ).toHaveLength(7);
     expect(fixture.nativeElement.textContent).toContain('No meals coming up yet.');
-    expect(fixture.nativeElement.querySelector('a[href="/planning"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('a[href="/planner"]')).not.toBeNull();
   });
 
-  it('shows the planning calendar alongside dated meal summaries', () => {
+  it('shows the meal plan calendar alongside dated meal summaries', () => {
     component.state.cycle.set({
       id: 'cycle-1',
       startDate: '2099-01-01',
@@ -115,7 +115,7 @@ describe('UpcomingMeals', () => {
             isFavorite: false,
           },
           recipeProfile: { id: 'profile-1', name: 'Family', servings: 4 },
-          hasGroceriesAdded: false,
+          hasReviewedGroceries: false,
         },
       ],
     });
@@ -129,7 +129,7 @@ describe('UpcomingMeals', () => {
     expect(date.textContent).toContain(component.upcomingMonth('2099-01-02'));
     expect(row.querySelector('app-recipe-summary').contains(date)).toBe(true);
     expect(summary.textContent).toContain('Pasta');
-    expect(fixture.nativeElement.querySelector('a[href="/planning"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('a[href="/planner"]')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('[data-testid="upcoming-calendar"]')).not.toBeNull();
     expect(
       fixture.nativeElement.querySelectorAll('[data-testid="upcoming-day-preview"]'),
@@ -162,7 +162,7 @@ describe('UpcomingMeals', () => {
             isFavorite: false,
           },
           recipeProfile: { id: 'profile-1', name: 'Family', servings: 4 },
-          hasGroceriesAdded: false,
+          hasReviewedGroceries: false,
         },
       ],
     });

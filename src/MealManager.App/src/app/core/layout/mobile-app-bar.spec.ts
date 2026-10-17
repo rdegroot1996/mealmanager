@@ -103,7 +103,7 @@ describe('MobileAppBar', () => {
       }),
     );
     const restore = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
-    events.next(new Scroll(new NavigationEnd(2, '/planning', '/planning'), [0, 300], null));
+    events.next(new Scroll(new NavigationEnd(2, '/planner', '/planner'), [0, 300], null));
     expect(restore).not.toHaveBeenCalled();
     loaded();
     await Promise.resolve();
@@ -119,7 +119,7 @@ describe('MobileAppBar', () => {
       }),
     );
     const restore = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
-    events.next(new Scroll(new NavigationEnd(2, '/planning', '/planning'), [0, 300], null));
+    events.next(new Scroll(new NavigationEnd(2, '/planner', '/planner'), [0, 300], null));
     window.dispatchEvent(new Event('wheel'));
     loaded();
     await Promise.resolve();

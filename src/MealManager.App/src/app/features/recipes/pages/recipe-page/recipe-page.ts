@@ -1,8 +1,13 @@
+import { NgTemplateOutlet } from '@angular/common';
+import { CookingView } from '../../components/cooking-view/cooking-view';
+import { afterNextRender, Injector } from '@angular/core';
 import { ApiRecipeProfile, ApiRecipeIngredient } from '../../../../api/models/api-recipe';
 import { Component, computed, inject, LOCALE_ID, OnInit, signal, viewChild } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { RecipesStore } from '../../state/recipes.store';
+import { RecipeReturnContext } from '../../../../core/layout/recipe-return-context';
+import { RecipeCatalogContext } from '../../state/recipe-catalog-context';
 import { PlanRecipeModal } from '../../components/plan-recipe-modal/plan-recipe-modal';
 import { ProfileFormModal } from '../../components/profile-form-modal/profile-form-modal';
 import { PageHeader } from '../../../../shared/components/page-header/page-header';
@@ -24,6 +29,8 @@ import { RecipeFavoriteButton } from '../../components/recipe-favorite-button/re
 @Component({
   selector: 'app-recipe-page',
   imports: [
+    NgTemplateOutlet,
+    CookingView,
     PlanRecipeModal,
     ProfileFormModal,
     RouterLink,
@@ -45,25 +52,53 @@ export class RecipePage implements OnInit {
   activatedRoute = inject(ActivatedRoute);
   recipeStore = inject(RecipesStore);
   router = inject(Router);
+  catalogContext = inject(RecipeCatalogContext);
+  returnContext = inject(RecipeReturnContext);
+  get backLabel() {
+    return this.returnContext.route === '/planner'
+      ? $localize`:@@recipes.backToPlanner:Back to planner`
+      : this.returnContext.route === '/shopping-list'
+        ? $localize`:@@recipes.backToShopping:Back to shopping list`
+        : $localize`:@@recipes.recipePage.template.backToRecipes2:Back to recipes`;
+  }
   toast = inject(ToastService);
 
   recipe = computed(() => this.recipeStore.activeRecipe());
   profile = signal<ApiRecipeProfile | null>(null);
   grocerySections = computed(() => {
-    const products = this.profile()?.products ?? [];
+    const groceries = this.profile()?.groceries ?? [];
     return [
       {
         name: $localize`:@@groceries.needed:Needed`,
-        showHeading: products.some((item) => item.atHome),
-        products: products.filter((item) => !item.atHome),
+        showHeading: groceries.some((item) => item.atHome),
+        groceries: groceries.filter((item) => !item.atHome),
       },
       {
         name: $localize`:@@groceries.usuallyAtHome:Usually at home`,
         showHeading: true,
-        products: products.filter((item) => item.atHome),
+        groceries: groceries.filter((item) => item.atHome),
       },
-    ].filter((section) => section.products.length > 0);
+    ].filter((section) => section.groceries.length > 0);
   });
+  cooking = signal(false);
+  private injector = inject(Injector);
+  startCooking() {
+    this.cooking.set(true);
+    afterNextRender(
+      () => {
+        const title = document.querySelector<HTMLElement>('app-cooking-view h1');
+        title?.scrollIntoView({ block: 'start' });
+        title?.focus({ preventScroll: true });
+      },
+      { injector: this.injector },
+    );
+  }
+  exitCooking() {
+    this.cooking.set(false);
+    afterNextRender(() => document.getElementById('start-cooking')?.focus(), {
+      injector: this.injector,
+    });
+  }
   selectedProfileId = signal<string>('');
   loading = signal(false);
   notFound = signal(false);
@@ -192,7 +227,7 @@ export class RecipePage implements OnInit {
         this.toast.error(
           apiErrorMessage(
             error,
-            $localize`:@@recipes.recipePage.thisRecipeCannotBeRemovedWhilePlanning:This recipe cannot be removed while planning history still refers to it.`,
+            $localize`:@@recipes.recipePage.thisRecipeCannotBeRemovedWhilePlanning:This recipe cannot be removed while meal plan history still refers to it.`,
           ),
         );
       },
@@ -223,7 +258,7 @@ export class RecipePage implements OnInit {
         this.toast.error(
           apiErrorMessage(
             error,
-            $localize`:@@recipes.recipePage.thisProfileCannotBeRemovedWhilePlanning:This profile cannot be removed while planning history still refers to it.`,
+            $localize`:@@recipes.recipePage.thisProfileCannotBeRemovedWhilePlanning:This profile cannot be removed while meal plan history still refers to it.`,
           ),
         );
       },

@@ -1,101 +1,57 @@
 # Frontend technical guide
 
-[Setup](../README.md) · [Product behavior](../../../docs/functional-overview.md) · [Cross-stack architecture](../../../docs/README.md) · [Localization](localization.md) · [Agent rules](../AGENTS.md)
+[Setup and checks](../README.md) · [Product behavior](../../../docs/functional-overview.md) · [Cross-stack architecture](../../../docs/README.md) · [Localization](localization.md)
 
-## Stack
+## Structure
 
-- Angular 22 with standalone components
-- TypeScript 6
-- RxJS and Angular signals
-- Tailwind CSS 4 and DaisyUI 5
-- Luxon for date handling
-- Vitest for unit and component tests
-- MSW for browser-local API mocks
-- Playwright for browser end-to-end tests
-
-## Architecture
+Angular 22 standalone components use TypeScript 6, signals, RxJS, Tailwind CSS 4, DaisyUI 5, and Luxon. Vitest covers units/components, MSW supplies mock data, and Playwright covers production browser flows.
 
 ```text
 src/app/
 ├── api/models/  Canonical API response contracts
-├── core/        Authentication, routing, interceptors, and application layout
-├── features/    Feature pages, components, services, models, and state stores
-└── shared/      Reusable presentational components and UI primitives
-src/mocks/       MSW handlers and in-memory test data
+├── core/        Authentication, routing, interceptors, and layout
+├── features/    Pages, components, derived models, and state stores
+└── shared/      Reusable presentation and UI primitives
+src/mocks/       MSW handlers and in-memory fixtures
 e2e/             Playwright tests against the production container
 ```
 
-Features own their pages, feature components, derived models, and state. State stores form the normal boundary between the UI and HTTP API. Shared API response contracts live in `src/app/api/models`, which keeps one canonical frontend representation of each backend response.
+Features own their behavior and state; stores form the UI's HTTP boundary. Keep API models, stores, backend DTOs, mocks, and tests aligned. Requests use relative `/api` URLs through the development proxy or production host. Public terminology follows the [glossary](../../../docs/functional-overview.md#terminology).
 
-Application-wide concerns belong in `core`; reusable presentation belongs in `shared`. Reuse shared UI primitives and prefer default DaisyUI components with Tailwind layout utilities. Theme tokens live in `src/styles.css`; shared `@utility` styles cover repeated surfaces, headings, recipe titles, and recipe placeholders. Keep single-use styles in their templates. Use `btn-error` for removal, add `btn-outline` for secondary actions, and use `alert-error alert-soft` for error feedback. Use the theme’s global border width and avoid component overrides.
+## Shared presentation and state
 
-`ProductRow` shares quantity, reordering, editing, and the item dialog. Shopping and meal review adapters own their checkbox semantics; features own state and persistence.
+Use DaisyUI components and Tailwind layout classes. Theme tokens and repeated surface/heading utilities live in `src/styles.css`; single-use styling stays in templates. Reuse FormField, Modal, EmptyState, SearchField, and AuthShell. FormField's compact spacing is for repeated authoring rows; ordinary forms use regular labels.
 
-Below 800px, `MobileAppBar` hides on downward scrolling and returns on upward scrolling, navigation, or keyboard focus. It respects reduced motion. Mobile routes restore Back/Forward positions after rendering; bottom navigation stays above the safe area. Desktop uses a fixed header and a scrolling main region.
+GroceryRow shares purchase quantity, editing, the item dialog, and CDK drag handles with Arrow Up/Down shortcuts. Profile/review adapters allow moves between Needed and Usually at home; Shopping-list rows reorder within their group. ReorderActions supplies direct arrows for ingredient/step authoring. Features own persistence, selection, and checkmarks.
 
-The application calls relative `/api` URLs. This lets the same frontend run through the ASP.NET Core development proxy and from the production host without environment-specific API base URLs.
+Modal backdrop dismissal requires a pointer gesture starting and ending outside. `busy` blocks ordinary form dismissal; `beforeDismiss` guards meaningful drafts. Successful programmatic close bypasses both. Stale asynchronous decisions cannot close a newer session; nested dialogs restore focus within the parent. Export disables backdrop dismissal while loading/sending, while explicit Close allows the export to continue.
 
-## Development details
+Catalog queries live in URL parameters. RecipeReturnContext retains the originating list and scroll position; restoration waits for loaded data, router scroll handling, and stable rendering. RecipePlanningContext retains a creation handoff in sessionStorage with an in-memory fallback. Planner rechecks its cycle/date before confirmation.
 
-The project declares `npm@12.0.2` and supports Node.js 22.22.3+ or 24.15.0+.
+MobileAppBar hides on downward scrolling below 800px and returns on upward scrolling, navigation, or focus, respecting reduced motion. Desktop uses a fixed header and scrolling main pane. The document and main pane use fixed `scroll-pb-48` focus clearance; this is scroll alignment, not visible page padding. Creation actions survive first save through a local `new` query flag.
 
-Install dependencies and start the Angular development server:
+## Branding and assets
 
-```powershell
-npm ci
-npm start
-```
+AppBrand owns the canonical restaurant glyph, soft secondary tile, Lora 500 wordmark, and compact/large proportions. Callers own link/heading semantics; DM Sans remains the body/control font. The glyph is defined in `shared/components/app-icon/app-icon.ts`.
 
-The development server listens on `http://localhost:4200`. For full-stack development, also run the API with `PROXY_FRONTEND=1` and open the API address; the [development guide](../../../docs/development.md#local-setup) contains the complete command.
+Run `npm run icons:generate` after glyph/theme changes. It generates favicon, ICO, installable, maskable, and Apple touch icons with size-specific padding; never edit those assets by hand. The [social preview](../../../docs/assets/README.md) captures the rendered brand rather than maintaining another logo implementation.
 
-### Mock API
+## Cooking mode
 
-Run the frontend without a backend using MSW:
+CookingView owns a component-scoped CookingScreenLock. It requests a native wake lock in a visible secure context, releases stale grants on exit, and reacquires on visibility return only while cooking stays open. Rejected requests and system releases have truthful status notes. There is no offline service worker or automatic fullscreen request.
 
-```powershell
-npm run start:mock
-```
+Hardware behavior still depends on browser and power settings; validate the household HTTPS origin on physical devices. Installation does not make an HTTP LAN origin secure.
 
-The mock configuration replaces the no-op `src/start-mocks.ts` with `src/mocks/start-mocks.ts`, starts the browser service worker, and handles relative `/api` requests with the handlers in `src/mocks`.
+## Mock development
 
-Mock mode starts with Picnic connected and no saved product mappings. Disconnect or reconnect in **Settings → Supermarket integrations** using `picnic@example.test`, password `Picnic123!` and SMS code `123456`. State resets on page reload.
+Use `npm run start:mock` at `http://localhost:4200`. MSW intercepts relative API requests; all in-memory state resets on reload. Keep its validation, query parameters, response codes, and not-found behavior aligned with the backend.
 
-Mock recipe uploads reject empty files, files over 10 MB, and unsupported image signatures so upload errors and retry can be exercised. Accepted uploads return an app-icon placeholder; mock mode does not decode, resize, convert, or persist image files. Mock sign-in accepts non-empty credentials and does not validate a real account password.
+Mock sign-in accepts nonempty credentials. Picnic starts connected without mappings; reconnect in Settings with `picnic@example.test`, password `Picnic123!`, and SMS code `123456`. Upload mocks check size/signatures and return a placeholder; they do not convert or persist images.
 
-When an API contract or behaviour changes, update its model, feature store, MSW handler, backend contract, and relevant tests together. Mock responses should reproduce the backend's status codes, validation, query parameters, and not-found behaviour closely enough that mock development does not hide integration errors.
+## Verification and production
 
-## Testing and verification
+See [frontend checks](../README.md#check) and [full-stack checks](../../../docs/development.md#verify-changes). Tests live beside source as `*.spec.ts`. Cover behavior, transformations, failure paths, and accessibility rather than mirroring implementation.
 
-Run unit and component tests with Vitest and create a production build:
+The production E2E suite builds the Docker image and uses its own Compose project, SQLite volume, and port `8081`, removed before/after the run. Docker and Playwright Chromium are required.
 
-```powershell
-npm test
-npm run build
-```
-
-Use `npm run typecheck` for TypeScript static analysis, `npm run format:check` to verify Prettier formatting, or `npm run format` to apply it.
-
-Tests live beside their source as `*.spec.ts`. Prefer testing user-visible behaviour, state transformations, loading and error paths, and accessibility interactions rather than implementation details.
-
-### Browser end-to-end tests
-
-Playwright tests build and launch the production Docker image, so Angular is served by ASP.NET Core exactly as it is in deployment. Docker must be running.
-
-Install Chromium once, then run the suite:
-
-```powershell
-npm run test:e2e:install
-npm run test:e2e
-```
-
-The suite uses its own Docker Compose project, SQLite volume, and port `8081`. Its resources are removed before and after a run.
-
-## Production build
-
-### App icons
-
-The `restaurant` path definition in `src/app/shared/components/app-icon/app-icon.ts` is the canonical MealManager glyph. Run `npm run icons:generate` after changing that path or the icon theme colours. The generator produces the browser favicon, installable PNG icons, maskable icon, Apple touch icon, and ICO file; do not edit those generated assets by hand.
-
-`npm run build` writes the browser bundle to `dist/mealmanager/browser`. The repository Dockerfile copies that output into the published ASP.NET Core application's `wwwroot`, and the backend provides SPA fallback for non-API routes.
-
-The production application therefore has one public origin and one deployable container even though frontend and backend development remain separated.
+`npm run build` writes `dist/mealmanager/browser`. The API Dockerfile copies it into `wwwroot`, and ASP.NET Core serves the SPA and API from one origin.

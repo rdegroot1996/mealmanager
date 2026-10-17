@@ -1,7 +1,7 @@
 import { planningDateLabel, planningDateParts } from './planning-date';
 
 describe('Planning date formatting', () => {
-  it('uses the shared planning weekday and calendar-date format', () => {
+  it('uses the shared meal plan weekday and calendar-date format', () => {
     expect(planningDateParts('2026-08-22')).toEqual({ weekday: 'Sat', shortDate: '22 Aug' });
     expect(planningDateLabel('2026-08-22')).toBe('Sat 22 Aug');
   });

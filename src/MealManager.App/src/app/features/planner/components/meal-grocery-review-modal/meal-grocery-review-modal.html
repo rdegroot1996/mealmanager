@@ -1,0 +1,158 @@
+<app-modal #modal [beforeDismiss]="beforeDismiss" [busy]="saving()" (closed)="endSession()">
+  <h2 modal-title i18n="@@planner.reviewGroceries">Review groceries</h2>
+  <p class="sr-only" aria-live="polite" aria-atomic="true">{{ reorderAnnouncement() }}</p>
+
+  @if (loading()) {
+    <app-loading-indicator
+      [compact]="true"
+      i18n-message="@@groceries.loadingGroceries"
+      message="Loading groceries…"
+    />
+  } @else if (loaded() && meal(); as meal) {
+    <app-recipe-summary
+      [profile]="meal.recipeProfile"
+      [name]="meal.recipe.name"
+      [imageUrl]="meal.recipe.imageUrl"
+    />
+
+    <p class="mt-4 text-sm leading-[21px] text-base-content/75" i18n="@@planner.purchaseScope">
+      Changes are for this time only. You can also save them to the profile below.
+    </p>
+
+    <h3 class="app-subsection-title mb-2 mt-6" i18n="@@groceries.needed">Needed</h3>
+    <div
+      cdkDropList
+      id="needed-meal-groceries"
+      [cdkDropListData]="neededItems()"
+      [cdkDropListConnectedTo]="['at-home-meal-groceries']"
+      [cdkDropListDisabled]="saving()"
+      class="flex flex-col divide-y divide-base-300 [&>app-grocery-row:last-child]:pb-0 [&>:last-child_app-grocery-row]:pb-0 min-h-11"
+      (cdkDropListDropped)="dropItem($event, false)"
+    >
+      @for (item of neededItems(); track item.id) {
+        <div cdkDrag [cdkDragData]="item" class="flex items-center gap-2 sm:gap-3">
+          <app-purchase-grocery-row
+            class="min-w-0 flex-1"
+            [item]="item"
+            [disabled]="saving()"
+            (moveRequested)="moveItemWithKeyboard(item, $event)"
+            (toggled)="toggleItem(item)"
+            (changed)="saveEditing(item, $event)"
+            (removed)="removeItem(item)"
+          />
+        </div>
+      } @empty {
+        <p
+          class="flex min-h-11 items-center text-sm leading-[21px] text-base-content/75"
+          i18n="@@groceries.noGroceriesYet"
+        >
+          No groceries yet.
+        </p>
+      }
+    </div>
+    <div>
+      <button
+        class="btn btn-ghost btn-sm min-h-11"
+        type="button"
+        i18n-aria-label="@@groceries.addNeededItem"
+        [disabled]="saving()"
+        aria-label="Add item to Needed"
+        (click)="startAddItem('needed')"
+      >
+        <app-icon name="add" class="size-5" />
+        <ng-container i18n="@@common.addItem">Add item</ng-container>
+      </button>
+    </div>
+
+    <div class="my-3 border-t border-base-300"></div>
+    <h3 class="app-subsection-title mb-2">
+      <ng-container i18n="@@groceries.usuallyAtHome">Usually at home</ng-container>
+    </h3>
+    <div
+      cdkDropList
+      id="at-home-meal-groceries"
+      [cdkDropListData]="atHomeItems()"
+      [cdkDropListConnectedTo]="['needed-meal-groceries']"
+      [cdkDropListDisabled]="saving()"
+      class="flex flex-col divide-y divide-base-300 [&>app-grocery-row:last-child]:pb-0 [&>:last-child_app-grocery-row]:pb-0 min-h-11"
+      (cdkDropListDropped)="dropItem($event, true)"
+    >
+      @for (item of atHomeItems(); track item.id) {
+        <div cdkDrag [cdkDragData]="item" class="flex items-center gap-2 sm:gap-3">
+          <app-purchase-grocery-row
+            class="min-w-0 flex-1"
+            [item]="item"
+            [disabled]="saving()"
+            (moveRequested)="moveItemWithKeyboard(item, $event)"
+            (toggled)="toggleItem(item)"
+            (changed)="saveEditing(item, $event)"
+            (removed)="removeItem(item)"
+          />
+        </div>
+      } @empty {
+        <p
+          class="flex min-h-11 items-center text-sm leading-[21px] text-base-content/75"
+          i18n="@@groceries.noGroceriesYet"
+        >
+          No groceries yet.
+        </p>
+      }
+    </div>
+    <div>
+      <button
+        class="btn btn-ghost btn-sm min-h-11"
+        type="button"
+        i18n-aria-label="@@groceries.addAtHomeItem"
+        [disabled]="saving()"
+        aria-label="Add item to Usually at home"
+        (click)="startAddItem('atHome')"
+      >
+        <app-icon name="add" class="size-5" />
+        <ng-container i18n="@@common.addItem">Add item</ng-container>
+      </button>
+    </div>
+
+    @if (loadedProfile()) {
+      <label class="mt-4 flex cursor-pointer items-start gap-3 rounded-box px-2 py-1 text-sm">
+        <input
+          type="checkbox"
+          class="toggle toggle-primary toggle-sm mt-0.5 max-[799px]:text-base"
+          [checked]="updateReusableProfile()"
+          [disabled]="saving()"
+          (change)="updateReusableProfile.set(!updateReusableProfile())"
+        />
+        <span>
+          <span class="font-medium">{{ updateProfileLabel() }}</span>
+        </span>
+      </label>
+    }
+  }
+
+  @if (error()) {
+    <p class="mt-3 text-sm text-error" role="alert">{{ error() }}</p>
+  }
+
+  <div modal-actions>
+    <button
+      class="btn btn-primary"
+      [disabled]="!meal() || !loaded() || loading() || saving()"
+      (click)="confirm()"
+    >
+      @if (saving()) {
+        <ng-container i18n="@@common.saving">Saving…</ng-container>
+      } @else {
+        {{ confirmLabel() }}
+      }
+    </button>
+  </div>
+</app-modal>
+
+<app-grocery-edit-modal
+  #itemEditor
+  [disabled]="saving()"
+  [context]="addingItemTo() === 'atHome' ? atHomeLabel : neededLabel"
+  (saved)="addManualItem($event, addingItemTo() === 'atHome')"
+  (closed)="addingItemTo.set(null)"
+/>
+
+<app-confirmation-modal #discardModal />

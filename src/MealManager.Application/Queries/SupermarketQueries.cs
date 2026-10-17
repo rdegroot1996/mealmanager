@@ -42,16 +42,16 @@ public sealed class SupermarketQueries(ApplicationDbContext db, SupermarketProvi
         {
             var items = await Groceries(cycleId, ct);
             var connection = await supermarkets.Connection(provider, ct);
-            var profileIds = items.Where(x => x.RecipeProfileProductId.HasValue).Select(x => x.RecipeProfileProductId!.Value).Distinct().ToArray();
+            var profileIds = items.Where(x => x.RecipeProfileGroceryItemId.HasValue).Select(x => x.RecipeProfileGroceryItemId!.Value).Distinct().ToArray();
             var mappings = await db.SupermarketProductMappings.AsNoTracking()
-                .Where(x => x.Provider == provider && profileIds.Contains(x.RecipeProfileProductId)).ToDictionaryAsync(x => x.RecipeProfileProductId, ct);
+                .Where(x => x.Provider == provider && profileIds.Contains(x.RecipeProfileGroceryItemId)).ToDictionaryAsync(x => x.RecipeProfileGroceryItemId, ct);
             var cache = new Dictionary<string, SupermarketProduct>();
             var result = new List<SupermarketReviewItemDto>();
             var adapter = supermarkets.Provider(provider);
             foreach (var item in items)
             {
                 SupermarketProduct? product = null;
-                if (item.RecipeProfileProductId is Guid profileId && mappings.TryGetValue(profileId, out var mapping))
+                if (item.RecipeProfileGroceryItemId is Guid profileId && mappings.TryGetValue(profileId, out var mapping))
                 {
                     if (!cache.TryGetValue(mapping.ProductId, out product))
                         cache[mapping.ProductId] = product = await adapter.GetProduct(mapping.ProductId, connection, ct);
@@ -59,16 +59,16 @@ public sealed class SupermarketQueries(ApplicationDbContext db, SupermarketProvi
                 }
                 result.Add(new SupermarketReviewItemDto
                 {
-                    GroceryItemId = item.Id,
-                    ProfileProductId = item.RecipeProfileProductId,
+                    ShoppingListItemId = item.Id,
+                    RecipeProfileGroceryItemId = item.RecipeProfileGroceryItemId,
                     Name = item.Name,
                     Quantity = item.Quantity,
                     Checked = item.Checked,
-                    Group = item.PlanningMeal?.Recipe.Name ?? "Other items",
+                    Group = item.PlannedMeal?.Recipe.Name ?? "Other items",
                     Product = product,
                 });
             }
-            var unreviewed = await db.Set<PlanningMeal>().CountAsync(x => x.Planning.PlanningCycleId == cycleId && x.Groceries == null, ct);
+            var unreviewed = await db.Set<PlannedMeal>().CountAsync(x => x.MealPlan.PlanningCycleId == cycleId && x.GroceryReview == null, ct);
             return new SupermarketReviewDto
             {
                 Provider = provider,
@@ -82,17 +82,17 @@ public sealed class SupermarketQueries(ApplicationDbContext db, SupermarketProvi
         catch (SupermarketException ex) { throw SupermarketProviders.Error(ex); }
     }
 
-    internal async Task<List<GroceryItem>> Groceries(Guid cycleId, CancellationToken ct)
+    internal async Task<List<ShoppingListItem>> Groceries(Guid cycleId, CancellationToken ct)
     {
         if (!await db.PlanningCycles.AnyAsync(x => x.Id == cycleId, ct)) throw new NotFoundError("Planning cycle");
-        return await db.Set<GroceryItem>().AsNoTracking().Include(x => x.PlanningMeal).ThenInclude(x => x!.Recipe)
-            .Where(x => x.GroceryList.PlanningCycleId == cycleId)
-            .OrderBy(x => x.PlanningMealId == null)
-            .ThenBy(x => x.PlanningMeal!.Date)
-            .ThenBy(x => x.PlanningMealId)
+        return await db.Set<ShoppingListItem>().AsNoTracking().Include(x => x.PlannedMeal).ThenInclude(x => x!.Recipe)
+            .Where(x => x.ShoppingList.PlanningCycleId == cycleId)
+            .OrderBy(x => x.PlannedMealId == null)
+            .ThenBy(x => x.PlannedMeal!.Date)
+            .ThenBy(x => x.PlannedMealId)
             .ThenBy(x => x.Order)
             .ThenBy(x => x.Id)
             .ToListAsync(ct);
     }
-    internal static string Revision(List<GroceryItem> items) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(items.Select(x => new { x.Id, x.Name, x.Quantity, x.Checked, x.RecipeProfileProductId })))));
+    internal static string Revision(List<ShoppingListItem> items) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(items.Select(x => new { x.Id, x.Name, x.Quantity, x.Checked, x.RecipeProfileGroceryItemId })))));
 }

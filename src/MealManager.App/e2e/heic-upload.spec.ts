@@ -10,16 +10,16 @@ test('uploads an HEIC recipe photo and serves the normalized JPEG', async ({ pag
   await page.getByLabel('Recipe name').fill('HEIC recipe');
   await page.getByRole('spinbutton', { name: 'Base servings', exact: true }).fill('2');
   await page.getByLabel('Category').selectOption('Meals');
-  await page.getByRole('button', { name: 'Add Ingredient' }).click();
+  await page.getByRole('button', { name: 'Add ingredient' }).click();
   await page.getByLabel('Ingredient name').fill('Ingredient');
   await page.getByLabel('Quantity').fill('1');
-  await page.getByRole('button', { name: 'Add Step' }).click();
+  await page.getByRole('button', { name: 'Add step' }).click();
   await page.locator('#step-description-0').fill('Prepare the meal.');
   await expect(page.getByRole('button', { name: 'Add image' })).toBeDisabled();
   await expect(page.getByText('Save the recipe first, then add photos.')).toBeVisible();
   await page.locator('app-page-header').getByRole('button', { name: 'Save' }).click();
 
-  await expect(page).toHaveURL(/\/recipes\/[0-9a-f-]+\/edit$/);
+  await expect(page).toHaveURL(/\/recipes\/[0-9a-f-]+\/edit(?:\?new=1)?$/);
   await expect(page.getByRole('button', { name: 'Add image' })).toBeEnabled();
 
   const uploadResponse = page.waitForResponse(

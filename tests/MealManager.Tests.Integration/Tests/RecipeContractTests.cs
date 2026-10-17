@@ -66,17 +66,17 @@ public partial class RecipeControllerTests
     }
 
     [Fact]
-    public async Task RecipeMutations_StoreExactRepeatedLabelsOnce()
+    public async Task RecipeMutations_StoreExactRepeatedTagsOnce()
     {
-        string[] labels = ["Easy", "easy", " Easy ", "Easy"];
-        var created = await HttpClient.PostAsJsonAsync("/api/recipes", CreateTestRecipe() with { Tags = labels });
+        string[] tags = ["Easy", "easy", " Easy ", "Easy"];
+        var created = await HttpClient.PostAsJsonAsync("/api/recipes", CreateTestRecipe() with { Tags = tags });
         created.EnsureSuccessStatusCode();
         var recipe = (await created.Content.ReadFromJsonAsync<RecipeDto>(JsonOptions))!;
-        Assert.Equal(labels.Distinct().Order(StringComparer.Ordinal), recipe.Tags.Select(tag => tag.Name).Order(StringComparer.Ordinal));
-        var response = await HttpClient.PutAsJsonAsync($"/api/recipes/{recipe.Id}", EditRecipe(recipe) with { Tags = labels });
+        Assert.Equal(tags.Distinct().Order(StringComparer.Ordinal), recipe.Tags.Select(tag => tag.Name).Order(StringComparer.Ordinal));
+        var response = await HttpClient.PutAsJsonAsync($"/api/recipes/{recipe.Id}", EditRecipe(recipe) with { Tags = tags });
         response.EnsureSuccessStatusCode();
         var updated = (await response.Content.ReadFromJsonAsync<RecipeDto>(JsonOptions))!;
-        Assert.Equal(labels.Distinct().Order(StringComparer.Ordinal), updated.Tags.Select(tag => tag.Name).Order(StringComparer.Ordinal));
+        Assert.Equal(tags.Distinct().Order(StringComparer.Ordinal), updated.Tags.Select(tag => tag.Name).Order(StringComparer.Ordinal));
     }
 
     [Fact]

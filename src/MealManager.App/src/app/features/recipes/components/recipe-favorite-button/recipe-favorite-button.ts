@@ -14,13 +14,14 @@ export class RecipeFavoriteButton {
   private recipeStore = inject(RecipesStore);
   private toast = inject(ToastService);
 
-  recipe = input.required<Pick<ApiRecipeSummary, 'id' | 'isFavorite'>>();
+  recipe = input.required<Pick<ApiRecipeSummary, 'id' | 'name' | 'isFavorite'>>();
   pending = signal(false);
 
   actionLabel(): string {
+    const name = this.recipe().name;
     return this.recipe().isFavorite
-      ? $localize`:@@recipes.removeFromFavorites:Remove from favorites`
-      : $localize`:@@recipes.addToFavorites:Add to favorites`;
+      ? $localize`:@@recipes.removeNamedFavorite:Remove ${name}:recipeName: from favorites`
+      : $localize`:@@recipes.addNamedFavorite:Add ${name}:recipeName: to favorites`;
   }
 
   toggle() {

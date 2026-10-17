@@ -10,4 +10,5 @@ export class FormField {
   hint = input<string | null>(null);
   error = input<string | null>(null);
   required = input(false);
+  compact = input(false);
 }

@@ -26,12 +26,20 @@ export async function setUpAdministrator(page: Page) {
   await expect(page).toHaveURL('/');
 }
 
-export async function navigateTo(page: Page, destination: 'Recipes' | 'Planning' | 'Groceries') {
+export async function navigateTo(
+  page: Page,
+  destination: 'Dashboard' | 'Recipes' | 'Planner' | 'Shopping list',
+) {
   const desktopNavigation = page.locator('aside nav[aria-label="Main navigation"]');
   const navigation = (await desktopNavigation.isVisible())
     ? desktopNavigation
     : page.locator('nav.app-bottom-nav[aria-label="Main navigation"]');
-  const routes = { Recipes: '/recipes', Planning: '/planning', Groceries: '/groceries' } as const;
+  const routes = {
+    Dashboard: '/',
+    Recipes: '/recipes',
+    Planner: '/planner',
+    'Shopping list': '/shopping-list',
+  } as const;
   await Promise.all([
     page.waitForURL(routes[destination]),
     navigation.getByRole('link', { name: new RegExp(`${destination}$`) }).click(),

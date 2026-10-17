@@ -44,6 +44,23 @@ describe('Picnic settings management', () => {
     expect(component.code).toBe('');
     expect(component.editing()).toBe(false);
   });
+  it('protects entered credentials and verification drafts without prompting on an untouched form', async () => {
+    const { component } = await setup();
+    const discard = vi.spyOn(component.discardModal(), 'confirmDiscard').mockResolvedValue(false);
+    component.manage();
+    expect(await component.beforeDismiss()).toBe(true);
+    component.password = 'unsaved';
+    expect(await component.beforeDismiss()).toBe(false);
+    component.connection.set(verification);
+    component.code = '';
+    expect(await component.beforeDismiss()).toBe(true);
+    component.code = '123456';
+    expect(await component.beforeDismiss()).toBe(false);
+    component.closeManagement();
+    expect(component.password).toBe('');
+    expect(component.code).toBe('');
+    expect(discard).toHaveBeenCalledTimes(2);
+  });
   it('retains SMS verification inside management and closes after successful verification', async () => {
     const { component, store, close } = await setup();
     component.manage();

@@ -1,5 +1,6 @@
 import { Component, computed, inject, LOCALE_ID, output, signal, viewChild } from '@angular/core';
 import { Modal } from '../../../../shared/components/modal/modal';
+import { ConfirmationModal } from '../../../../shared/components/confirmation-modal/confirmation-modal';
 import { NumberInput } from '../../../../shared/components/number-input/number-input';
 import { FormField } from '../../../../shared/components/form-field/form-field';
 import { FormsModule } from '@angular/forms';
@@ -13,10 +14,18 @@ import { AppIcon } from '../../../../shared/components/app-icon/app-icon';
 
 @Component({
   selector: 'app-cycle-form-modal',
-  imports: [Modal, FormsModule, FormField, AppIcon, NumberInput],
+  imports: [ConfirmationModal, Modal, FormsModule, FormField, AppIcon, NumberInput],
   templateUrl: './cycle-form-modal.html',
 })
 export class CycleFormModal {
+  private savedDraft = '';
+  readonly discardModal = viewChild.required<ConfirmationModal>('discardModal');
+  readonly beforeDismiss = () =>
+    this.draftSnapshot() === this.savedDraft || this.discardModal().confirmDiscard();
+  private draftSnapshot() {
+    return JSON.stringify([this.startDate(), this.days()]);
+  }
+
   ngOnDestroy() {
     this.endSession();
   }
@@ -28,7 +37,7 @@ export class CycleFormModal {
   private locale = inject(LOCALE_ID);
   toast = inject(ToastService);
   modal = viewChild<Modal>('modal');
-  readonly deleteLabel = $localize`:@@planning.deleteCycle:Delete cycle`;
+  readonly deleteLabel = $localize`:@@planner.deleteCycle:Delete cycle`;
   saved = output<ApiPlanningCycle>();
   removeRequested = output<string>();
   remove() {
@@ -90,6 +99,7 @@ export class CycleFormModal {
         this.days.set(7);
       }
     }
+    this.savedDraft = this.draftSnapshot();
     this.modal()!.open();
   }
 

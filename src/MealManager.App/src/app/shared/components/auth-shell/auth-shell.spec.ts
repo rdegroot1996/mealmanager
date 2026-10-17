@@ -7,7 +7,6 @@ describe('AuthShell', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({ imports: [AuthShell] }).compileComponents();
     fixture = TestBed.createComponent(AuthShell);
-    fixture.componentRef.setInput('title', 'MealManager');
     fixture.componentRef.setInput('description', 'Sign in to manage your meals.');
     fixture.detectChanges();
   });

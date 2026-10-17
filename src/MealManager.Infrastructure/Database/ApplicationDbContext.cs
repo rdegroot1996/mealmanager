@@ -14,9 +14,9 @@ public class ApplicationDbContext : IdentityDbContext<User, Role, Guid>
 
     public DbSet<PlanningCycle> PlanningCycles { get; set; }
 
-    public DbSet<Planning> Plannings { get; set; }
+    public DbSet<MealPlan> MealPlans { get; set; }
 
-    public DbSet<GroceryList> GroceryLists { get; set; }
+    public DbSet<ShoppingList> ShoppingLists { get; set; }
 
     public DbSet<SupermarketProductMapping> SupermarketProductMappings { get; set; }
 

@@ -1,23 +1,18 @@
-import { Component, computed, signal, viewChild } from '@angular/core';
-import { moveProduct } from '../../../../shared/components/product-row/product-order';
+import { Component, computed, HostListener, signal, viewChild } from '@angular/core';
+import { ConfirmationModal } from '../../../../shared/components/confirmation-modal/confirmation-modal';
+import { dropGrocery, moveGrocery } from '../../../../shared/components/grocery-row/grocery-order';
 import { Modal } from '../../../../shared/components/modal/modal';
 import {
-  ApiRecipeProduct,
+  ApiRecipeProfileGroceryItem,
   ApiRecipeProfile,
   ApiRecipeIngredient,
 } from '../../../../api/models/api-recipe';
-import { ProductRow } from '../../../../shared/components/product-row/product-row';
+import { GroceryRow } from '../../../../shared/components/grocery-row/grocery-row';
 import { Observable } from 'rxjs';
 import { apiErrorMessage } from '../../../../shared/services/api-error-message';
+import { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
 import {
-  CdkDrag,
-  CdkDragDrop,
-  CdkDropList,
-  moveItemInArray,
-  transferArrayItem,
-} from '@angular/cdk/drag-drop';
-import {
-  GroceryItemDraft,
+  GroceryDraft,
   GroceryEditModal,
 } from '../../../../shared/components/grocery-edit-modal/grocery-edit-modal';
 import { FormsModule } from '@angular/forms';
@@ -32,11 +27,12 @@ import { AppIcon } from '../../../../shared/components/app-icon/app-icon';
     FormsModule,
     FormField,
     NumberInput,
-    ProductRow,
+    GroceryRow,
     CdkDrag,
     CdkDropList,
     GroceryEditModal,
     AppIcon,
+    ConfirmationModal,
   ],
   templateUrl: './profile-form-modal.html',
 })
@@ -45,8 +41,44 @@ export class ProfileFormModal {
     this.endSession();
   }
   private session = 0;
+  private savedDraft = '';
+  private editorActive = false;
+  discardModal = viewChild.required<ConfirmationModal>('discardModal');
+  readonly beforeDismiss = async () => {
+    if (this.saving()) return false;
+    if (!this.hasUnsavedChanges()) return true;
+    const session = this.session;
+    const discard = await this.discardModal().open({
+      title: $localize`:@@recipes.editRecipePage.discardUnsavedChanges:Discard unsaved changes?`,
+      message: $localize`:@@recipes.profileUnsavedChanges:Your profile changes have not been saved. If you close now, they will be lost.`,
+      cancelLabel: $localize`:@@recipes.keepEditing:Keep editing`,
+      confirmLabel: $localize`:@@recipes.discardChanges:Discard changes`,
+      destructive: true,
+    });
+    return discard && session === this.session;
+  };
+
+  hasUnsavedChanges() {
+    return this.editorActive && this.draftSnapshot() !== this.savedDraft;
+  }
+
+  @HostListener('window:beforeunload', ['$event'])
+  protectUnsavedChanges(event: BeforeUnloadEvent) {
+    if (this.hasUnsavedChanges()) event.preventDefault();
+  }
+
+  private draftSnapshot() {
+    return JSON.stringify({
+      name: this.profileName(),
+      servings: this.profileServings(),
+      groceries: [...this.neededItems(), ...this.atHomeItems()].map(
+        ({ id, name, quantity, atHome }) => ({ id, name, quantity, atHome }),
+      ),
+    });
+  }
   endSession() {
     ++this.session;
+    this.editorActive = false;
   }
   modal = viewChild<Modal>('modal');
   itemEditor = viewChild.required<GroceryEditModal>('itemEditor');
@@ -63,8 +95,8 @@ export class ProfileFormModal {
   editingProfile = computed(() => (this.profile()?.id ? this.profile() : null));
   profileName = signal('');
   profileServings = signal(4);
-  neededItems = signal<ApiRecipeProduct[]>([]);
-  atHomeItems = signal<ApiRecipeProduct[]>([]);
+  neededItems = signal<ApiRecipeProfileGroceryItem[]>([]);
+  atHomeItems = signal<ApiRecipeProfileGroceryItem[]>([]);
   addingItemTo = signal<'needed' | 'atHome' | null>(null);
   saving = signal(false);
   error = signal('');
@@ -82,18 +114,20 @@ export class ProfileFormModal {
     this.onSave = saveFn ?? null;
     this.saving.set(false);
     this.error.set('');
-    this.profile.set(profile ?? { id: '', name: '', servings: baseServings, products: [] });
+    this.profile.set(profile ?? { id: '', name: '', servings: baseServings, groceries: [] });
     this.profileName.set(profile?.name ?? '');
     this.profileServings.set(profile?.servings ?? baseServings);
-    this.setProducts(profile?.products ?? []);
+    this.setGroceries(profile?.groceries ?? []);
     this.addingItemTo.set(null);
     this.ingredients.set(ingredients);
+    this.savedDraft = this.draftSnapshot();
+    this.editorActive = true;
     this.modal()!.open();
   }
 
-  addItem(edit: GroceryItemDraft, atHome: boolean) {
+  addItem(edit: GroceryDraft, atHome: boolean) {
     if (this.saving()) return;
-    const item: ApiRecipeProduct = {
+    const item: ApiRecipeProfileGroceryItem = {
       id: crypto.randomUUID(),
       name: edit.name,
       quantity: edit.quantity,
@@ -140,27 +174,26 @@ export class ProfileFormModal {
     );
   }
 
-  dropItem(event: CdkDragDrop<ApiRecipeProduct[]>, atHome: boolean) {
+  dropItem(event: CdkDragDrop<ApiRecipeProfileGroceryItem[]>, atHome: boolean) {
     if (this.saving()) return;
-    const needed = [...this.neededItems()];
-    const atHomeItems = [...this.atHomeItems()];
-    const target = atHome ? atHomeItems : needed;
-    if (event.previousContainer === event.container) {
-      moveItemInArray(target, event.previousIndex, event.currentIndex);
-    } else {
-      const source = atHome ? needed : atHomeItems;
-      transferArrayItem(source, target, event.previousIndex, event.currentIndex);
-    }
-    this.neededItems.set(needed.map((item) => ({ ...item, atHome: false })));
-    this.atHomeItems.set(atHomeItems.map((item) => ({ ...item, atHome: true })));
+    const moved = dropGrocery(
+      this.neededItems(),
+      this.atHomeItems(),
+      event.previousContainer === event.container,
+      atHome,
+      event.previousIndex,
+      event.currentIndex,
+    );
+    this.neededItems.set(moved.needed);
+    this.atHomeItems.set(moved.atHome);
   }
 
-  moveItemWithKeyboard(item: ApiRecipeProduct, direction: -1 | 1) {
+  moveItemWithKeyboard(item: ApiRecipeProfileGroceryItem, direction: -1 | 1) {
     if (this.saving()) return;
-    const moved = moveProduct(this.neededItems(), this.atHomeItems(), item, direction);
+    const moved = moveGrocery(this.neededItems(), this.atHomeItems(), item, direction);
     if (!moved) {
       this.reorderAnnouncement.set(
-        $localize`:@@groceries.productCannotMoveFurther:${item.name}:itemName: cannot be moved further in that direction.`,
+        $localize`:@@common.itemCannotMoveFurther:${item.name}:itemName: cannot be moved further in that direction.`,
       );
       return;
     }
@@ -168,7 +201,7 @@ export class ProfileFormModal {
     this.neededItems.set(moved.needed);
     this.atHomeItems.set(moved.atHome);
     this.reorderAnnouncement.set(
-      $localize`:@@groceries.productMoved:${item.name}:itemName: moved to position ${moved.position + 1}:position:.`,
+      $localize`:@@common.itemMoved:${item.name}:itemName: moved to position ${moved.position + 1}:position:.`,
     );
     setTimeout(() =>
       this.modal()!
@@ -204,10 +237,10 @@ export class ProfileFormModal {
       );
       return;
     }
-    const allProducts: ApiRecipeProduct[] = [
+    const allGroceries: ApiRecipeProfileGroceryItem[] = [
       ...this.neededItems().map((p) => ({ ...p, atHome: false })),
       ...this.atHomeItems().map((p) => ({ ...p, atHome: true })),
-    ].map((product, order) => ({ ...product, order }));
+    ].map((item, order) => ({ ...item, order }));
     if (!this.onSave) return;
     this.saving.set(true);
     this.error.set('');
@@ -215,11 +248,12 @@ export class ProfileFormModal {
       id: this.profile()?.id ?? '',
       name,
       servings: this.profileServings(),
-      products: allProducts,
+      groceries: allGroceries,
     }).subscribe({
       next: () => {
         if (session !== this.session) return;
         this.saving.set(false);
+        this.savedDraft = this.draftSnapshot();
         this.modal()?.close();
       },
       error: (response: unknown) => {
@@ -235,9 +269,9 @@ export class ProfileFormModal {
     });
   }
 
-  private setProducts(products: ApiRecipeProduct[]) {
-    const ordered = [...products].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-    this.neededItems.set(structuredClone(ordered.filter((product) => !product.atHome)));
-    this.atHomeItems.set(structuredClone(ordered.filter((product) => product.atHome)));
+  private setGroceries(groceries: ApiRecipeProfileGroceryItem[]) {
+    const ordered = [...groceries].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    this.neededItems.set(structuredClone(ordered.filter((item) => !item.atHome)));
+    this.atHomeItems.set(structuredClone(ordered.filter((item) => item.atHome)));
   }
 }

@@ -9,7 +9,7 @@ public class SupermarketProductMappingConfiguration : IEntityTypeConfiguration<S
     public void Configure(EntityTypeBuilder<SupermarketProductMapping> builder)
     {
         builder.Property(x => x.Provider).HasConversion(value => value.ToString().ToLowerInvariant(), value => Enum.Parse<SupermarketProvider>(value, true));
-        builder.HasIndex(x => new { x.RecipeProfileProductId, x.Provider }).IsUnique();
-        builder.HasOne(x => x.RecipeProfileProduct).WithMany().HasForeignKey(x => x.RecipeProfileProductId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(x => new { x.RecipeProfileGroceryItemId, x.Provider }).IsUnique();
+        builder.HasOne(x => x.RecipeProfileGroceryItem).WithMany().HasForeignKey(x => x.RecipeProfileGroceryItemId).OnDelete(DeleteBehavior.Cascade);
     }
 }

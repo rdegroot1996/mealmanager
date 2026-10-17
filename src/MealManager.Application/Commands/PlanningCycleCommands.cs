@@ -13,7 +13,7 @@ public class PlanningCycleCommands(ApplicationDbContext dbContext, PlanningCycle
         return await queries.GetPlanningCycle(cycle.Id);
     }
 
-    internal async Task<(PlanningCycle Cycle, Planning Planning)> AddCycle(CreatePlanningCycleDto command)
+    internal async Task<(PlanningCycle Cycle, MealPlan MealPlan)> AddCycle(CreatePlanningCycleDto command)
     {
         var latestStartDate = await dbContext.PlanningCycles
             .Select(cycle => (DateOnly?)cycle.StartDate)
@@ -34,23 +34,23 @@ public class PlanningCycleCommands(ApplicationDbContext dbContext, PlanningCycle
         };
         dbContext.PlanningCycles.Add(planningCycle);
 
-        // Create planning
-        var planning = new Planning
+        // Create meal plan
+        var mealPlan = new MealPlan
         {
             Id = Guid.CreateVersion7(),
             PlanningCycleId = planningCycle.Id,
         };
-        dbContext.Plannings.Add(planning);
+        dbContext.MealPlans.Add(mealPlan);
 
-        // Create grocery list
-        var groceryList = new GroceryList
+        // Create shopping list
+        var shoppingList = new ShoppingList
         {
             Id = Guid.CreateVersion7(),
             PlanningCycleId = planningCycle.Id,
         };
-        dbContext.GroceryLists.Add(groceryList);
+        dbContext.ShoppingLists.Add(shoppingList);
 
-        return (planningCycle, planning);
+        return (planningCycle, mealPlan);
     }
 
     public async Task<PlanningCycleDto> UpdatePlanningCycle(Guid id, UpdatePlanningCycleDto command)

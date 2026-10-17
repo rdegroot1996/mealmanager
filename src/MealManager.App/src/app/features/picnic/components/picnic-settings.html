@@ -24,7 +24,12 @@
       }
     </button>
   </div>
-  <app-modal #management (closed)="closeManagement()">
+  <app-modal
+    #management
+    [busy]="busy()"
+    [beforeDismiss]="beforeDismiss"
+    (closed)="closeManagement()"
+  >
     <h2 modal-title i18n="@@supermarkets.picnicConnection">Picnic connection</h2>
     <p class="mb-4 text-sm text-base-content/75">
       {{ status(provider) }} · {{ provider.countryCode }}
@@ -189,3 +194,4 @@
     Reset Picnic connection
   </button>
 }
+<app-confirmation-modal #discardModal />

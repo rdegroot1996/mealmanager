@@ -1,13 +1,12 @@
 import { Component, input } from '@angular/core';
 import { LanguageSwitcher } from '../../../core/i18n/language-switcher';
-import { AppIcon } from '../app-icon/app-icon';
+import { AppBrand } from '../app-brand/app-brand';
 
 @Component({
   selector: 'app-auth-shell',
-  imports: [LanguageSwitcher, AppIcon],
+  imports: [LanguageSwitcher, AppBrand],
   templateUrl: './auth-shell.html',
 })
 export class AuthShell {
-  title = input.required<string>();
   description = input.required<string>();
 }

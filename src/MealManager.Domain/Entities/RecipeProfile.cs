@@ -6,5 +6,5 @@ public class RecipeProfile : BaseEntity
     public Recipe Recipe { get; set; } = null!;
     public required string Name { get; set; }
     public required int Servings { get; set; }
-    public List<RecipeProfileProduct> Products { get; set; } = [];
+    public List<RecipeProfileGroceryItem> Groceries { get; set; } = [];
 }

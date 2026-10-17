@@ -45,18 +45,18 @@ public sealed class RecipeEditCommands(
         {
             throw new ValidationException("Expected profile version is required.");
         }
-        if (patch.Name is null && patch.Servings is null && patch.Products is null)
+        if (patch.Name is null && patch.Servings is null && patch.Groceries is null)
         {
             throw new ValidationException("Supply at least one field to update.");
         }
         var current = await profileQueries.GetRecipeProfile(patch.ProfileId);
         if (current.ToState().ProfileVersion != patch.ExpectedProfileVersion) throw Changed();
-        ValidateRows(patch.Products?.Select(row => row.Id), current.Products.Select(row => row.Id));
+        ValidateRows(patch.Groceries?.Select(row => row.Id), current.Groceries.Select(row => row.Id));
         var command = new UpdateRecipeProfileDto
         {
             Name = patch.Name ?? current.Name,
             Servings = patch.Servings ?? current.Servings,
-            Products = patch.Products ?? current.Products.Select(row => row.ToInput()).ToArray(),
+            Groceries = patch.Groceries ?? current.Groceries.Select(row => row.ToInput()).ToArray(),
         };
         await profileValidator.ValidateAndThrowAsync(command);
         return (await profileCommands.UpdateRecipeProfile(patch.ProfileId, command)).ToState();

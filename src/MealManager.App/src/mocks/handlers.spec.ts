@@ -3,7 +3,7 @@ import { setupServer } from 'msw/node';
 import { File as NodeFile } from 'node:buffer';
 import { handlers, resetMockData } from './handlers';
 
-describe('mock planning contracts', () => {
+describe('mock meal plan contracts', () => {
   const server = setupServer(...handlers);
   const api = (path: string, method = 'GET', body?: unknown) =>
     fetch(new URL(path, document.baseURI), {
@@ -16,94 +16,96 @@ describe('mock planning contracts', () => {
   afterAll(() => server.close());
 
   it('returns upcoming entries across cycles with bounded calendar dates and input validation', async () => {
-    const previous = await (await api('/api/planning/cycle/c1')).json();
-    const middle = await (await api('/api/planning/cycle/c2')).json();
+    const previous = await (await api('/api/meal-plans/cycle/c1')).json();
+    const middle = await (await api('/api/meal-plans/cycle/c2')).json();
     const currentCycle = await (await api('/api/planning-cycles/current')).json();
-    const current = await (await api(`/api/planning/cycle/${currentCycle.id}`)).json();
+    const current = await (await api(`/api/meal-plans/cycle/${currentCycle.id}`)).json();
     const all = [...previous.entries, ...middle.entries, ...current.entries].sort(
       (a, b) =>
         a.date.localeCompare(b.date) || a.sortOrder - b.sortOrder || a.id.localeCompare(b.id),
     );
     const fromDate = all[0].date;
-    const result = await (await api(`/api/planning/upcoming?fromDate=${fromDate}`)).json();
+    const result = await (await api(`/api/meal-plans/upcoming?fromDate=${fromDate}`)).json();
     expect(result.entries.map((entry: { id: string }) => entry.id)).toEqual(
       all.slice(0, 3).map((entry) => entry.id),
     );
     expect(result.plannedDates).toContain(fromDate);
-    expect((await api('/api/planning/upcoming')).status).toBe(422);
-    expect((await api('/api/planning/upcoming?fromDate=invalid')).status).toBe(422);
-    expect((await api('/api/planning/upcoming?fromDate=9999-12-31')).status).toBe(400);
+    expect((await api('/api/meal-plans/upcoming')).status).toBe(422);
+    expect((await api('/api/meal-plans/upcoming?fromDate=invalid')).status).toBe(422);
+    expect((await api('/api/meal-plans/upcoming?fromDate=9999-12-31')).status).toBe(400);
     expect(
-      (await (await api('/api/planning/upcoming?fromDate=9999-12-25')).json()).entries,
+      (await (await api('/api/meal-plans/upcoming?fromDate=9999-12-25')).json()).entries,
     ).toEqual([]);
   });
 
   it('suggests retained shopping names across cycles and validates bounds', async () => {
     const current = await (await api('/api/planning-cycles/current')).json();
-    await api('/api/grocery-lists/cycle/c1/items', 'POST', { name: 'WC papier', quantity: 1 });
-    await api(`/api/grocery-lists/cycle/${current.id}/items`, 'POST', {
+    await api('/api/shopping-lists/cycle/c1/items', 'POST', { name: 'WC papier', quantity: 1 });
+    await api(`/api/shopping-lists/cycle/${current.id}/items`, 'POST', {
       name: 'wc papier',
       quantity: 1,
     });
-    await api(`/api/grocery-lists/cycle/${current.id}/items`, 'POST', {
+    await api(`/api/shopping-lists/cycle/${current.id}/items`, 'POST', {
       name: 'vochtig wc papier',
       quantity: 1,
     });
-    expect(await (await api('/api/grocery-lists/suggestions?search=WC')).json()).toEqual([
+    expect(await (await api('/api/shopping-lists/suggestions?search=WC')).json()).toEqual([
       'WC papier',
       'vochtig wc papier',
     ]);
-    expect(await (await api('/api/grocery-lists/suggestions?search=wc&limit=1')).json()).toEqual([
+    expect(await (await api('/api/shopping-lists/suggestions?search=wc&limit=1')).json()).toEqual([
       'WC papier',
     ]);
-    expect(await (await api('/api/grocery-lists/suggestions?search=')).json()).toEqual([]);
-    expect((await api('/api/grocery-lists/suggestions?search=wc&limit=21')).status).toBe(400);
+    expect(await (await api('/api/shopping-lists/suggestions?search=')).json()).toEqual([]);
+    expect((await api('/api/shopping-lists/suggestions?search=wc&limit=21')).status).toBe(400);
   });
 
-  it('returns not found for an unknown cycle planning', async () => {
-    expect((await api('/api/planning/cycle/missing')).status).toBe(404);
-    expect((await api('/api/grocery-lists/cycle/missing')).status).toBe(404);
+  it('returns not found for an unknown cycle meal plan', async () => {
+    expect((await api('/api/meal-plans/cycle/missing')).status).toBe(404);
+    expect((await api('/api/shopping-lists/cycle/missing')).status).toBe(404);
   });
 
-  it('rejects historical planning mutations while keeping historical shopping editable', async () => {
+  it('rejects historical meal plan mutations while keeping historical shopping editable', async () => {
     expect((await api('/api/planning-cycles/c1', 'DELETE')).status).toBe(400);
     expect(
-      (await api('/api/planning-meals/m-prev-1/groceries', 'POST', { groceries: [] })).status,
+      (await api('/api/planned-meals/m-prev-1/groceries', 'POST', { groceries: [] })).status,
     ).toBe(400);
-    expect((await api('/api/planning-meals/m-prev-1', 'DELETE')).status).toBe(400);
+    expect((await api('/api/planned-meals/m-prev-1', 'DELETE')).status).toBe(400);
     expect(
-      (await api('/api/grocery-lists/cycle/c1/items', 'POST', { name: 'Milk', quantity: 1 }))
+      (await api('/api/shopping-lists/cycle/c1/items', 'POST', { name: 'Milk', quantity: 1 }))
         .status,
     ).toBe(201);
   });
 
   it('rejects an out-of-range meal and accepts an explicit empty review', async () => {
     const cycle = await (await api('/api/planning-cycles/current')).json();
-    const planning = await (await api(`/api/planning/cycle/${cycle.id}`)).json();
+    const mealPlan = await (await api(`/api/meal-plans/cycle/${cycle.id}`)).json();
     const meal = {
-      planningId: planning.id,
+      mealPlanId: mealPlan.id,
       recipeId: 'r1',
       recipeProfileId: 'r1-p1',
       date: '2000-01-01',
     };
-    expect((await api('/api/planning-meals', 'POST', meal)).status).toBe(400);
-    const response = await api('/api/planning-meals', 'POST', { ...meal, date: cycle.startDate });
+    expect((await api('/api/planned-meals', 'POST', meal)).status).toBe(400);
+    const response = await api('/api/planned-meals', 'POST', { ...meal, date: cycle.startDate });
     expect(response.status).toBe(201);
     const created = await response.json();
+    const review = await api(`/api/planned-meals/${created.id}/groceries`, 'POST', {
+      groceries: [],
+    });
+    expect(review.status).toBe(201);
+    expect(await review.json()).toMatchObject({ meal: { id: created.id }, items: [] });
+    const updated = await (await api(`/api/meal-plans/cycle/${cycle.id}`)).json();
     expect(
-      (await api(`/api/planning-meals/${created.id}/groceries`, 'POST', { groceries: [] })).status,
-    ).toBe(201);
-    const updated = await (await api(`/api/planning/cycle/${cycle.id}`)).json();
-    expect(
-      updated.entries.find((entry: { id: string }) => entry.id === created.id).hasGroceriesAdded,
+      updated.entries.find((entry: { id: string }) => entry.id === created.id).hasReviewedGroceries,
     ).toBe(true);
   });
 
   it('rejects shrinking a cycle around an existing entry', async () => {
     const cycle = await (await api('/api/planning-cycles/current')).json();
-    const planning = await (await api(`/api/planning/cycle/${cycle.id}`)).json();
-    await api('/api/planning-meals', 'POST', {
-      planningId: planning.id,
+    const mealPlan = await (await api(`/api/meal-plans/cycle/${cycle.id}`)).json();
+    await api('/api/planned-meals', 'POST', {
+      mealPlanId: mealPlan.id,
       recipeId: 'r1',
       recipeProfileId: 'r1-p1',
       date: cycle.endDate,
@@ -213,7 +215,7 @@ describe('mock planning contracts', () => {
     expect((await api('/api/users/missing', 'DELETE')).status).toBe(404);
   });
 
-  it('rejects duplicate and foreign recipe rows and recipes used by planning', async () => {
+  it('rejects duplicate and foreign recipe rows and recipes used by meal plans', async () => {
     const recipe = await (await api('/api/recipes/r1')).json();
     const other = await (await api('/api/recipes/r2')).json();
     const body = { ...recipe, tags: recipe.tags.map((tag: { name: string }) => tag.name) };
@@ -233,23 +235,23 @@ describe('mock planning contracts', () => {
     expect((await (await api('/api/recipes/r1')).json()).name).toBe(recipe.name);
   });
 
-  it('uses server-created product IDs and consistent product name validation', async () => {
+  it('uses server-created grocery IDs and consistent grocery name validation', async () => {
     const draft = {
       recipeId: 'r1',
       name: 'New',
       servings: 2,
-      products: [{ id: 'draft', name: 'Rice', quantity: 1, atHome: false }],
+      groceries: [{ id: 'draft', name: 'Rice', quantity: 1, atHome: false }],
     };
     const created = await api('/api/recipe-profiles', 'POST', draft);
     expect(created.status).toBe(201);
     const profile = await created.json();
-    expect(profile.products[0].id).not.toBe('draft');
-    expect(profile.products[0].order).toBe(0);
+    expect(profile.groceries[0].id).not.toBe('draft');
+    expect(profile.groceries[0].order).toBe(0);
     expect(
       (
         await api('/api/recipe-profiles', 'POST', {
           ...draft,
-          products: [{ ...draft.products[0], name: 'a'.repeat(201) }],
+          groceries: [{ ...draft.groceries[0], name: 'a'.repeat(201) }],
         })
       ).status,
     ).toBe(400);
@@ -257,9 +259,21 @@ describe('mock planning contracts', () => {
       (
         await api('/api/recipe-profiles/' + profile.id, 'PUT', {
           ...profile,
-          products: [profile.products[0], profile.products[0]],
+          groceries: [profile.groceries[0], profile.groceries[0]],
         })
       ).status,
     ).toBe(400);
+  });
+  it('rejects fractional profile servings and purchase quantities on create and update', async () => {
+    const profile = await (await api('/api/recipe-profiles/r1-p1')).json();
+    for (const invalid of [
+      { ...profile, servings: 1.5 },
+      { ...profile, groceries: [{ name: 'Rice', quantity: 1.5, atHome: false }] },
+    ]) {
+      expect(
+        (await api('/api/recipe-profiles', 'POST', { ...invalid, recipeId: 'r1' })).status,
+      ).toBe(400);
+      expect((await api('/api/recipe-profiles/r1-p1', 'PUT', invalid)).status).toBe(400);
+    }
   });
 });

@@ -21,28 +21,28 @@ describe('DashboardState', () => {
     });
     state.load();
     http
-      .expectOne((request) => request.url === '/api/planning/upcoming')
+      .expectOne((request) => request.url === '/api/meal-plans/upcoming')
       .flush({ fromDate: state.today(), entries: [], plannedDates: [] });
     http
       .expectOne('/api/planning-cycles/current')
       .flush({ id: 'active', startDate: '2026-09-08', endDate: '2026-09-14' });
     http
-      .expectOne('/api/planning/cycle/active')
+      .expectOne('/api/meal-plans/cycle/active')
       .flush({ id: 'p', planningCycleId: 'active', entries: [], notes: [] });
     expect(cycles.currentCycle()?.id).toBe('old');
-    expect(state.planning()?.id).toBe('p');
+    expect(state.mealPlan()?.id).toBe('p');
     state.load();
     http
-      .expectOne((request) => request.url === '/api/planning/upcoming')
+      .expectOne((request) => request.url === '/api/meal-plans/upcoming')
       .flush({ fromDate: state.today(), entries: [], plannedDates: [] });
-    expect(state.planning()).toBeNull();
+    expect(state.mealPlan()).toBeNull();
     http.expectOne('/api/planning-cycles/current').flush({}, { status: 500, statusText: 'Error' });
     expect(state.error()).toContain('retry');
     expect(state.loading()).toBe(false);
     http.verify();
   });
 
-  it('keeps upcoming meals available when active planning fails and refreshes at midnight', () => {
+  it('keeps upcoming meals available when active meal plan fails and refreshes at midnight', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 9, 2, 23, 59, 50));
     TestBed.configureTestingModule({
@@ -54,7 +54,7 @@ describe('DashboardState', () => {
     http
       .expectOne(
         (request) =>
-          request.url === '/api/planning/upcoming' &&
+          request.url === '/api/meal-plans/upcoming' &&
           request.params.get('fromDate') === '2026-10-02',
       )
       .flush({ fromDate: '2026-10-02', entries: [], plannedDates: ['2026-10-02'] });
@@ -65,7 +65,7 @@ describe('DashboardState', () => {
     http
       .expectOne(
         (request) =>
-          request.url === '/api/planning/upcoming' &&
+          request.url === '/api/meal-plans/upcoming' &&
           request.params.get('fromDate') === '2026-10-03',
       )
       .flush({ fromDate: '2026-10-03', entries: [], plannedDates: [] });
@@ -82,13 +82,13 @@ describe('DashboardState', () => {
     const state = TestBed.inject(DashboardState);
     const http = TestBed.inject(HttpTestingController);
     state.load();
-    const obsolete = http.expectOne((request) => request.url === '/api/planning/upcoming');
+    const obsolete = http.expectOne((request) => request.url === '/api/meal-plans/upcoming');
     const oldActive = http.expectOne('/api/planning-cycles/current');
     state.load();
     expect(obsolete.cancelled).toBe(true);
     expect(oldActive.cancelled).toBe(true);
     http
-      .expectOne((request) => request.url === '/api/planning/upcoming')
+      .expectOne((request) => request.url === '/api/meal-plans/upcoming')
       .flush({}, { status: 500, statusText: 'Error' });
     http
       .expectOne('/api/planning-cycles/current')

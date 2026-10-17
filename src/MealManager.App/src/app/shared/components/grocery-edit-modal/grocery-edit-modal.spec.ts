@@ -2,6 +2,24 @@ import { TestBed } from '@angular/core/testing';
 import { GroceryEditModal } from './grocery-edit-modal';
 
 describe('GroceryEditModal', () => {
+  it('protects a changed item draft and stops prompting when changes are reverted', async () => {
+    const { editor } = await setup();
+    const discard = vi.spyOn(editor.discardModal(), 'confirmDiscard').mockResolvedValue(false);
+    editor.open({ name: 'Rice', quantity: 2 });
+    expect(await editor.beforeDismiss()).toBe(true);
+    editor.draftQuantity.set(3);
+    expect(await editor.beforeDismiss()).toBe(false);
+    expect(editor.draftQuantity()).toBe(3);
+    editor.draftQuantity.set(2);
+    editor.draftName.set(' Rice ');
+    expect(await editor.beforeDismiss()).toBe(true);
+    expect(discard).toHaveBeenCalledOnce();
+    editor.openNew();
+    expect(await editor.beforeDismiss()).toBe(true);
+    editor.draftName.set('Milk');
+    discard.mockResolvedValue(true);
+    expect(await editor.beforeDismiss()).toBe(true);
+  });
   async function setup() {
     const fixture = TestBed.createComponent(GroceryEditModal);
     fixture.detectChanges();

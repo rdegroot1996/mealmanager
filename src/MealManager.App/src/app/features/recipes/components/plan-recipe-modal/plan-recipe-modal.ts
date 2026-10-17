@@ -10,11 +10,11 @@ import {
 } from '@angular/core';
 import { Modal } from '../../../../shared/components/modal/modal';
 import { Recipe } from '../../models/recipe';
-import { PlanningStore, PlanningDay, planningDays } from '../../../planning/state/planning.store';
+import { MealPlanStore, PlanningDay, planningDays } from '../../../planner/state/meal-plan.store';
 import { PlanningCycleStore } from '../../../planning-cycle/state/planning-cycle.store';
 import { FormsModule } from '@angular/forms';
 import { map, switchMap } from 'rxjs';
-import { PlanningDaySelect } from '../../../planning/components/planning-day-select/planning-day-select';
+import { PlanningDaySelect } from '../../../planner/components/planning-day-select/planning-day-select';
 import { apiErrorMessage } from '../../../../shared/services/api-error-message';
 import { LoadingIndicator } from '../../../../shared/components/loading-indicator/loading-indicator';
 import { ToastService } from '../../../../shared/services/toast.service';
@@ -25,7 +25,7 @@ import { ToastService } from '../../../../shared/services/toast.service';
   templateUrl: './plan-recipe-modal.html',
 })
 export class PlanRecipeModal {
-  planningStore = inject(PlanningStore);
+  mealPlanStore = inject(MealPlanStore);
   cycleStore = inject(PlanningCycleStore);
   toast = inject(ToastService);
   private readonly injector = inject(Injector);
@@ -37,7 +37,7 @@ export class PlanRecipeModal {
 
   selectedDate = signal('');
   days = signal<PlanningDay[]>([]);
-  private planningId: string | null = null;
+  private mealPlanId: string | null = null;
   ngOnDestroy() {
     this.endSession();
   }
@@ -51,7 +51,7 @@ export class PlanRecipeModal {
 
   open() {
     const session = ++this.session;
-    this.planningId = null;
+    this.mealPlanId = null;
     this.days.set([]);
     this.selectedDate.set('');
     this.loading.set(true);
@@ -61,14 +61,14 @@ export class PlanRecipeModal {
       .fetchActiveCycle()
       .pipe(
         switchMap((cycle) =>
-          this.planningStore.fetchPlanning(cycle.id).pipe(map((planning) => ({ cycle, planning }))),
+          this.mealPlanStore.fetchMealPlan(cycle.id).pipe(map((mealPlan) => ({ cycle, mealPlan }))),
         ),
       )
       .subscribe({
-        next: ({ cycle, planning }) => {
+        next: ({ cycle, mealPlan }) => {
           if (session !== this.session) return;
-          this.planningId = planning.id;
-          const days = planningDays(cycle, planning);
+          this.mealPlanId = mealPlan.id;
+          const days = planningDays(cycle, mealPlan);
           this.days.set(days);
           this.selectedDate.set(
             days.find((day) => day.isToday)?.date ?? days.find((day) => !day.isPast)?.date ?? '',
@@ -97,7 +97,7 @@ export class PlanRecipeModal {
 
   planRecipe() {
     if (
-      !this.planningId ||
+      !this.mealPlanId ||
       !this.days().some((day) => day.date === this.selectedDate()) ||
       this.loading() ||
       this.saving()
@@ -107,13 +107,8 @@ export class PlanRecipeModal {
 
     this.saving.set(true);
     this.error.set('');
-    this.planningStore
-      .addRecipeToPlanning(
-        this.planningId,
-        this.selectedDate(),
-        this.recipe().id,
-        this.profile().id,
-      )
+    this.mealPlanStore
+      .planMeal(this.mealPlanId, this.selectedDate(), this.recipe().id, this.profile().id)
       .subscribe({
         next: () => {
           if (session !== this.session) return;

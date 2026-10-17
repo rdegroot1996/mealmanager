@@ -1,7 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { RecipeCatalogPage } from './recipe-catalog-page';
-import { provideRouter } from '@angular/router';
+import { NavigationStart, provideRouter, Router } from '@angular/router';
+import { RecipeCatalogContext } from '../../state/recipe-catalog-context';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
@@ -24,6 +25,34 @@ describe('RecipeCatalogPage', () => {
     expect(component).toBeTruthy();
   });
 
+  it('restores shareable filters from the URL and keeps updates in the return context', async () => {
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl(
+      '/?q=Soup&category=Meals&tag=Quick&tag=Family&favorite=1&sort=LeastPlanned',
+    );
+    expect(component.searchQuery()).toBe('Soup');
+    expect(component.categoryFilter()).toBe('Meals');
+    expect(component.selectedTags()).toEqual(['Quick', 'Family']);
+    expect(component.favoriteOnly()).toBe(true);
+    expect(component.sortOrder()).toBe('LeastPlanned');
+    component.removeTagFilter('Quick');
+    await fixture.whenStable();
+    expect(router.parseUrl(router.url).queryParams).toEqual({
+      q: 'Soup',
+      category: 'Meals',
+      tag: 'Family',
+      favorite: '1',
+      sort: 'LeastPlanned',
+    });
+    expect(TestBed.inject(RecipeCatalogContext).queryParams).toEqual({
+      q: 'Soup',
+      category: 'Meals',
+      tag: ['Family'],
+      favorite: '1',
+      sort: 'LeastPlanned',
+    });
+  });
+
   it('restores available tags after retry and retains them when filters narrow the results', () => {
     const http = TestBed.inject(HttpTestingController);
     http.expectOne('/api/recipes').flush({}, { status: 503, statusText: 'Unavailable' });
@@ -43,6 +72,23 @@ describe('RecipeCatalogPage', () => {
     expect(component.recipeStore.summaries()).toEqual([]);
     expect(component.allTags()).toEqual(['Quick']);
     http.verify();
+  });
+
+  it('captures scroll before the result list is removed and ignores filter-only navigation', () => {
+    const main = document.createElement('main');
+    main.append(fixture.nativeElement);
+    main.scrollTop = 240;
+    const context = TestBed.inject(RecipeCatalogContext);
+    const router = TestBed.inject(Router);
+    // Router.events is backed by the router's event subject.
+    const events = router.events as unknown as { next: (event: NavigationStart) => void };
+    events.next(new NavigationStart(1, '/recipes?tag=Quick'));
+    expect(context.scroll).toBeNull();
+    events.next(new NavigationStart(2, '/recipes/recipe-1'));
+    expect(context.scroll).toEqual({ key: '{}', top: 240 });
+    main.removeChild(fixture.nativeElement);
+    fixture.destroy();
+    expect(context.scroll?.top).toBe(240);
   });
 
   it('offers the complete category filter in the single filter dialog', () => {

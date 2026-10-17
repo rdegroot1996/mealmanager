@@ -114,7 +114,7 @@ Send-McpRequest 'notifications/initialized' @{} -Notification
 $listed = Send-McpRequest 'tools/list' @{}
 $toolNames = @($listed.result.tools | ForEach-Object { $_.name })
 foreach ($requiredTool in @('create_recipe', 'update_recipe', 'list_recipe_catalog', 'list_recipe_tags',
-        'search_recipes', 'get_active_planning', 'create_planning_cycle', 'apply_planning', 'add_grocery_item', 'get_grocery_list', 'remove_grocery_item')) {
+        'search_recipes', 'get_active_meal_plan', 'create_planning_cycle', 'apply_meal_plan', 'add_shopping_list_item', 'get_shopping_list', 'remove_shopping_list_item')) {
     if ($requiredTool -notin $toolNames) {
         throw "The MCP endpoint did not advertise $requiredTool."
     }
@@ -132,7 +132,7 @@ if (-not $ExerciseWrites) {
     return
 }
 
-$existingPlanning = Send-McpRequest 'tools/call' @{ name = 'get_active_planning'; arguments = @{} }
+$existingPlanning = Send-McpRequest 'tools/call' @{ name = 'get_active_meal_plan'; arguments = @{} }
 if ($existingPlanning.result.structuredContent.cycle) {
     throw 'Write smoke test requires an isolated database without an existing planning cycle.'
 }
@@ -161,16 +161,16 @@ Send-McpRequest 'tools/call' @{
     arguments = @{
         profileId = $profileId
         expectedProfileVersion = (Send-McpRequest 'tools/call' @{ name = 'get_recipe_profile'; arguments = @{ profileId = $profileId } }).result.structuredContent.profileVersion
-        products = @(
+        groceries = @(
             @{ name = 'Minced meat pack'; quantity = 1; atHome = $false },
             @{ name = 'Salt'; quantity = 1; atHome = $true }
         )
     }
 } | Out-Null
 $profile = Send-McpRequest 'tools/call' @{ name = 'get_recipe_profile'; arguments = @{ profileId = $profileId } }
-if (@($profile.result.structuredContent.products).Count -ne 2 -or
-    -not $profile.result.structuredContent.products[1].atHome) {
-    throw 'The confirmed Default profile products were not persisted.'
+if (@($profile.result.structuredContent.groceries).Count -ne 2 -or
+    -not $profile.result.structuredContent.groceries[1].atHome) {
+    throw 'The confirmed Default profile groceries were not persisted.'
 }
 $recipeName = "$recipeName edited"
 Send-McpRequest 'tools/call' @{
@@ -182,10 +182,10 @@ Send-McpRequest 'tools/call' @{ name = 'create_recipe'; arguments = @{
     ingredients = @(@{ name = 'Tomatoes'; quantity = 400; unit = 'g' }); steps = @('Simmer tomatoes.')
 } } | Out-Null
 $catalog = Send-McpRequest 'tools/call' @{ name = 'list_recipe_catalog'; arguments = @{} }
-$labels = Send-McpRequest 'tools/call' @{ name = 'list_recipe_tags'; arguments = @{} }
+$tags = Send-McpRequest 'tools/call' @{ name = 'list_recipe_tags'; arguments = @{} }
 if ($catalog.result.structuredContent.totalCount -ne 2 -or
-    'Freezable' -notin @($labels.result.structuredContent.tags | ForEach-Object { $_.name })) {
-    throw 'Recipe catalog or known labels did not include the edited recipe.'
+    'Freezable' -notin @($tags.result.structuredContent.tags | ForEach-Object { $_.name })) {
+    throw 'Recipe catalog or known tags did not include the edited recipe.'
 }
 $search = Send-McpRequest 'tools/call' @{
     name = 'search_recipes'
@@ -206,7 +206,7 @@ Send-McpRequest 'tools/call' @{ name = 'update_recipe'; arguments = @{
 $currentProfile = $profile.result.structuredContent
 Send-McpRequest 'tools/call' @{ name = 'update_recipe_profile'; arguments = @{
     profileId = $profileId; expectedProfileVersion = $currentProfile.profileVersion
-    products = @(@{ id = [guid]::NewGuid().ToString(); name = 'Unknown product'; quantity = 1 })
+    groceries = @(@{ id = [guid]::NewGuid().ToString(); name = 'Unknown product'; quantity = 1 })
 } } -ExpectedError 'ValidationError' | Out-Null
 $freezable = Send-McpRequest 'tools/call' @{ name = 'list_recipe_catalog'; arguments = @{ tags = @('Easy', 'Freezable') } }
 if ($freezable.result.structuredContent.totalCount -ne 1 -or
@@ -214,7 +214,7 @@ if ($freezable.result.structuredContent.totalCount -ne 1 -or
     'Ground meat' -notin @($freezable.result.structuredContent.recipes[0].ingredients | ForEach-Object { $_.name })) {
     throw 'Filtered catalog did not provide ingredients for client synonym interpretation.'
 }
-Write-Output 'PASS: confirmed recipe/Default products, editing, catalog/labels, SQL search and stale/invalid edit rejection.'
+Write-Output 'PASS: confirmed recipe/Default groceries, editing, catalog/tags, SQL search and stale/invalid edit rejection.'
 
 $cycleStart = [DateTime]::Today.AddDays((9 - [int][DateTime]::Today.DayOfWeek) % 7)
 $startDate = $cycleStart.ToString('yyyy-MM-dd')
@@ -228,7 +228,7 @@ $cycle = Send-McpRequest 'tools/call' @{
     name = 'create_planning_cycle'
     arguments = @{
         startDate = $startDate; endDate = $endDate
-        expectedPlanningVersion = $existingPlanning.result.structuredContent.planningVersion
+        expectedMealPlanVersion = $existingPlanning.result.structuredContent.mealPlanVersion
         entries = @(
             @{ clientKey = 'cook'; kind = 'Meal'; date = $cycleStart.AddDays(2).ToString('yyyy-MM-dd'); recipeId = $recipeId; profileId = $bulkId },
             @{ clientKey = 'leftover'; kind = 'Leftover'; date = $cycleStart.AddDays(3).ToString('yyyy-MM-dd'); originalMealKey = 'cook' },
@@ -242,19 +242,19 @@ $cycle = Send-McpRequest 'tools/call' @{
 }
 $savedCycle = $cycle.result.structuredContent
 if ($savedCycle.startDate -ne $startDate -or $savedCycle.endDate -ne $endDate -or
-    @($savedCycle.planning.entries).Count -ne 3 -or @($savedCycle.planning.notes).Count -ne 2) {
+    @($savedCycle.mealPlan.entries).Count -ne 3 -or @($savedCycle.mealPlan.notes).Count -ne 2) {
     throw 'The complete proposed cycle was not returned with its inclusive date range.'
 }
-$beforeGroceries = Send-McpRequest 'tools/call' @{ name = 'get_grocery_list'; arguments = @{} }
-if (@($beforeGroceries.result.structuredContent.groceries).Count -ne 0 -or
-    @($beforeGroceries.result.structuredContent.planningMealGroceries).Count -ne 0) {
+$beforeGroceries = Send-McpRequest 'tools/call' @{ name = 'get_shopping_list'; arguments = @{} }
+if (@($beforeGroceries.result.structuredContent.items).Count -ne 0 -or
+    @($beforeGroceries.result.structuredContent.mealGroups).Count -ne 0) {
     throw 'Planning unexpectedly added groceries.'
 }
 $ids = $savedCycle.createdIds
 $corrected = Send-McpRequest 'tools/call' @{
-    name = 'apply_planning'
+    name = 'apply_meal_plan'
     arguments = @{
-        cycleId = $savedCycle.id; expectedPlanningVersion = $savedCycle.planningVersion
+        cycleId = $savedCycle.id; expectedMealPlanVersion = $savedCycle.mealPlanVersion
         entries = @(
             @{ id = $ids.cook; kind = 'Meal'; date = $cycleStart.AddDays(2).ToString('yyyy-MM-dd'); recipeId = $recipeId; profileId = $bulkId },
             @{ id = $ids.leftover; kind = 'Leftover'; date = $cycleStart.AddDays(3).ToString('yyyy-MM-dd'); originalMealId = $ids.cook },
@@ -266,73 +266,73 @@ $corrected = Send-McpRequest 'tools/call' @{
         )
     }
 }
-$readback = Send-McpRequest 'tools/call' @{ name = 'get_active_planning'; arguments = @{} }
-if ($readback.result.structuredContent.planningVersion -ne $corrected.result.structuredContent.planningVersion -or
-    $readback.result.structuredContent.planning.entries[2].date -ne $cycleStart.AddDays(5).ToString('yyyy-MM-dd')) {
-    throw 'The corrected planning did not persist.'
+$readback = Send-McpRequest 'tools/call' @{ name = 'get_active_meal_plan'; arguments = @{} }
+if ($readback.result.structuredContent.mealPlanVersion -ne $corrected.result.structuredContent.mealPlanVersion -or
+    $readback.result.structuredContent.mealPlan.entries[2].date -ne $cycleStart.AddDays(5).ToString('yyyy-MM-dd')) {
+    throw 'The corrected meal plan did not persist.'
 }
 Send-McpRequest 'tools/call' @{
     name = 'review_meal_groceries'
-    arguments = @{ planningMealId = $ids.cook; groceries = @() }
+    arguments = @{ plannedMealId = $ids.cook; groceries = @() }
 } | Out-Null
-Write-Output 'PASS: complete Tuesday-Monday planning, linked leftovers, bulk profile, corrections and explicit empty grocery review.'
+Write-Output 'PASS: complete Tuesday-Monday meal plan, linked leftovers, bulk profile, corrections and explicit empty grocery review.'
 $groceryName = "MCP smoke milk $suffix"
 $added = Send-McpRequest 'tools/call' @{
-    name = 'add_grocery_item'
+    name = 'add_shopping_list_item'
     arguments = @{ name = $groceryName; quantity = 2 }
 }
 $manualId = $added.result.structuredContent.id
-Send-McpRequest 'tools/call' @{ name = 'update_grocery_item'; arguments = @{
-    groceryItemId = $manualId; name = $groceryName; quantity = 3; isChecked = $true
+Send-McpRequest 'tools/call' @{ name = 'update_shopping_list_item'; arguments = @{
+    shoppingListItemId = $manualId; name = $groceryName; quantity = 3; isChecked = $true
 } } | Out-Null
-$list = Send-McpRequest 'tools/call' @{ name = 'get_grocery_list'; arguments = @{} }
-$groceries = @($list.result.structuredContent.groceries | Where-Object { $_.id -eq $manualId })
+$list = Send-McpRequest 'tools/call' @{ name = 'get_shopping_list'; arguments = @{} }
+$groceries = @($list.result.structuredContent.items | Where-Object { $_.id -eq $manualId })
 if ($groceries.Count -ne 1 -or $groceries[0].quantity -ne 3 -or -not $groceries[0].checked) {
     throw 'The edited manual shopping item was not returned.'
 }
 $mealReview = Send-McpRequest 'tools/call' @{ name = 'review_meal_groceries'; arguments = @{
-    planningMealId = $ids.cook; groceries = @(@{ name = 'Meal meat'; quantity = 1 }, @{ name = 'Meal carrots'; quantity = 1 })
+    plannedMealId = $ids.cook; groceries = @(@{ name = 'Meal meat'; quantity = 1 }, @{ name = 'Meal carrots'; quantity = 1 })
 } }
-$removedMealGroceryId = $mealReview.result.structuredContent.groceries[0].id
-$mealGroceryId = $mealReview.result.structuredContent.groceries[1].id
-$list = Send-McpRequest 'tools/call' @{ name = 'get_grocery_list'; arguments = @{} }
-$group = $list.result.structuredContent.planningMealGroceries[0]
-if ($group.planningMeal.id -ne $ids.cook -or $group.planningMeal.recipeName -ne $recipeName -or
-    $group.planningMeal.date -ne $cycleStart.AddDays(2).ToString('yyyy-MM-dd') -or
-    $group.groceries[0].planningMealId -ne $ids.cook) {
+$removedMealGroceryId = $mealReview.result.structuredContent.items[0].id
+$mealGroceryId = $mealReview.result.structuredContent.items[1].id
+$list = Send-McpRequest 'tools/call' @{ name = 'get_shopping_list'; arguments = @{} }
+$group = $list.result.structuredContent.mealGroups[0]
+if ($group.meal.id -ne $ids.cook -or $group.meal.recipeName -ne $recipeName -or
+    $group.meal.date -ne $cycleStart.AddDays(2).ToString('yyyy-MM-dd') -or
+    $group.items[0].plannedMealId -ne $ids.cook) {
     throw 'Shopping did not clearly identify the recipe and original meal date.'
 }
-Send-McpRequest 'tools/call' @{ name = 'remove_grocery_item'; arguments = @{ groceryItemId = $removedMealGroceryId } } | Out-Null
-Send-McpRequest 'tools/call' @{ name = 'remove_grocery_item'; arguments = @{ groceryItemId = $manualId } } | Out-Null
-$list = Send-McpRequest 'tools/call' @{ name = 'get_grocery_list'; arguments = @{} }
-if (@($list.result.structuredContent.groceries).Count -ne 0 -or
-    $list.result.structuredContent.planningMealGroceries[0].groceries[0].id -ne $mealGroceryId) {
+Send-McpRequest 'tools/call' @{ name = 'remove_shopping_list_item'; arguments = @{ shoppingListItemId = $removedMealGroceryId } } | Out-Null
+Send-McpRequest 'tools/call' @{ name = 'remove_shopping_list_item'; arguments = @{ shoppingListItemId = $manualId } } | Out-Null
+$list = Send-McpRequest 'tools/call' @{ name = 'get_shopping_list'; arguments = @{} }
+if (@($list.result.structuredContent.items).Count -ne 0 -or
+    $list.result.structuredContent.mealGroups[0].items[0].id -ne $mealGroceryId) {
     throw 'Removal did not preserve the other meal item or failed to remove the manual item.'
 }
 Write-Output 'PASS: shopping identifies meal recipe/date; manual and meal-item removal preserve other groceries.'
 
-$prior = Send-McpRequest 'tools/call' @{ name = 'get_active_planning'; arguments = @{} }
+$prior = Send-McpRequest 'tools/call' @{ name = 'get_active_meal_plan'; arguments = @{} }
 $nextStart = $cycleStart.AddDays(7)
 $nextCycle = Send-McpRequest 'tools/call' @{ name = 'create_planning_cycle'; arguments = @{
     startDate = $nextStart.ToString('yyyy-MM-dd'); endDate = $nextStart.AddDays(6).ToString('yyyy-MM-dd')
-    expectedPlanningVersion = $prior.result.structuredContent.planningVersion
+    expectedMealPlanVersion = $prior.result.structuredContent.mealPlanVersion
     entries = @(@{ clientKey = 'easy'; kind = 'Meal'; date = $nextStart.ToString('yyyy-MM-dd'); recipeId = $recipeId; profileId = $profileId })
     notes = @(@{ clientKey = 'out'; date = $nextStart.AddDays(1).ToString('yyyy-MM-dd'); text = 'Eating out' })
 } }
 Send-McpRequest 'tools/call' @{ name = 'plan_meal'; arguments = @{
     cycleId = $savedCycle.id; recipeId = $recipeId; profileId = $profileId; date = $startDate
 } } -ExpectedError 'HistoricalCycleReadOnly' | Out-Null
-$historicalShopping = Send-McpRequest 'tools/call' @{ name = 'get_grocery_list'; arguments = @{ cycleId = $savedCycle.id } }
-if ($historicalShopping.result.structuredContent.planningMealGroceries[0].groceries[0].id -ne $mealGroceryId -or
+$historicalShopping = Send-McpRequest 'tools/call' @{ name = 'get_shopping_list'; arguments = @{ cycleId = $savedCycle.id } }
+if ($historicalShopping.result.structuredContent.mealGroups[0].items[0].id -ne $mealGroceryId -or
     $nextCycle.result.structuredContent.startDate -ne $nextStart.ToString('yyyy-MM-dd')) {
     throw 'Next cycle or historical shopping retrieval failed.'
 }
-Write-Output 'PASS: next Tuesday-Monday cycle, retained historical shopping and rejected historical planning writes.'
-Send-McpRequest 'tools/call' @{ name = 'remove_grocery_item'; arguments = @{ groceryItemId = $mealGroceryId } } | Out-Null
-$historicalShopping = Send-McpRequest 'tools/call' @{ name = 'get_grocery_list'; arguments = @{ cycleId = $savedCycle.id } }
-$reviewedGroups = @($historicalShopping.result.structuredContent.planningMealGroceries)
-if ($reviewedGroups.Count -ne 1 -or $reviewedGroups[0].planningMeal.id -ne $ids.cook -or
-    @($reviewedGroups[0].groceries).Count -ne 0) {
+Write-Output 'PASS: next Tuesday-Monday cycle, retained historical shopping and rejected historical meal plan writes.'
+Send-McpRequest 'tools/call' @{ name = 'remove_shopping_list_item'; arguments = @{ shoppingListItemId = $mealGroceryId } } | Out-Null
+$historicalShopping = Send-McpRequest 'tools/call' @{ name = 'get_shopping_list'; arguments = @{ cycleId = $savedCycle.id } }
+$reviewedGroups = @($historicalShopping.result.structuredContent.mealGroups)
+if ($reviewedGroups.Count -ne 1 -or $reviewedGroups[0].meal.id -ne $ids.cook -or
+    @($reviewedGroups[0].items).Count -ne 0) {
     throw 'Removing the final historical meal item did not preserve its reviewed group.'
 }
 Write-Output 'PASS: final meal-item removal preserves an empty reviewed group in historical shopping.'

@@ -6,5 +6,5 @@ public sealed record PatchRecipeProfileDto
     public required string ExpectedProfileVersion { get; init; }
     public string? Name { get; init; }
     public int? Servings { get; init; }
-    public RecipeProfileProductInputDto[]? Products { get; init; }
+    public RecipeProfileGroceryItemInputDto[]? Groceries { get; init; }
 }

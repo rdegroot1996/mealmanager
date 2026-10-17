@@ -19,8 +19,8 @@ export interface ApiSupermarketProduct {
   maxQuantity: number | null;
 }
 export interface ApiSupermarketReviewItem {
-  groceryItemId: string;
-  profileProductId: string | null;
+  shoppingListItemId: string;
+  recipeProfileGroceryItemId: string | null;
   name: string;
   quantity: number;
   checked: boolean;
@@ -36,7 +36,7 @@ export interface ApiSupermarketReview {
   unreviewedMeals: number;
 }
 export interface ApiSupermarketSelection {
-  groceryItemId: string;
+  shoppingListItemId: string;
   productId: string;
   quantity: number;
   remember: boolean;
@@ -48,7 +48,7 @@ export interface ApiSupermarketSendLine {
   quantity: number;
   outcome: 'Added' | 'Failed' | 'Unknown' | 'NotAttempted';
   reason: string | null;
-  groceryItemIds: string[];
+  shoppingListItemIds: string[];
   localWarning: string | null;
 }
 export interface ApiSupermarketSend {

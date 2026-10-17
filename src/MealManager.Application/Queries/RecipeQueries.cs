@@ -21,7 +21,7 @@ public class RecipeQueries(ApplicationDbContext dbContext)
                 .FirstOrDefaultAsync()
          ?? throw new NotFoundError(nameof(Recipe));
 
-        var plannedDates = dbContext.Set<PlanningMeal>()
+        var plannedDates = dbContext.Set<PlannedMeal>()
             .Where(meal => meal.RecipeId == id)
             .Select(meal => meal.Date);
         var today = DateOnly.FromDateTime(DateTime.Today);

@@ -43,7 +43,7 @@ export function outcomeReason(value: string | null, outcome?: string) {
     case 'Deadline':
       return $localize`:@@supermarkets.reasonDeadline:Export timed out. Try again in a new round.`;
     case 'LocalPersistence':
-      return $localize`:@@supermarkets.localSaveWarning:The cart addition was confirmed, but local updates could not be saved. Check your Shopping list and connection before continuing. Do not resend this product.`;
+      return $localize`:@@supermarkets.localSaveWarning:The cart addition was confirmed, but local updates could not be saved. Check your shopping list and connection before continuing. Do not resend this product.`;
     case 'MappingChanged':
       return $localize`:@@supermarkets.mappingChanged:The source or connection changed. Its saved product choice was kept.`;
     case 'Rejected':

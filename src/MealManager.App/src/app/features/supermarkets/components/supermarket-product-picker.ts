@@ -92,7 +92,7 @@ export class SupermarketProductPicker {
   choose(product: ApiSupermarketProduct) {
     if (product.availability !== 'Available') return;
     if (
-      this.row().profileProductId &&
+      this.row().recipeProfileGroceryItemId &&
       this.originalProductId() &&
       product.id !== this.originalProductId()
     ) {
@@ -102,7 +102,7 @@ export class SupermarketProductPicker {
     }
     this.selected.emit({
       product,
-      remember: !!this.row().profileProductId && !this.originalProductId(),
+      remember: !!this.row().recipeProfileGroceryItemId && !this.originalProductId(),
     });
   }
 

@@ -81,7 +81,7 @@ export class SupermarketsStore {
         items: rows
           .filter((x) => x.selected)
           .map((x) => ({
-            groceryItemId: x.groceryItemId,
+            shoppingListItemId: x.shoppingListItemId,
             productId: x.product!.id,
             // Keep source metadata within API bounds; combined totals determine cart additions.
             quantity: Math.min(x.buyQuantity, 999),
@@ -119,7 +119,7 @@ export class SupermarketsStore {
           ...(x[cycleId] ?? []),
           ...result.lines
             .filter((line) => line.outcome === 'Added')
-            .flatMap((line) => line.groceryItemIds),
+            .flatMap((line) => line.shoppingListItemIds),
         ]),
       ],
     }));

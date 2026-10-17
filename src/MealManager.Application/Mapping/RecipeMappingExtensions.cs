@@ -132,17 +132,17 @@ public static class RecipeMappingExtensions
             Id = profile.Id,
             Name = profile.Name,
             Servings = profile.Servings,
-            Products = profile.Products.OrderBy(p => p.Order).Select(p => p.ToDto()).ToArray(),
+            Groceries = profile.Groceries.OrderBy(p => p.Order).Select(p => p.ToDto()).ToArray(),
         };
 
-    public static RecipeProfileProductDto ToDto(this RecipeProfileProduct product) =>
+    public static RecipeProfileGroceryItemDto ToDto(this RecipeProfileGroceryItem item) =>
         new()
         {
-            Id = product.Id,
-            Name = product.Name,
-            Quantity = product.Quantity,
-            AtHome = product.AtHome,
-            Order = product.Order,
+            Id = item.Id,
+            Name = item.Name,
+            Quantity = item.Quantity,
+            AtHome = item.AtHome,
+            Order = item.Order,
         };
 
     public static RecipeIngredientInputDto ToInput(this RecipeIngredientDto row) => new()
@@ -159,7 +159,7 @@ public static class RecipeMappingExtensions
         Description = row.Description,
     };
 
-    public static RecipeProfileProductInputDto ToInput(this RecipeProfileProductDto row) => new()
+    public static RecipeProfileGroceryItemInputDto ToInput(this RecipeProfileGroceryItemDto row) => new()
     {
         Id = row.Id,
         Name = row.Name,

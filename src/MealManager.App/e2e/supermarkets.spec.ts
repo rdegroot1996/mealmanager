@@ -39,7 +39,7 @@ async function seed(page: Page, names: string[], profile = false) {
         endDate: '2026-10-06',
       });
       for (const name of names)
-        await post(`/api/grocery-lists/cycle/${cycle.id}/items`, { name, quantity: 1 });
+        await post(`/api/shopping-lists/cycle/${cycle.id}/items`, { name, quantity: 1 });
       if (profile) {
         const recipe = await post('/api/recipes', {
           name: 'Noodles',
@@ -54,7 +54,7 @@ async function seed(page: Page, names: string[], profile = false) {
           {
             name: 'Default',
             servings: 2,
-            products: [
+            groceries: [
               {
                 id: '00000000-0000-0000-0000-000000000000',
                 name: 'Woknoedels',
@@ -65,17 +65,17 @@ async function seed(page: Page, names: string[], profile = false) {
           },
           'PUT',
         );
-        const planning = await (await fetch(`/api/planning/cycle/${cycle.id}`)).json();
-        const meal = await post('/api/planning-meals', {
-          planningId: planning.id,
+        const mealPlan = await (await fetch(`/api/meal-plans/cycle/${cycle.id}`)).json();
+        const meal = await post('/api/planned-meals', {
+          mealPlanId: mealPlan.id,
           recipeId: recipe.id,
           recipeProfileId: recipeProfile.id,
           date: cycle.startDate,
         });
-        await post(`/api/planning-meals/${meal.id}/groceries`, {
+        await post(`/api/planned-meals/${meal.id}/groceries`, {
           groceries: [
             {
-              recipeProfileProductId: recipeProfile.products[0].id,
+              recipeProfileGroceryItemId: recipeProfile.groceries[0].id,
               name: 'Woknoedels',
               quantity: 1,
             },
@@ -115,7 +115,7 @@ test('an unavailable supermarket is explained only after clicking the optional a
   page,
 }) => {
   await seed(page, ['Milk']);
-  await page.goto('/groceries');
+  await page.goto('/shopping-list');
   const setup = page.getByRole('dialog', { name: 'Export groceries', exact: true });
   await expect(setup).toBeHidden();
   await expect(page.getByRole('link', { name: 'Connect a supermarket in Settings' })).toHaveCount(
@@ -133,7 +133,7 @@ test('send results clear after refresh while connection, checks and product mapp
   test.setTimeout(120000);
   await connect(page);
   const cycle = await seed(page, [], true);
-  await page.goto('/groceries');
+  await page.goto('/shopping-list');
   await page.getByRole('button', { name: 'Export', exact: true }).click();
   await choose(page, 'Woknoedels', 'Picnic Woknoedels');
   await send(page);
@@ -161,8 +161,8 @@ test('send results clear after refresh while connection, checks and product mapp
       .getByRole('checkbox')
       .first(),
   ).not.toBeChecked();
-  const list = await (await page.request.get(`/api/grocery-lists/cycle/${cycle}`)).json();
-  expect(list.planningMealGroceries[0].groceries[0].checked).toBe(true);
+  const list = await (await page.request.get(`/api/shopping-lists/cycle/${cycle}`)).json();
+  expect(list.mealGroups[0].items[0].checked).toBe(true);
   await page.goto('/settings');
   await expect(
     page
@@ -177,7 +177,7 @@ test('replacement confirmation keeps one-off choices and saves future choices on
 }) => {
   await connect(page);
   const cycle = await seed(page, [], true);
-  await page.goto('/groceries');
+  await page.goto('/shopping-list');
   await page.getByRole('button', { name: 'Export', exact: true }).click();
   await choose(page, 'Woknoedels', 'Picnic Woknoedels');
   await send(page);
@@ -229,7 +229,7 @@ test('replacement confirmation keeps one-off choices and saves future choices on
 test('partial failures remain unchecked and can be exported in a fresh round', async ({ page }) => {
   await connect(page);
   const cycle = await seed(page, ['Woknoedels', 'Test geweigerd', 'Melk']);
-  await page.goto('/groceries');
+  await page.goto('/shopping-list');
   await page.getByRole('button', { name: 'Export', exact: true }).click();
   await choose(page, 'Woknoedels', 'Picnic Woknoedels');
   await choose(page, 'Test geweigerd', 'Test geweigerd');
@@ -241,8 +241,8 @@ test('partial failures remain unchecked and can be exported in a fresh round', a
       'The supermarket rejected this product. Choose a replacement or try again later.',
     ),
   ).toBeVisible();
-  const afterFailure = (await (await page.request.get(`/api/grocery-lists/cycle/${cycle}`)).json())
-    .groceries;
+  const afterFailure = (await (await page.request.get(`/api/shopping-lists/cycle/${cycle}`)).json())
+    .items;
   expect(afterFailure.map((x: { name: string; checked: boolean }) => [x.name, x.checked])).toEqual([
     ['Woknoedels', true],
     ['Test geweigerd', false],
@@ -268,7 +268,7 @@ test('partial failures remain unchecked and can be exported in a fresh round', a
   await send(page);
   await expect(page.getByText('1 product added.', { exact: true })).toBeVisible();
   expect(
-    (await (await page.request.get(`/api/grocery-lists/cycle/${cycle}`)).json()).groceries.every(
+    (await (await page.request.get(`/api/shopping-lists/cycle/${cycle}`)).json()).items.every(
       (x: { checked: boolean }) => x.checked,
     ),
   ).toBe(true);
@@ -279,7 +279,7 @@ test('unconfirmed and skipped additions show as failed and can be exported in a 
 }) => {
   await connect(page);
   const cycle = await seed(page, ['Test onzeker', 'Melk']);
-  await page.goto('/groceries');
+  await page.goto('/shopping-list');
   await page.getByRole('button', { name: 'Export', exact: true }).click();
   await choose(page, 'Test onzeker', 'Test onzeker');
   await choose(page, 'Melk', 'Picnic Melk');
@@ -288,8 +288,8 @@ test('unconfirmed and skipped additions show as failed and can be exported in a 
   const dialog = page.getByRole('dialog', { name: 'Export to Picnic', exact: true });
   await expect(dialog.getByText('Could not add', { exact: true })).toHaveCount(2);
   await expect(dialog.getByRole('button', { name: 'It was added', exact: true })).toHaveCount(0);
-  const groceries = (await (await page.request.get(`/api/grocery-lists/cycle/${cycle}`)).json())
-    .groceries;
+  const groceries = (await (await page.request.get(`/api/shopping-lists/cycle/${cycle}`)).json())
+    .items;
   expect(groceries.every((x: { checked: boolean }) => !x.checked)).toBe(true);
   await dialog.getByRole('button', { name: 'Close', exact: true }).last().click();
   await page.getByRole('button', { name: 'Export', exact: true }).click();
@@ -311,7 +311,7 @@ test('failed request leaves groceries unchecked and never automatically resends'
     sends++;
     await route.abort('failed');
   });
-  await page.goto('/groceries');
+  await page.goto('/shopping-list');
   await page.getByRole('button', { name: 'Export', exact: true }).click();
   await choose(page, 'Woknoedels', 'Picnic Woknoedels');
   await send(page);
@@ -320,8 +320,7 @@ test('failed request leaves groceries unchecked and never automatically resends'
   ).toBeVisible();
   expect(sends).toBe(1);
   expect(
-    (await (await page.request.get(`/api/grocery-lists/cycle/${cycle}`)).json()).groceries[0]
-      .checked,
+    (await (await page.request.get(`/api/shopping-lists/cycle/${cycle}`)).json()).items[0].checked,
   ).toBe(false);
   await page.unroute('**/api/supermarkets/cycles/*/send');
   await page
@@ -348,7 +347,7 @@ test('refreshes confirmed grocery checkmarks when an otherwise successful respon
     expect(response.ok()).toBe(true);
     await route.abort('failed');
   });
-  await page.goto('/groceries');
+  await page.goto('/shopping-list');
   await page.getByRole('button', { name: 'Export', exact: true }).click();
   await choose(page, 'Woknoedels', 'Picnic Woknoedels');
   await send(page);
@@ -357,7 +356,7 @@ test('refreshes confirmed grocery checkmarks when an otherwise successful respon
   ).toBeVisible();
   const dialog = page.getByRole('dialog', { name: 'Export to Picnic', exact: true });
   await dialog.getByRole('button', { name: 'Close', exact: true }).last().click();
-  await expect(page.locator('app-grocery-item-row').getByRole('checkbox')).toBeChecked();
+  await expect(page.locator('app-shopping-list-item-row').getByRole('checkbox')).toBeChecked();
   await page.getByRole('button', { name: 'Export', exact: true }).click();
   await expect(
     dialog.getByRole('checkbox', { name: /Woknoedels/, includeHidden: true }),
@@ -381,22 +380,22 @@ for (const viewport of [
     );
     const expectedIds = await page.evaluate(async (cycle) => {
       const session = await (await fetch('/api/authentication/session')).json();
-      const list = await (await fetch(`/api/grocery-lists/cycle/${cycle}`)).json();
-      const itemIds = list.groceries.map((item: { id: string }) => item.id).reverse();
-      const response = await fetch(`/api/grocery-lists/${list.id}/items/order`, {
+      const list = await (await fetch(`/api/shopping-lists/cycle/${cycle}`)).json();
+      const itemIds = list.items.map((item: { id: string }) => item.id).reverse();
+      const response = await fetch(`/api/shopping-lists/${list.id}/items/order`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': session.antiforgeryToken },
-        body: JSON.stringify({ planningMealId: null, itemIds }),
+        body: JSON.stringify({ plannedMealId: null, itemIds }),
       });
       if (!response.ok) throw new Error(await response.text());
       return [
-        ...list.planningMealGroceries.flatMap((group: { groceries: { id: string }[] }) =>
-          group.groceries.map((item) => item.id),
+        ...list.mealGroups.flatMap((group: { items: { id: string }[] }) =>
+          group.items.map((item) => item.id),
         ),
         ...itemIds,
       ];
     }, cycle);
-    await page.goto('/groceries');
+    await page.goto('/shopping-list');
     const exportButton = page.getByRole('button', { name: 'Export', exact: true });
     await expect(
       page.locator('app-page-header').getByRole('button', { name: 'Export', exact: true }),
@@ -447,12 +446,12 @@ for (const viewport of [
   });
 }
 
-test('duplicate products retain separate pack amounts and export their sum; closing discards unsent choices', async ({
+test('duplicate groceries retain separate pack amounts and export their sum; closing discards unsent choices', async ({
   page,
 }) => {
   await connect(page);
   const cycle = await seed(page, ['Woknoedels', 'Conimex Woknoedels']);
-  await page.goto('/groceries');
+  await page.goto('/shopping-list');
   const exportButton = page.getByRole('button', { name: 'Export', exact: true });
   const dialog = page.getByRole('dialog', { name: 'Export to Picnic', exact: true });
   const configure = async () => {
@@ -491,6 +490,9 @@ test('duplicate products retain separate pack amounts and export their sum; clos
   await quantity.fill('4');
   await expect(add).toBeEnabled();
   await dialog.getByRole('button', { name: 'Close', exact: true }).click();
+  const discard = page.getByRole('dialog', { name: 'Discard unsaved changes?', exact: true });
+  await expect(discard).toBeVisible();
+  await discard.getByRole('button', { name: 'Discard changes', exact: true }).click();
   await expect(dialog).toBeHidden();
   await exportButton.click();
   await expect(dialog.getByText('No product selected', { exact: true })).toHaveCount(2);
@@ -510,8 +512,8 @@ test('duplicate products retain separate pack amounts and export their sum; clos
   const result = await (await response).json();
   expect(result.lines).toHaveLength(1);
   expect(result.lines[0]).toMatchObject({ productId: 's1001', quantity: 3, outcome: 'Added' });
-  expect(result.lines[0].groceryItemIds).toHaveLength(2);
+  expect(result.lines[0].shoppingListItemIds).toHaveLength(2);
   await expect(dialog.getByText('1 product added.', { exact: true })).toBeVisible();
-  const list = await (await page.request.get(`/api/grocery-lists/cycle/${cycle}`)).json();
-  expect(list.groceries.every((item: { checked: boolean }) => item.checked)).toBe(true);
+  const list = await (await page.request.get(`/api/shopping-lists/cycle/${cycle}`)).json();
+  expect(list.items.every((item: { checked: boolean }) => item.checked)).toBe(true);
 });

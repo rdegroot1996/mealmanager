@@ -6,12 +6,8 @@
       appMobileAppBar
       class="max-[800px]:fixed max-[800px]:inset-x-0 max-[800px]:top-0 max-[800px]:h-18 max-[800px]:transition-transform max-[800px]:duration-180 max-[800px]:ease-out max-[800px]:motion-reduce:transition-none max-[800px]:motion-reduce:duration-0 z-20 flex items-center justify-between gap-4 border-b border-base-300 bg-base-100 px-6 max-[359px]:px-4 min-[800px]:col-span-2 min-[800px]:px-7"
     >
-      <a
-        routerLink="/"
-        class="flex items-center gap-2 text-sm font-semibold"
-        aria-label="MealManager"
-      >
-        <app-icon name="restaurant" class="size-5 text-primary" />MealManager
+      <a routerLink="/" class="inline-flex items-center" aria-label="MealManager">
+        <app-brand />
       </a>
       <button
         class="btn btn-ghost size-11 min-h-11 ml-auto flex items-center gap-2"
@@ -60,7 +56,7 @@
     </header>
     <app-navigation [items]="menuItems" />
     <main
-      class="col-start-1 row-start-2 min-w-0 scroll-pb-28 min-[800px]:col-start-2 min-[800px]:overflow-y-auto has-[app-edit-recipe-page]:scroll-pb-48"
+      class="col-start-1 row-start-2 min-w-0 scroll-pb-48 min-[800px]:col-start-2 min-[800px]:overflow-y-auto"
     >
       <div
         class="mx-auto w-full max-w-[1164px] px-6 pt-6 pb-28 max-[359px]:px-4 min-[600px]:px-8 min-[600px]:pt-8 min-[800px]:pb-12 min-[1100px]:pt-10"

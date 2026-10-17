@@ -21,20 +21,34 @@
   </div>
 } @else if (recipe(); as recipe) {
   <app-page-header>
-    <a
-      page-content
-      class="flex items-center gap-1"
-      [routerLink]="recipe.id ? ['/recipes', recipe.id] : ['/recipes']"
-    >
-      <app-icon name="chevron_left" class="size-5" />
-      <span class="text-sm">
-        @if (recipe.id) {
-          <ng-container i18n="@@recipes.backToRecipe">Back to recipe</ng-container>
-        } @else {
-          <ng-container i18n="@@recipes.backToRecipes">Back to recipes</ng-container>
-        }
-      </span>
-    </a>
+    @if (planningDraft) {
+      <a
+        page-content
+        class="flex items-center gap-1"
+        routerLink="/planner"
+        [queryParams]="{ resume: 'recipe' }"
+        (click)="preparePlanningReturn()"
+      >
+        <app-icon name="chevron_left" class="size-5" /><span class="text-sm">{{
+          backToPlannerLabel
+        }}</span>
+      </a>
+    } @else {
+      <a
+        page-content
+        class="flex items-center gap-1"
+        [routerLink]="recipe.id ? ['/recipes', recipe.id] : ['/recipes']"
+      >
+        <app-icon name="chevron_left" class="size-5" />
+        <span class="text-sm">
+          @if (recipe.id) {
+            <ng-container i18n="@@recipes.backToRecipe">Back to recipe</ng-container>
+          } @else {
+            <ng-container i18n="@@recipes.backToRecipes">Back to recipes</ng-container>
+          }
+        </span>
+      </a>
+    }
     <button
       class="btn btn-primary"
       page-actions
@@ -62,43 +76,73 @@
     <div class="min-w-0">
       <div class="card-body gap-5 p-0">
         <h2 class="app-section-title" i18n="@@recipes.editRecipePage.template.recipeDetails">
-          Recipe Details
+          Recipe details
         </h2>
         @if (saveError()) {
-          <div class="alert alert-error alert-soft" role="alert">
+          <div
+            id="recipe-save-error"
+            tabindex="-1"
+            class="alert alert-error alert-soft"
+            role="alert"
+          >
             {{ saveError() }}
           </div>
         }
         @if (validationErrors().length > 0) {
-          <div class="alert alert-error alert-soft" role="alert">
+          <div
+            id="recipe-validation"
+            tabindex="-1"
+            class="alert alert-error alert-soft"
+            role="alert"
+          >
             <ul>
-              @for (error of validationErrors(); track error) {
-                <li>{{ error }}</li>
+              @for (issue of validationIssues(); track issue.id) {
+                <li>
+                  <button type="button" class="link text-left" (click)="revealControl(issue.id)">
+                    {{ validationTargetLabel(issue.id) }}: {{ issue.message }}
+                  </button>
+                </li>
               }
             </ul>
           </div>
         }
         <div class="grid grid-cols-1 min-[600px]:grid-cols-2 gap-4 mb-4">
           <label class="fieldset w-full min-[600px]:col-span-2">
-            <span class="fieldset-legend" i18n="@@recipes.editRecipePage.template.recipeName"
-              >Recipe Name</span
+            <span class="fieldset-legend"
+              ><ng-container i18n="@@recipes.editRecipePage.template.recipeName"
+                >Recipe name</ng-container
+              ><span aria-hidden="true" class="text-base-content/50"> *</span></span
             >
             <input
               id="recipe-name"
+              required
               type="text"
               class="input w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
               i18n-aria-label="@@recipes.editRecipePage.template.ariaLabelRecipeName"
               aria-label="Recipe name"
               [(ngModel)]="recipe.name"
+              [attr.aria-invalid]="!!fieldError('recipe-name')"
+              [attr.aria-describedby]="fieldError('recipe-name') ? 'recipe-name-error' : null"
             />
+
+            @if (fieldError('recipe-name'); as message) {
+              <p id="recipe-name-error" class="text-sm text-error" role="alert">{{ message }}</p>
+            }
           </label>
           <app-form-field
             controlId="recipe-base-servings"
+            [required]="true"
+            [error]="fieldError('recipe-base-servings')"
             label="Base servings"
             i18n-label="@@recipes.editRecipePage.template.baseServings"
           >
             <app-number-input
               controlId="recipe-base-servings"
+              [required]="true"
+              [invalid]="!!fieldError('recipe-base-servings')"
+              [describedBy]="
+                fieldError('recipe-base-servings') ? 'recipe-base-servings-error' : null
+              "
               [fullWidth]="true"
               label="Base servings"
               i18n-label="@@recipes.editRecipePage.template.baseServings"
@@ -107,37 +151,36 @@
             />
           </app-form-field>
           <label class="fieldset w-full">
-            <span class="fieldset-legend" i18n="@@recipes.editRecipePage.template.category"
-              >Category</span
+            <span class="fieldset-legend"
+              ><ng-container i18n="@@recipes.editRecipePage.template.category"
+                >Category</ng-container
+              ><span aria-hidden="true" class="text-base-content/50"> *</span></span
             >
             <select
               class="select w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
               i18n-aria-label="@@recipes.editRecipePage.template.category"
               aria-label="Category"
+              id="recipe-category"
+              required
+              [attr.aria-invalid]="!!fieldError('recipe-category')"
               [(ngModel)]="recipe.category"
+              [attr.aria-describedby]="
+                fieldError('recipe-category') ? 'recipe-category-error' : null
+              "
             >
               @for (category of categories; track category) {
                 <option [value]="category">{{ categoryLabel(category) }}</option>
               }
             </select>
-          </label>
-          <label class="fieldset min-[600px]:col-span-2">
-            <span class="fieldset-legend" i18n="@@recipes.notes">Notes</span>
-            <textarea
-              class="textarea w-full min-h-24 max-[799px]:text-base border-base-300 bg-base-100"
-              name="notes"
-              maxlength="4000"
-              i18n-aria-label="@@recipes.notes"
-              aria-label="Notes"
-              i18n-placeholder="@@recipes.notesPlaceholder"
-              placeholder="Source, tips, or adaptations…"
-              [(ngModel)]="recipe.notes"
-            ></textarea>
+
+            @if (fieldError('recipe-category'); as message) {
+              <p id="recipe-category-error" class="text-sm text-error" role="alert">
+                {{ message }}
+              </p>
+            }
           </label>
           <fieldset class="fieldset w-full min-[600px]:col-span-2">
-            <legend class="fieldset-legend" i18n="@@recipes.editRecipePage.template.tags">
-              Tags
-            </legend>
+            <legend class="fieldset-legend">{{ tagsLabel }}</legend>
             <div
               class="flex flex-wrap gap-2"
               i18n-aria-label="@@recipes.editRecipePage.template.ariaLabelSelectedTags"
@@ -162,6 +205,9 @@
                 type="search"
                 class="input w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
                 i18n-aria-label="@@recipes.editRecipePage.template.ariaLabelSearchOrAddATag"
+                id="recipe-tags"
+                [attr.aria-invalid]="!!fieldError('recipe-tags')"
+                [attr.aria-describedby]="fieldError('recipe-tags') ? 'recipe-tags-error' : null"
                 aria-label="Search or add a tag"
                 i18n-placeholder="@@recipes.editRecipePage.template.ariaLabelSearchOrAddATag"
                 placeholder="Search or add a tag"
@@ -193,11 +239,41 @@
                 }
               </div>
             }
+            @if (fieldError('recipe-tags'); as message) {
+              <p id="recipe-tags-error" class="text-sm text-error" role="alert">{{ message }}</p>
+            }
           </fieldset>
-          <div class="flex flex-col gap-2 min-[600px]:col-span-2">
-            <h3 class="app-subsection-title" i18n="@@recipes.editRecipePage.template.photos">
+        </div>
+        <section class="flex min-w-0 flex-col gap-6 border-t border-base-300 pt-4">
+          <div class="flex min-w-0 flex-col gap-3">
+            <h2 class="app-section-title" i18n="@@recipes.notes">Notes</h2>
+            <textarea
+              class="textarea w-full min-h-24 max-[799px]:text-base border-base-300 bg-base-100"
+              name="notes"
+              id="recipe-notes"
+              [attr.aria-invalid]="!!fieldError('recipe-notes')"
+              maxlength="4000"
+              i18n-aria-label="@@recipes.notes"
+              aria-label="Notes"
+              i18n-placeholder="@@recipes.notesPlaceholder"
+              placeholder="Source, tips, or adaptations…"
+              [(ngModel)]="recipe.notes"
+              [attr.aria-describedby]="fieldError('recipe-notes') ? 'recipe-notes-error' : null"
+            ></textarea>
+
+            @if (fieldError('recipe-notes'); as message) {
+              <p id="recipe-notes-error" class="text-sm text-error" role="alert">{{ message }}</p>
+            }
+          </div>
+          <div class="flex min-w-0 flex-col gap-3">
+            <h2
+              id="recipe-photos"
+              tabindex="-1"
+              class="app-section-title"
+              i18n="@@recipes.editRecipePage.template.photos"
+            >
               Photos
-            </h3>
+            </h2>
             @if (!recipe.id) {
               <p
                 class="text-sm text-base-content/75"
@@ -211,157 +287,146 @@
                 {{ imageError() }}
               </div>
             }
-            <div class="grid grid-cols-[repeat(auto-fill,minmax(144px,1fr))] gap-3">
-              @for (image of photoItems(); track image.id) {
-                <div class="min-w-0" data-testid="recipe-photo">
-                  <div class="relative">
-                    <img
-                      [src]="image.url"
-                      [alt]="photoAlt(recipe.name, $index + 1)"
-                      class="aspect-[1.25] w-full rounded-box object-cover"
-                    />
-                    @if ($index === 0) {
-                      <span
-                        class="badge badge-primary absolute left-2 top-2"
-                        i18n="@@recipes.editRecipePage.template.primary"
-                        >Primary</span
+            @if (photoItems().length) {
+              <div class="grid grid-cols-[repeat(auto-fill,minmax(144px,1fr))] gap-3">
+                @for (image of photoItems(); track image.id) {
+                  <div class="min-w-0" data-testid="recipe-photo">
+                    <div class="relative">
+                      <img
+                        [src]="image.url"
+                        [alt]="photoAlt(recipe.name, $index + 1)"
+                        class="aspect-[1.25] w-full rounded-box object-cover"
+                      />
+                      @if ($index === 0) {
+                        <span
+                          class="badge badge-primary absolute left-2 top-2"
+                          i18n="@@recipes.editRecipePage.template.primary"
+                          >Primary</span
+                        >
+                      }
+                    </div>
+                    <div class="mt-1 flex gap-1">
+                      <button
+                        type="button"
+                        class="btn btn-ghost btn-square size-11 min-h-11"
+                        [disabled]="$first || imagesPending() || saving()"
+                        [attr.aria-label]="movePhotoLabel($index + 1, -1)"
+                        (click)="moveImage($index, $index - 1)"
                       >
-                    }
+                        <app-icon name="chevron_left" class="size-4" />
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-ghost btn-square size-11 min-h-11 text-error"
+                        [disabled]="imagesPending() || saving()"
+                        [attr.aria-label]="removePhotoLabel($index + 1)"
+                        (click)="deleteImage(image.id)"
+                      >
+                        <app-icon name="delete" class="size-4" />
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-ghost btn-square size-11 min-h-11"
+                        [disabled]="$last || imagesPending() || saving()"
+                        [attr.aria-label]="movePhotoLabel($index + 1, 1)"
+                        (click)="moveImage($index, $index + 1)"
+                      >
+                        <app-icon name="chevron_right" class="size-4" />
+                      </button>
+                    </div>
                   </div>
-                  <div class="mt-1 flex justify-between gap-1">
-                    <button
-                      type="button"
-                      class="btn btn-ghost btn-square size-11 min-h-11"
-                      [disabled]="$first || imagesPending() || saving()"
-                      [attr.aria-label]="movePhotoLabel($index + 1, -1)"
-                      (click)="moveImage($index, $index - 1)"
-                    >
-                      <app-icon name="chevron_left" class="size-4" />
-                    </button>
-                    <button
-                      type="button"
-                      class="btn btn-ghost btn-square size-11 min-h-11 text-error"
-                      [disabled]="imagesPending() || saving()"
-                      [attr.aria-label]="removePhotoLabel($index + 1)"
-                      (click)="deleteImage(image.id)"
-                    >
-                      <app-icon name="delete" class="size-4" />
-                    </button>
-                    <button
-                      type="button"
-                      class="btn btn-ghost btn-square size-11 min-h-11"
-                      [disabled]="$last || imagesPending() || saving()"
-                      [attr.aria-label]="movePhotoLabel($index + 1, 1)"
-                      (click)="moveImage($index, $index + 1)"
-                    >
-                      <app-icon name="chevron_right" class="size-4" />
-                    </button>
-                  </div>
-                </div>
-              }
-            </div>
-            <button
-              type="button"
-              class="btn btn-secondary self-start"
-              [disabled]="!recipe.id || imagesPending() || saving()"
-              (click)="triggerImageSelection()"
-            >
-              <app-icon name="add_photo_alternate" class="size-5" /><span
-                i18n="@@recipes.editRecipePage.addImage"
-                >Add image</span
+                }
+              </div>
+            }
+            <div class="flex flex-col items-start gap-2">
+              <button
+                type="button"
+                class="btn btn-secondary self-start"
+                [disabled]="!recipe.id || imagesPending() || saving()"
+                (click)="triggerImageSelection()"
               >
-            </button>
-            <input
-              #imageInput
-              type="file"
-              class="hidden max-[799px]:text-base"
-              accept="image/*"
-              multiple
-              (change)="uploadImage($event)"
-            />
-            <span
-              class="text-sm text-base-content/75"
-              i18n="@@recipes.editRecipePage.template.jpegPNGWebPGIFHEICOrHEIF"
-            >
-              JPEG, PNG, WebP, GIF, HEIC or HEIF. Maximum 10 MB.
-            </span>
+                <app-icon name="add_photo_alternate" class="size-5" /><span
+                  i18n="@@recipes.editRecipePage.addImage"
+                  >Add image</span
+                >
+              </button>
+              <input
+                #imageInput
+                type="file"
+                class="hidden max-[799px]:text-base"
+                accept="image/*"
+                multiple
+                (change)="uploadImage($event)"
+              />
+              <span
+                class="text-sm text-base-content/75"
+                i18n="@@recipes.editRecipePage.template.jpegPNGWebPGIFHEICOrHEIF"
+              >
+                JPEG, PNG, WebP, GIF, HEIC or HEIF. Maximum 10 MB.
+              </span>
+            </div>
             @if (imageUploading()) {
               <p class="text-sm text-base-content/75">{{ uploadStatus() }}</p>
             }
           </div>
-        </div>
+        </section>
       </div>
     </div>
 
-    <div class="min-w-0 grid grid-cols-1 gap-8">
+    <div class="min-w-0 grid grid-cols-1 gap-4">
       <div class="min-w-0">
-        <div class="card-body gap-5 p-0">
-          <h2 class="app-section-title mb-3">
+        <div class="card-body gap-3 p-0">
+          <h2 class="app-section-title">
             <ng-container i18n="@@recipes.ingredients">Ingredients</ng-container>
           </h2>
-          <div
-            cdkDropList
-            class="flex flex-col gap-3"
-            (cdkDropListDropped)="dropIngredient($event)"
-          >
+          <div class="flex flex-col gap-2">
             @for (ingredient of recipe.ingredients; track ingredient.id) {
-              <div class="relative border-b border-base-300 py-3" cdkDrag>
-                <div class="flex items-start gap-2">
-                  <button
-                    cdkDragHandle
-                    type="button"
-                    class="btn btn-ghost btn-square size-11 min-h-11 shrink-0"
-                    [attr.aria-label]="reorderIngredientLabel(ingredient.name)"
-                    [id]="'ingredient-handle-' + ingredient.id"
-                    (keydown.arrowup)="
-                      $event.preventDefault(); moveIngredient($index, $index - 1, true)
-                    "
-                    (keydown.arrowdown)="
-                      $event.preventDefault(); moveIngredient($index, $index + 1, true)
-                    "
-                  >
-                    <app-icon name="drag_indicator" class="size-5" />
-                  </button>
-                  <div class="grid min-w-0 max-w-xl flex-1 grid-cols-2 gap-2 sm:gap-3">
-                    <app-form-field
-                      class="col-span-2"
-                      controlId="ingredient-name-{{ $index }}"
-                      i18n-label="@@recipes.editRecipePage.template.labelIngredientName"
-                      label="Ingredient name"
+              <div
+                class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-1 gap-y-2 border-b border-base-300 py-2"
+                data-testid="ingredient-editor-row"
+              >
+                <app-reorder-actions
+                  class="row-span-2 -ml-2"
+                  [stacked]="true"
+                  [name]="ingredient.name || ingredientLabel"
+                  [id]="'ingredient-handle-' + ingredient.id"
+                  [canMoveUp]="$index > 0"
+                  [canMoveDown]="$index < recipe.ingredients.length - 1"
+                  (moved)="moveIngredient($index, $index + $event, true)"
+                />
+                <div class="flex items-center gap-2">
+                  <label class="min-w-0 flex-1">
+                    <span
+                      class="sr-only"
+                      i18n="@@recipes.editRecipePage.template.labelIngredientName"
+                      >Ingredient name</span
                     >
-                      <input
-                        id="ingredient-name-{{ $index }}"
-                        type="text"
-                        class="input h-11 w-full max-[799px]:text-base border-base-300 bg-base-100"
-                        [(ngModel)]="ingredient.name"
-                      />
-                    </app-form-field>
-                    <app-form-field
-                      controlId="ingredient-quantity-{{ $index }}"
-                      i18n-label="@@common.quantity"
-                      label="Quantity"
-                    >
-                      <input
-                        id="ingredient-quantity-{{ $index }}"
-                        type="text"
-                        inputmode="decimal"
-                        class="input h-11 w-full max-[799px]:text-base border-base-300 bg-base-100"
-                        [ngModel]="quantityDraft(ingredient)"
-                        (ngModelChange)="updateQuantity(ingredient, $event)"
-                        [attr.aria-invalid]="!isFiniteQuantity(ingredient.quantity)"
-                      />
-                    </app-form-field>
-                    <app-form-field
-                      controlId="ingredient-unit-{{ $index }}"
-                      i18n-label="@@recipes.editRecipePage.template.labelUnit"
-                      label="Unit"
-                    >
-                      <app-unit-selector
-                        [controlId]="'ingredient-unit-' + $index"
-                        [(unit)]="ingredient.unit"
-                      />
-                    </app-form-field>
-                  </div>
+                    <input
+                      id="ingredient-name-{{ $index }}"
+                      required
+                      type="text"
+                      class="input h-11 w-full max-[799px]:text-base border-base-300 bg-base-100 aria-invalid:border-error"
+                      placeholder="Ingredient name"
+                      i18n-placeholder="@@recipes.editRecipePage.template.labelIngredientName"
+                      [(ngModel)]="ingredient.name"
+                      [attr.aria-invalid]="!!fieldError('ingredient-name-' + $index)"
+                      [attr.aria-describedby]="
+                        fieldError('ingredient-name-' + $index)
+                          ? 'ingredient-name-' + $index + '-error'
+                          : null
+                      "
+                    />
+
+                    @if (fieldError('ingredient-name-' + $index); as message) {
+                      <p
+                        id="ingredient-name-{{ $index }}-error"
+                        class="text-sm text-error"
+                        role="alert"
+                      >
+                        {{ message }}
+                      </p>
+                    }
+                  </label>
                   <button
                     type="button"
                     class="btn btn-ghost btn-square size-11 min-h-11 shrink-0 text-error"
@@ -370,6 +435,52 @@
                   >
                     <app-icon name="delete" class="size-5" />
                   </button>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <app-form-field
+                    controlId="ingredient-quantity-{{ $index }}"
+                    [required]="true"
+                    [error]="fieldError('ingredient-quantity-' + $index)"
+                    [compact]="true"
+                    label="Quantity"
+                    i18n-label="@@common.quantity"
+                  >
+                    <input
+                      id="ingredient-quantity-{{ $index }}"
+                      required
+                      [attr.aria-describedby]="
+                        fieldError('ingredient-quantity-' + $index)
+                          ? 'ingredient-quantity-' + $index + '-error'
+                          : null
+                      "
+                      type="text"
+                      inputmode="decimal"
+                      class="input h-11 w-full max-[799px]:text-base border-base-300 bg-base-100 aria-invalid:border-error"
+                      [ngModel]="quantityDraft(ingredient)"
+                      (ngModelChange)="updateQuantity(ingredient, $event)"
+                      [attr.aria-invalid]="!!fieldError('ingredient-quantity-' + $index)"
+                    />
+                  </app-form-field>
+                  <app-form-field
+                    controlId="ingredient-unit-{{ $index }}"
+                    [required]="true"
+                    [error]="fieldError('ingredient-unit-' + $index)"
+                    [compact]="true"
+                    label="Unit"
+                    i18n-label="@@recipes.editRecipePage.template.labelUnit"
+                  >
+                    <app-unit-selector
+                      [controlId]="'ingredient-unit-' + $index"
+                      [required]="true"
+                      [invalid]="!!fieldError('ingredient-unit-' + $index)"
+                      [describedBy]="
+                        fieldError('ingredient-unit-' + $index)
+                          ? 'ingredient-unit-' + $index + '-error'
+                          : null
+                      "
+                      [(unit)]="ingredient.unit"
+                    />
+                  </app-form-field>
                 </div>
               </div>
             } @empty {
@@ -382,36 +493,30 @@
             }
           </div>
           <button
-            class="btn btn-outline btn-primary mt-4 self-start"
+            class="btn btn-outline btn-primary self-start"
             (click)="addIngredient()"
             i18n="@@recipes.editRecipePage.template.addIngredient"
           >
-            Add Ingredient
+            Add ingredient
           </button>
         </div>
       </div>
-      <div class="min-w-0 border-t border-base-300 pt-6">
-        <div class="card-body gap-5 p-0">
-          <h2 class="app-section-title mb-3">
+      <div class="min-w-0 border-t border-base-300 pt-4">
+        <div class="card-body gap-3 p-0">
+          <h2 class="app-section-title">
             <ng-container i18n="@@recipes.steps">Steps</ng-container>
           </h2>
-          <div cdkDropList class="flex flex-col gap-3" (cdkDropListDropped)="dropStep($event)">
+          <div class="flex flex-col gap-3">
             @for (step of recipe.steps; track step.id) {
-              <div class="border-b border-base-300 py-3" cdkDrag>
+              <div class="border-b border-base-300 py-2">
                 <div class="mb-2 flex items-center gap-2">
-                  <button
-                    cdkDragHandle
-                    type="button"
-                    class="btn btn-ghost btn-square size-11 min-h-11"
-                    [attr.aria-label]="reorderStepLabel($index + 1)"
+                  <app-reorder-actions
+                    [name]="stepName($index + 1)"
                     [id]="'step-handle-' + step.id"
-                    (keydown.arrowup)="$event.preventDefault(); moveStep($index, $index - 1, true)"
-                    (keydown.arrowdown)="
-                      $event.preventDefault(); moveStep($index, $index + 1, true)
-                    "
-                  >
-                    <app-icon name="drag_indicator" class="size-5" />
-                  </button>
+                    [canMoveUp]="$index > 0"
+                    [canMoveDown]="$index < recipe.steps.length - 1"
+                    (moved)="moveStep($index, $index + $event, true)"
+                  />
                   <label
                     class="font-medium"
                     for="step-description-{{ $index }}"
@@ -429,9 +534,25 @@
                 </div>
                 <textarea
                   id="step-description-{{ $index }}"
-                  class="textarea min-h-24 w-full max-[799px]:text-base border-base-300 bg-base-100"
+                  required
+                  class="textarea min-h-24 w-full max-[799px]:text-base border-base-300 bg-base-100 aria-invalid:border-error"
                   [(ngModel)]="step.description"
+                  [attr.aria-invalid]="!!fieldError('step-description-' + $index)"
+                  [attr.aria-describedby]="
+                    fieldError('step-description-' + $index)
+                      ? 'step-description-' + $index + '-error'
+                      : null
+                  "
                 ></textarea>
+                @if (fieldError('step-description-' + $index); as message) {
+                  <p
+                    id="step-description-{{ $index }}-error"
+                    class="text-sm text-error"
+                    role="alert"
+                  >
+                    {{ message }}
+                  </p>
+                }
               </div>
             } @empty {
               <p
@@ -443,11 +564,11 @@
             }
           </div>
           <button
-            class="btn btn-outline btn-primary mt-4 self-start"
+            class="btn btn-outline btn-primary self-start"
             (click)="addStep()"
             i18n="@@recipes.editRecipePage.template.addStep"
           >
-            Add Step
+            Add step
           </button>
         </div>
       </div>
@@ -460,20 +581,32 @@
     @if (uploadStatus()) {
       <span class="self-center text-sm text-base-content/75">{{ uploadStatus() }}</span>
     }
+    @if (creatingRecipe && !planningDraft) {
+      <button
+        class="btn btn-secondary"
+        type="button"
+        [disabled]="saving() || imagesPending()"
+        (click)="saveRecipe(true)"
+      >
+        @if (saving()) {
+          <ng-container i18n="@@common.saving">Saving…</ng-container>
+        } @else {
+          <ng-container i18n="@@recipes.saveAndAddAnother">Save and add another</ng-container>
+        }
+      </button>
+    }
+    @if (planningDraft) {
+      <button
+        class="btn btn-primary"
+        type="button"
+        [disabled]="saving() || imagesPending()"
+        (click)="continuePlanning()"
+      >
+        {{ continueLabel() }}
+      </button>
+    }
     <button
-      class="btn btn-outline btn-primary"
-      type="button"
-      [disabled]="saving() || imagesPending()"
-      (click)="saveRecipe(true)"
-    >
-      @if (saving()) {
-        <ng-container i18n="@@common.saving">Saving…</ng-container>
-      } @else {
-        <ng-container i18n="@@recipes.saveAndAddAnother">Save and add another</ng-container>
-      }
-    </button>
-    <button
-      class="btn btn-primary"
+      [class]="planningDraft ? 'btn btn-secondary' : 'btn btn-primary'"
       type="button"
       [disabled]="saving() || imagesPending()"
       (click)="saveRecipe()"
@@ -486,4 +619,5 @@
     </button>
   </div>
 }
+<p class="sr-only" aria-live="polite" aria-atomic="true">{{ reorderAnnouncement() }}</p>
 <app-confirmation-modal #discardChangesModal />

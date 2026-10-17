@@ -9,6 +9,7 @@ import { ToastService } from '../../../../shared/services/toast.service';
 import { UserFormModal } from '../../components/user-form-modal/user-form-modal';
 import { UsersStore } from '../../state/users.store';
 import { AppIcon } from '../../../../shared/components/app-icon/app-icon';
+import { editItemLabel } from '../../../../core/i18n/labels';
 
 @Component({
   selector: 'app-users-page',
@@ -16,6 +17,7 @@ import { AppIcon } from '../../../../shared/components/app-icon/app-icon';
   templateUrl: './users-page.html',
 })
 export class UsersPage implements OnInit {
+  readonly editItemLabel = editItemLabel;
   readonly store = inject(UsersStore);
   readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);

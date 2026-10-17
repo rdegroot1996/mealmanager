@@ -3,7 +3,11 @@
   class="modal modal-bottom min-[600px]:modal-middle"
   [attr.aria-labelledby]="labelledBy() || titleId"
   (click)="onBackdropClick($event)"
+  (pointerdown)="onPointerDown($event)"
+  (pointerup)="onPointerUp($event)"
+  (pointercancel)="resetBackdrop()"
   (close)="onClosed()"
+  (cancel)="onCancel($event)"
 >
   <div
     class="modal-box flex max-h-[calc(100dvh-1rem)] w-full flex-col overflow-hidden rounded-t-[1.5rem] bg-base-200 p-6 pb-[max(1rem,env(safe-area-inset-bottom))] max-[359px]:px-4 min-[600px]:max-h-[calc(100dvh-3rem)] min-[600px]:rounded-[1.25rem]"
@@ -21,7 +25,8 @@
         <button
           class="btn btn-ghost btn-square size-11 shrink-0"
           type="button"
-          (click)="close()"
+          [disabled]="busy()"
+          (click)="cancel()"
           aria-label="Close"
           i18n-aria-label="@@common.close"
         >

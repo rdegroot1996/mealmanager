@@ -2,20 +2,29 @@ import { AppIcon } from '../app-icon/app-icon';
 import { Component, ElementRef, input, output, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Modal } from '../modal/modal';
+import { ConfirmationModal } from '../confirmation-modal/confirmation-modal';
 import { FormField } from '../form-field/form-field';
 import { NumberInput } from '../number-input/number-input';
 
-export interface GroceryItemDraft {
+export interface GroceryDraft {
   name: string;
   quantity: number;
 }
 
 @Component({
   selector: 'app-grocery-edit-modal',
-  imports: [AppIcon, Modal, FormsModule, FormField, NumberInput],
+  imports: [ConfirmationModal, AppIcon, Modal, FormsModule, FormField, NumberInput],
   templateUrl: './grocery-edit-modal.html',
 })
 export class GroceryEditModal {
+  private savedDraft = '';
+  readonly discardModal = viewChild.required<ConfirmationModal>('discardModal');
+  readonly beforeDismiss = () =>
+    this.draftSnapshot() === this.savedDraft || this.discardModal().confirmDiscard();
+  private draftSnapshot() {
+    return JSON.stringify([this.draftName().trim(), this.draftQuantity()]);
+  }
+
   private static nextId = 0;
   private readonly id = ++GroceryEditModal.nextId;
   disabled = input(false);
@@ -27,7 +36,7 @@ export class GroceryEditModal {
   suggestionsLoading = input(false);
   suggestionsError = input(false);
   nameQueryChanged = output<string>();
-  saved = output<GroceryItemDraft>();
+  saved = output<GroceryDraft>();
   removed = output<void>();
   closed = output<void>();
   readonly modal = viewChild.required<Modal>('modal');
@@ -42,13 +51,14 @@ export class GroceryEditModal {
   readonly quantityId = `grocery-quantity-${this.id}`;
   readonly formId = `grocery-form-${this.id}`;
 
-  open(item: GroceryItemDraft, creating = false) {
+  open(item: GroceryDraft, creating = false) {
     if (this.disabled()) return;
     this.creating.set(creating);
     this.draftName.set(item.name);
     this.draftQuantity.set(item.quantity);
     this.error.set('');
     this.suggestionsOpen.set(false);
+    this.savedDraft = this.draftSnapshot();
     this.modal().open(creating ? 'control' : 'title');
   }
 
