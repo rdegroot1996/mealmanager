@@ -48,8 +48,7 @@
         controlId="user-password"
         i18n-label="@@users.initialPassword"
         label="Initial password"
-        i18n-hint="@@users.passwordHint"
-        hint="At least 6 characters."
+        [hint]="passwordHint"
         [required]="true"
       >
         <input
@@ -99,6 +98,14 @@
 
   @if (isEdit() && !isCurrentUser()) {
     <button
+      class="btn btn-secondary mt-4 w-full"
+      type="button"
+      [disabled]="saving()"
+      (click)="resetPassword.open(user()!)"
+    >
+      <ng-container i18n="@@users.resetPassword">Reset password</ng-container>
+    </button>
+    <button
       class="btn btn-outline h-auto min-h-12 w-full btn-error py-[11px] whitespace-normal mt-4"
       type="button"
       [disabled]="saving()"
@@ -122,3 +129,4 @@
 </app-modal>
 
 <app-confirmation-modal #discardModal />
+<app-reset-password-modal #resetPassword />

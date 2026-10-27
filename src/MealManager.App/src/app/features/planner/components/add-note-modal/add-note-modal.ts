@@ -38,13 +38,7 @@ export class AddNoteModal {
   readonly removeRequested = output<string>();
   remove() {
     const noteId = this.editingNoteId();
-    if (
-      !noteId ||
-      this.saving() ||
-      this.cycleStore.currentCycle()?.nextPlanningCycleId ||
-      this.cycleStore.currentCycle()?.id !== this.cycleId
-    )
-      return;
+    if (!noteId || this.saving() || this.cycleStore.currentCycle()?.id !== this.cycleId) return;
     this.modal()?.close();
     this.removeRequested.emit(noteId);
   }
@@ -56,7 +50,6 @@ export class AddNoteModal {
   error = signal('');
 
   open(date: string, note: ApiPlanningDayNote | null = null) {
-    if (this.cycleStore.currentCycle()?.nextPlanningCycleId) return;
     this.cycleId = this.cycleStore.currentCycle()?.id;
     ++this.session;
     this.date.set(date);
@@ -69,11 +62,7 @@ export class AddNoteModal {
   }
 
   confirm() {
-    if (
-      this.cycleStore.currentCycle()?.nextPlanningCycleId ||
-      this.cycleStore.currentCycle()?.id !== this.cycleId
-    )
-      return;
+    if (this.cycleStore.currentCycle()?.id !== this.cycleId) return;
     const session = this.session;
     const cycleId = this.cycleStore.currentCycle()?.id;
     const text = this.noteText().trim();

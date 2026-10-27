@@ -1,6 +1,4 @@
-using MealManager.Domain;
 using MealManager.Domain.Entities;
-using MealManager.Infrastructure.Authentication;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 

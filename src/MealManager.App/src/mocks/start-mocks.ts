@@ -1,9 +1,15 @@
 import { worker } from './browser';
+import { HttpNetworkFrame } from 'msw/experimental';
 
 export async function startMocks() {
   await worker.start({
-    onUnhandledRequest(request, print) {
-      if (new URL(request.url).pathname.startsWith('/api/')) print.error();
+    onUnhandledFrame({ frame, defaults }) {
+      if (
+        frame instanceof HttpNetworkFrame &&
+        new URL(frame.data.request.url).pathname.startsWith('/api/')
+      ) {
+        defaults.error();
+      }
     },
   });
 }

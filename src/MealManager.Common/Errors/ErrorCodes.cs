@@ -8,6 +8,8 @@ public static class ErrorCodes
     public const string ValidationError = nameof(ValidationError);
     public const string CannotRemoveOwnAdminRole = nameof(CannotRemoveOwnAdminRole);
     public const string CannotDeleteSelf = nameof(CannotDeleteSelf);
+    public const string CannotResetOwnPassword = nameof(CannotResetOwnPassword);
+    public const string PasswordChangeRequired = nameof(PasswordChangeRequired);
     public const string RecipeInUse = nameof(RecipeInUse);
     public const string LeftoverAlreadyPlanned = nameof(LeftoverAlreadyPlanned);
     public const string MealMustPrecedeLeftovers = nameof(MealMustPrecedeLeftovers);
@@ -20,7 +22,7 @@ public static class ErrorCodes
     public const string DateOutsideCycle = nameof(DateOutsideCycle);
     public const string LeftoverMustFollowOriginal = nameof(LeftoverMustFollowOriginal);
     public const string CycleCannotExcludeEntries = nameof(CycleCannotExcludeEntries);
-    public const string HistoricalCycleReadOnly = nameof(HistoricalCycleReadOnly);
+    public const string ActiveCycleRequired = nameof(ActiveCycleRequired);
     public const string ApplicationAlreadyInitialized = nameof(ApplicationAlreadyInitialized);
     public const string InvalidRecipeImageOrder = nameof(InvalidRecipeImageOrder);
     public const string RecipeProfileInUse = nameof(RecipeProfileInUse);

@@ -42,12 +42,28 @@ describe('UserFormModal', () => {
     http.expectNone('/api/users');
   });
 
+  it.each(['abcdef', 'ABC123!', 'Abcdef!', 'Äbc123!'])(
+    'applies the shared new-password policy to initial passwords: %s',
+    (password) => {
+      const fixture = TestBed.createComponent(UserFormModal);
+      fixture.detectChanges();
+      const component = fixture.componentInstance;
+      component.displayName.set('Member');
+      component.email.set('member@example.test');
+      component.password.set(password);
+      component.save();
+      expect(component.error()).toBe(component.passwordHint);
+      http.expectNone('/api/users');
+    },
+  );
+
   it('keeps the current administrator role locked while allowing name edits', () => {
     const currentUser = {
       id: 'admin-id',
       email: 'admin@example.test',
       displayName: 'Admin',
       isAdmin: true,
+      mustChangePassword: false,
     };
     TestBed.inject(AuthService).currentUser.set(currentUser);
     const fixture = TestBed.createComponent(UserFormModal);
@@ -71,6 +87,7 @@ describe('UserFormModal', () => {
       email: 'self@example.test',
       displayName: 'Self',
       isAdmin: true,
+      mustChangePassword: false,
     };
     const otherUser = { ...currentUser, id: 'other', displayName: 'Other' };
     TestBed.inject(AuthService).currentUser.set(currentUser);

@@ -12,6 +12,10 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
 
   return next(request).pipe(
     catchError((error: HttpErrorResponse) => {
+      if (error.status === 403 && error.error?.code === 'PasswordChangeRequired') {
+        auth.currentUser.update((user) => (user ? { ...user, mustChangePassword: true } : user));
+        void router.navigate(['/change-password']);
+      }
       if (error.status === 401 && !isAnonymousRequest) {
         auth.markUnauthenticated();
         void router.navigate(['/login']);

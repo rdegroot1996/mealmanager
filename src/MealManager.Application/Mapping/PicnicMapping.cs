@@ -1,4 +1,3 @@
-using MealManager.Application.DTO;
 using MealManager.Infrastructure.Supermarkets;
 namespace MealManager.Application.Mapping;
 

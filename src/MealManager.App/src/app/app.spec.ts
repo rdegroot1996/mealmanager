@@ -28,4 +28,20 @@ describe('App', () => {
       '/',
     );
   });
+
+  it('withholds household navigation while a temporary password must be replaced', () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.componentInstance.auth.isAuthenticated.set(true);
+    fixture.componentInstance.auth.currentUser.set({
+      id: 'member',
+      email: 'member@example.test',
+      displayName: 'Member',
+      isAdmin: false,
+      mustChangePassword: true,
+    });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-navigation')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[aria-label="Open account menu"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('router-outlet')).not.toBeNull();
+  });
 });

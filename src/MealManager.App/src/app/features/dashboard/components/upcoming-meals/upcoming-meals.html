@@ -13,7 +13,7 @@
         Coming up
       </h2>
       <a
-        class="text-sm font-medium text-secondary-content hover:underline"
+        class="inline-flex min-h-11 items-center text-sm font-medium text-secondary-content hover:underline"
         routerLink="/planner"
         i18n="@@dashboard.upcomingMeals.seePlanner"
         >See planner</a
@@ -70,6 +70,7 @@
             <a
               class="flex min-w-0 items-center gap-3 border-b border-base-300 py-4 transition-colors hover:bg-base-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               [routerLink]="['/recipes', meal.recipe.id]"
+              [queryParams]="{ profile: meal.recipeProfile.id }"
               [attr.aria-label]="viewRecipeLabel(meal.recipe.name)"
             >
               <app-recipe-summary

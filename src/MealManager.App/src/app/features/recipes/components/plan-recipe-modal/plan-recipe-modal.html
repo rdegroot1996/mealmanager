@@ -11,6 +11,10 @@
       i18n-message="@@recipes.planRecipeModal.template.messageLoadingPlanningDays"
       message="Loading planning days…"
     />
+  } @else if (noCycle()) {
+    <p i18n="@@recipes.firstCycleRequired">
+      Start your first planning cycle, then choose a day for this recipe.
+    </p>
   } @else {
     <app-planning-day-select
       [disabled]="saving()"
@@ -25,16 +29,23 @@
   }
 
   <div modal-actions>
-    <button
-      class="btn btn-primary"
-      [disabled]="!selectedDate() || loading() || saving()"
-      (click)="planRecipe()"
-    >
-      @if (saving()) {
-        <ng-container i18n="@@common.adding">Adding…</ng-container>
-      } @else {
-        <ng-container i18n="@@recipes.addToPlanner">Add to planner</ng-container>
-      }
-    </button>
+    @if (noCycle()) {
+      <button class="btn btn-primary" type="button" (click)="cycleForm.open()">
+        <ng-container i18n="@@planner.plannerPage.startFirstCycle">Start first cycle</ng-container>
+      </button>
+    } @else {
+      <button
+        class="btn btn-primary"
+        [disabled]="!selectedDate() || loading() || saving()"
+        (click)="planRecipe()"
+      >
+        @if (saving()) {
+          <ng-container i18n="@@common.adding">Adding…</ng-container>
+        } @else {
+          <ng-container i18n="@@recipes.addToPlanner">Add to planner</ng-container>
+        }
+      </button>
+    }
   </div>
 </app-modal>
+<app-cycle-form-modal #cycleForm (saved)="open()" />

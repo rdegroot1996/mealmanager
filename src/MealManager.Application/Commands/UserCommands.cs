@@ -28,6 +28,7 @@ public class UserCommands(UserManager<User> userManager, AuthenticationService a
             Id = user.Id,
             Email = user.Email!,
             DisplayName = user.DisplayName,
+            MustChangePassword = user.MustChangePassword,
             IsAdmin = command.IsAdmin,
         };
     }
@@ -51,6 +52,7 @@ public class UserCommands(UserManager<User> userManager, AuthenticationService a
             Id = user.Id,
             Email = user.Email!,
             DisplayName = user.DisplayName,
+            MustChangePassword = user.MustChangePassword,
             IsAdmin = await userManager.IsInRoleAsync(user, UserRoles.Admin),
         };
     }
@@ -92,6 +94,7 @@ public class UserCommands(UserManager<User> userManager, AuthenticationService a
             Id = user.Id,
             Email = user.Email!,
             DisplayName = user.DisplayName,
+            MustChangePassword = user.MustChangePassword,
             IsAdmin = command.IsAdmin,
         };
     }

@@ -12,6 +12,7 @@
 
     <app-form-field
       controlId="setup-display-name"
+      [error]="fieldError('display-name')"
       i18n-label="@@common.displayName"
       label="Display name"
       [required]="true"
@@ -19,6 +20,9 @@
       <input
         class="input w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
         id="setup-display-name"
+        [disabled]="loading()"
+        [attr.aria-invalid]="!!fieldError('display-name')"
+        [attr.aria-describedby]="fieldError('display-name') ? 'setup-display-name-error' : null"
         name="displayName"
         i18n-aria-label="@@common.displayName"
         aria-label="Display name"
@@ -29,6 +33,7 @@
     </app-form-field>
     <app-form-field
       controlId="setup-email"
+      [error]="fieldError('email')"
       i18n-label="@@common.email"
       label="Email"
       [required]="true"
@@ -36,6 +41,9 @@
       <input
         class="input w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
         id="setup-email"
+        [disabled]="loading()"
+        [attr.aria-invalid]="!!fieldError('email')"
+        [attr.aria-describedby]="fieldError('email') ? 'setup-email-error' : null"
         type="email"
         name="email"
         i18n-aria-label="@@common.email"
@@ -47,6 +55,8 @@
     </app-form-field>
     <app-form-field
       controlId="setup-password"
+      [error]="fieldError('password')"
+      [hint]="passwordHint"
       i18n-label="@@common.password"
       label="Password"
       [required]="true"
@@ -54,6 +64,13 @@
       <input
         class="input w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
         id="setup-password"
+        [disabled]="loading()"
+        [attr.aria-invalid]="!!fieldError('password')"
+        [attr.aria-describedby]="
+          fieldError('password')
+            ? 'setup-password-error setup-password-hint'
+            : 'setup-password-hint'
+        "
         type="password"
         name="password"
         i18n-aria-label="@@common.password"
@@ -66,6 +83,7 @@
     </app-form-field>
     <app-form-field
       controlId="setup-confirm-password"
+      [error]="fieldError('confirm-password')"
       i18n-label="@@common.confirmPassword"
       label="Confirm password"
       [required]="true"
@@ -73,6 +91,11 @@
       <input
         class="input w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
         id="setup-confirm-password"
+        [disabled]="loading()"
+        [attr.aria-invalid]="!!fieldError('confirm-password')"
+        [attr.aria-describedby]="
+          fieldError('confirm-password') ? 'setup-confirm-password-error' : null
+        "
         type="password"
         name="confirmPassword"
         i18n-aria-label="@@common.confirmPassword"

@@ -1,3 +1,4 @@
+using MealManager.Application.Supermarkets;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MealManager.Application;
@@ -15,8 +16,9 @@ public static class ApplicationServiceExtensions
             .AddTransient<ConfigCommands>()
             .AddTransient<PicnicConnectionCommands>()
             .AddTransient<SupermarketSendCommands>()
-            .AddTransient<MealManager.Application.Supermarkets.SupermarketProviders>()
+            .AddTransient<SupermarketProviders>()
             .AddTransient<UserCommands>()
+            .AddTransient<PasswordCommands>()
             .AddTransient<RecipeCommands>()
             .AddTransient<RecipeEditCommands>()
             .AddTransient<RecipeImageCommands>()

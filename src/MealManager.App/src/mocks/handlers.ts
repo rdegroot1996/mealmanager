@@ -1,6 +1,6 @@
 import { DateTime } from 'luxon';
 import { MockMealPlan, MockPlannedLeftover } from './data/mock-meal-plan';
-import { http, HttpResponse } from 'msw';
+import { http, HttpResponse } from 'msw/http';
 import { recipes, MockRecipe } from './data/recipes';
 import { cycles } from './data/planning-cycles';
 import { mockImageUploadError } from './image-upload';
@@ -12,6 +12,7 @@ import { ApiShoppingList, ApiShoppingListItem } from '../app/api/models/api-shop
 import { ApiConfig } from '../app/api/models/api-config';
 import { ApiUser } from '../app/api/models/api-user';
 import { resetSupermarkets, supermarketHandlers } from './supermarkets';
+import { passwordMeetsPolicy } from '../app/features/authentication/authentication-validation';
 
 // Deep-clone mutable state so handlers can mutate freely
 let recipeDb: MockRecipe[] = structuredClone(recipes);
@@ -27,16 +28,18 @@ const initialUsers: ApiUser[] = [
     email: 'admin@example.test',
     displayName: 'MealManager Admin',
     isAdmin: true,
+    mustChangePassword: false,
   },
 ];
 let userDb = structuredClone(initialUsers);
-const currentUserId = initialUsers[0].id;
+let currentUserId = initialUsers[0].id;
 
 export function resetMockData() {
   resetSupermarkets();
   configDb = { appInitialized: true };
   isAuthenticated = true;
   userDb = structuredClone(initialUsers);
+  currentUserId = initialUsers[0].id;
   recipeDb = structuredClone(recipes);
   cycleDb = structuredClone(cycles);
   mealPlanDb = structuredClone(mealPlans);
@@ -53,12 +56,15 @@ function userAccess() {
 function activeCycle() {
   return [...cycleDb].sort((a, b) => b.startDate.localeCompare(a.startDate))[0];
 }
-function planningAccess(cycleId: string, date?: string) {
+function planningAccess(cycleId: string, date?: string, requireActive = false) {
   const cycle = cycleDb.find((c) => c.id === cycleId);
   if (!cycle) return new HttpResponse(null, { status: 404 });
-  if (cycle.id !== activeCycle()?.id)
+  if (requireActive && cycle.id !== activeCycle()?.id)
     return HttpResponse.json(
-      { code: 'HistoricalCycleReadOnly', detail: 'Historical planning cycles are read-only.' },
+      {
+        code: 'ActiveCycleRequired',
+        detail: 'This operation requires the active planning cycle.',
+      },
       { status: 400 },
     );
   if (date && (!DateTime.fromISO(date).isValid || date < cycle.startDate || date > cycle.endDate))
@@ -146,6 +152,21 @@ function toPlanningEntries(mealPlan: MockMealPlan): ApiPlannedEntry[] {
 }
 
 export const handlers = [
+  http.all('/api/*', ({ request }) => {
+    if (!isAuthenticated || !userDb.find((user) => user.id === currentUserId)?.mustChangePassword)
+      return;
+    const path = new URL(request.url).pathname.toLowerCase().replace(/\/$/, '');
+    if (
+      [
+        '/api/authentication/session',
+        '/api/authentication/change-password',
+        '/api/authentication/logout',
+      ].includes(path) ||
+      (path === '/api/users/me' && request.method === 'GET')
+    )
+      return;
+    return HttpResponse.json({ code: 'PasswordChangeRequired' }, { status: 403 });
+  }),
   ...supermarketHandlers({
     lists: () => shoppingListDb,
     access: (admin) =>
@@ -175,12 +196,44 @@ export const handlers = [
   http.post('/api/authentication/login', async ({ request }) => {
     const body = (await request.json()) as { email?: string; password?: string };
     if (!body.email || !body.password) return new HttpResponse(null, { status: 401 });
+    currentUserId =
+      userDb.find((user) => user.email.toLowerCase() === body.email!.toLowerCase())?.id ??
+      initialUsers[0].id;
     isAuthenticated = true;
     return new HttpResponse(null, { status: 204 });
   }),
 
   http.post('/api/authentication/logout', () => {
     isAuthenticated = false;
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  http.post('/api/authentication/change-password', async ({ request }) => {
+    if (!isAuthenticated) return new HttpResponse(null, { status: 401 });
+    const body = (await request.json()) as { currentPassword: string; newPassword: string };
+    if (
+      !body.currentPassword ||
+      !passwordMeetsPolicy(body.newPassword ?? '') ||
+      body.newPassword === body.currentPassword
+    )
+      return HttpResponse.json({ code: 'ValidationError' }, { status: 400 });
+    const user = userDb.find((user) => user.id === currentUserId);
+    if (!user) return new HttpResponse(null, { status: 404 });
+    user.mustChangePassword = false;
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  http.post('/api/users/:id/reset-password', async ({ params, request }) => {
+    const denied = userAccess();
+    if (denied) return denied;
+    if (params['id'] === currentUserId)
+      return HttpResponse.json({ code: 'CannotResetOwnPassword' }, { status: 400 });
+    const user = userDb.find((user) => user.id === params['id']);
+    if (!user) return new HttpResponse(null, { status: 404 });
+    const body = (await request.json()) as { temporaryPassword: string };
+    if (!passwordMeetsPolicy(body.temporaryPassword ?? ''))
+      return HttpResponse.json({ code: 'ValidationError' }, { status: 400 });
+    user.mustChangePassword = true;
     return new HttpResponse(null, { status: 204 });
   }),
 
@@ -197,6 +250,12 @@ export const handlers = [
     const denied = userAccess();
     if (denied) return denied;
     const body = (await request.json()) as Omit<ApiUser, 'id'> & { password: string };
+    if (
+      !body.displayName?.trim() ||
+      !body.email?.trim() ||
+      !passwordMeetsPolicy(body.password ?? '')
+    )
+      return HttpResponse.json({ code: 'ValidationError' }, { status: 400 });
     if (userDb.some(({ email }) => email.toLowerCase() === body.email.toLowerCase())) {
       return HttpResponse.json(
         { title: 'A user with this email already exists.' },
@@ -204,7 +263,7 @@ export const handlers = [
       );
     }
     const { password: _password, ...details } = body;
-    const user: ApiUser = { ...details, id: crypto.randomUUID() };
+    const user: ApiUser = { ...details, mustChangePassword: false, id: crypto.randomUUID() };
     userDb.push(user);
     return HttpResponse.json(user, { status: 201 });
   }),
@@ -245,7 +304,7 @@ export const handlers = [
     const url = new URL(request.url);
     const category = url.searchParams.get('category');
     const tags = url.searchParams.getAll('tags');
-    const search = url.searchParams.get('search')?.toLowerCase();
+    const search = url.searchParams.get('search')?.trim().toLowerCase();
     const favorite = url.searchParams.get('favorite');
     const sort = url.searchParams.get('sort') ?? 'Name';
     const today = DateTime.local().toISODate()!;
@@ -728,7 +787,7 @@ export const handlers = [
     const idx = cycleDb.findIndex((c) => c.id === params['id']);
     if (idx === -1) return new HttpResponse(null, { status: 404 });
     const body = (await request.json()) as { startDate: string; endDate: string };
-    const access = planningAccess(cycleDb[idx].id);
+    const access = planningAccess(cycleDb[idx].id, undefined, true);
     if (access) return access;
     const mealPlan = mealPlanDb[cycleDb[idx].id];
     if (
@@ -748,7 +807,7 @@ export const handlers = [
     const idx = cycleDb.findIndex((cycle) => cycle.id === id);
     if (idx === -1) return new HttpResponse(null, { status: 404 });
 
-    const access = planningAccess(id);
+    const access = planningAccess(id, undefined, true);
     if (access) return access;
     cycleDb.splice(idx, 1);
     delete mealPlanDb[id];
@@ -975,6 +1034,7 @@ export const handlers = [
             recipeId: meal.recipe.id,
             recipeName: meal.recipe.name,
             recipeImageUrl: meal.recipe.imageUrl ?? '',
+            recipeProfileId: meal.recipeProfile.id,
             profileName: meal.recipeProfile.name,
             profileServings: meal.recipeProfile.servings,
           },
@@ -1051,6 +1111,7 @@ export const handlers = [
         recipeId: foundMeal.recipe.id,
         recipeName: foundMeal.recipe.name,
         recipeImageUrl: foundMeal.recipe.imageUrl ?? '',
+        recipeProfileId: foundMeal.recipeProfile.id,
         profileName: foundMeal.recipeProfile.name,
         profileServings: foundMeal.recipeProfile.servings,
       },

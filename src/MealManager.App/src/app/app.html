@@ -1,4 +1,11 @@
-@if (auth.isAuthenticated()) {
+@if (auth.isAuthenticated() && !auth.currentUser()?.mustChangePassword) {
+  <a
+    href="#main-content"
+    class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-field focus:bg-base-100 focus:p-4 focus:outline-2 focus:outline-primary"
+    (click)="skipToContent($event)"
+    i18n="@@navigation.skipToContent"
+    >Skip to content</a
+  >
   <div
     class="grid min-h-dvh grid-cols-1 grid-rows-[4.5rem_1fr] bg-base-200 min-[800px]:h-dvh min-[800px]:grid-cols-[200px_minmax(0,1fr)] min-[800px]:grid-rows-[4.5rem_minmax(0,1fr)] min-[800px]:overflow-hidden"
   >
@@ -30,10 +37,14 @@
             </p>
           </div>
         </div>
-        <div class="grid gap-2">
+        <nav
+          class="divide-y divide-base-300 rounded-field border border-base-300"
+          aria-label="Account"
+          i18n-aria-label="@@app.accountNavigation"
+        >
           @if (auth.currentUser()?.isAdmin) {
             <a
-              class="btn btn-ghost h-auto min-h-12 w-full justify-start gap-3 px-3 py-3 font-normal whitespace-normal"
+              class="flex min-h-12 w-full items-center gap-3 px-4 py-3 text-sm hover:bg-base-100 focus-visible:outline-2 focus-visible:outline-primary"
               routerLink="/settings"
               (click)="accountDialog.close()"
             >
@@ -41,21 +52,30 @@
               <span i18n="@@settings.title">Settings</span>
             </a>
           }
-          <app-language-switcher class="px-3" />
-        </div>
+          <a
+            class="flex min-h-12 w-full items-center gap-3 px-4 py-3 text-sm hover:bg-base-100 focus-visible:outline-2 focus-visible:outline-primary"
+            routerLink="/change-password"
+            (click)="accountDialog.close()"
+          >
+            <app-icon name="lock" class="size-5 shrink-0 text-primary" />
+            <span i18n="@@authentication.changePassword">Change password</span>
+          </a>
+        </nav>
+        <app-language-switcher class="mt-5 block" />
         <button
           modal-actions
           type="button"
           class="btn btn-ghost w-full text-error hover:bg-error/5 font-normal"
           (click)="accountDialog.close(); signOut()"
-          i18n="@@app.app.template.signOut"
         >
-          Sign out
+          <ng-container i18n="@@app.app.template.signOut">Sign out</ng-container>
         </button>
       </app-modal>
     </header>
     <app-navigation [items]="menuItems" />
     <main
+      id="main-content"
+      tabindex="-1"
       class="col-start-1 row-start-2 min-w-0 scroll-pb-48 min-[800px]:col-start-2 min-[800px]:overflow-y-auto"
     >
       <div
@@ -72,7 +92,7 @@
       </div>
     </main>
   </div>
-  <app-toast-host />
 } @else {
   <router-outlet />
 }
+<app-toast-host />

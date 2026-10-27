@@ -1,4 +1,5 @@
 using MealManager.Application.Supermarkets;
+using MealManager.Common.Enums;
 using MealManager.Domain.Contracts;
 using MealManager.Domain.Entities;
 using MealManager.Infrastructure.Database;
@@ -146,7 +147,7 @@ public sealed class SupermarketSendCommands(
         var mappings = await local.SupermarketProductMappings.Where(x => x.Provider == command.Provider && profileIds.Contains(x.RecipeProfileGroceryItemId))
             .ToDictionaryAsync(x => x.RecipeProfileGroceryItemId, ct);
         var connectionJson = await local.AppSettings.Where(x => x.Key == ProviderSettingsStore.Key(command.Provider)).Select(x => x.Value).SingleOrDefaultAsync(ct);
-        var sameConnection = command.Provider != MealManager.Common.Enums.SupermarketProvider.Picnic ||
+        var sameConnection = command.Provider != SupermarketProvider.Picnic ||
             ProviderSettingsStore.Picnic(connectionJson).ConnectionGeneration == command.ConnectionGeneration;
         string? warning = null;
         var updatedProfiles = new HashSet<Guid>();

@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using MealManager.Application.DTO;
-using MealManager.Common.Enums;
 using MealManager.Tests.Integration.Configuration;
 using Xunit;
 

@@ -105,7 +105,7 @@ export class MealGroceryReviewModal {
   });
 
   open(meal: ApiPlannedEntry) {
-    if (meal.kind !== 'Meal' || this.cycleStore.currentCycle()?.nextPlanningCycleId) return;
+    if (meal.kind !== 'Meal') return;
     const session = ++this.session;
     this.cycleId = this.cycleStore.currentCycle()?.id;
     this.meal.set(meal);
@@ -279,7 +279,6 @@ export class MealGroceryReviewModal {
       !meal ||
       this.saving() ||
       !this.loaded() ||
-      this.cycleStore.currentCycle()?.nextPlanningCycleId ||
       this.cycleStore.currentCycle()?.id !== this.cycleId
     )
       return;

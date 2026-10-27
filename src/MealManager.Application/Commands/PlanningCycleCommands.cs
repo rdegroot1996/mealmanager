@@ -75,7 +75,7 @@ public class PlanningCycleCommands(ApplicationDbContext dbContext, PlanningCycle
 
     public async Task DeletePlanningCycle(Guid id)
     {
-        await cycleAccess.EnsureEditable(id);
+        await cycleAccess.EnsureActive(id);
         var planningCycle = await dbContext.PlanningCycles.FindAsync(id)
             ?? throw new NotFoundError(nameof(PlanningCycle));
 

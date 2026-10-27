@@ -16,5 +16,6 @@ export class RecipeSummary {
   category = input<string | null>(null);
   profile = input<{ name: string; servings: number } | null>(null);
   recipeLink = input<(string | number)[] | null>(null);
+  recipeProfileId = input<string | null>(null);
   imageSize = input<'sm' | 'thumbnail' | 'md' | 'lg'>('md');
 }

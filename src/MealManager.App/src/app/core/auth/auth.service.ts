@@ -26,6 +26,12 @@ export class AuthService {
       .pipe(switchMap(() => this.restoreSession()));
   }
 
+  changePassword(currentPassword: string, newPassword: string) {
+    return this.http
+      .post<void>('/api/authentication/change-password', { currentPassword, newPassword })
+      .pipe(switchMap(() => this.restoreSession()));
+  }
+
   restoreSession(strict = false): Observable<boolean> {
     return this.http.get<AuthenticationSession>('/api/authentication/session').pipe(
       switchMap((session) =>

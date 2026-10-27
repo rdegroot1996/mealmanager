@@ -7,6 +7,12 @@ import { catchError, switchMap, throwError } from 'rxjs';
 import { AuthShell } from '../../../../shared/components/auth-shell/auth-shell';
 import { FormField } from '../../../../shared/components/form-field/form-field';
 import { DEFAULT_LOCALE } from '../../../../core/i18n/locale';
+import {
+  emailError,
+  focusInvalidControl,
+  newPasswordError,
+  passwordHint,
+} from '../../authentication-validation';
 
 @Component({
   selector: 'app-setup-page',
@@ -24,6 +30,21 @@ export class SetupPage implements OnInit {
   confirmPassword = '';
   error = signal('');
   loading = signal(false);
+  attempted = signal(false);
+  readonly passwordHint = passwordHint;
+
+  fieldError(field: string): string | null {
+    if (!this.attempted()) return null;
+    if (field === 'display-name')
+      return this.displayName.trim()
+        ? null
+        : $localize`:@@authentication.displayNameRequired:Enter your display name.`;
+    if (field === 'email') return emailError(this.email);
+    if (field === 'password') return newPasswordError(this.password);
+    return this.confirmPassword && this.password === this.confirmPassword
+      ? null
+      : $localize`:@@authentication.setupPage.thePasswordsDoNotMatch:The passwords do not match.`;
+  }
 
   ngOnInit() {
     this.config.getConfig().subscribe({
@@ -39,25 +60,28 @@ export class SetupPage implements OnInit {
   }
 
   submit() {
+    if (this.loading()) return;
     this.error.set('');
-    if (this.password !== this.confirmPassword) {
-      this.error.set(
-        $localize`:@@authentication.setupPage.thePasswordsDoNotMatch:The passwords do not match.`,
-      );
+    this.attempted.set(true);
+    const invalid = ['display-name', 'email', 'password', 'confirm-password'].filter((field) =>
+      this.fieldError(field),
+    );
+    if (invalid.length) {
+      focusInvalidControl(invalid.map((field) => 'setup-' + field));
       return;
     }
 
     this.loading.set(true);
     this.config
       .initialize({
-        adminEmail: this.email,
+        adminEmail: this.email.trim(),
         adminPassword: this.password,
-        adminDisplayName: this.displayName,
+        adminDisplayName: this.displayName.trim(),
       })
       .pipe(
         switchMap(() =>
           this.auth
-            .login(this.email, this.password)
+            .login(this.email.trim(), this.password)
             .pipe(catchError(() => throwError(() => new Error('automatic-sign-in-failed')))),
         ),
       )

@@ -1,4 +1,5 @@
 import { RecipeReturnContext } from '../../../../core/layout/recipe-return-context';
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, OnInit, signal, viewChild } from '@angular/core';
 import { viewRecipeLabel } from '../../../../core/i18n/labels';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -29,6 +30,7 @@ import { SupermarketSend } from '../../../supermarkets/components/supermarket-se
 @Component({
   selector: 'app-shopping-list-page',
   imports: [
+    NgTemplateOutlet,
     PlanningCycleSwitcher,
     RouterLink,
     ShoppingListItemRow,
@@ -53,11 +55,6 @@ export class ShoppingListPage implements OnInit {
       : $localize`:@@groceries.itemCount:${count}:count: items`;
   }
   unconfirmedMealsMessage(count: number): string {
-    if (this.cycleStore.currentCycle()?.nextPlanningCycleId) {
-      return count === 1
-        ? $localize`:@@groceries.oneMealWasNotReviewed:Groceries for 1 meal were not reviewed.`
-        : $localize`:@@groceries.mealsWereNotReviewed:Groceries for ${count}:count: meals were not reviewed.`;
-    }
     return count === 1
       ? $localize`:@@groceries.oneMealNeedsReview:Groceries for 1 meal haven't been reviewed yet.`
       : $localize`:@@groceries.mealsNeedReview:Groceries for ${count}:count: meals haven't been reviewed yet.`;
@@ -334,10 +331,19 @@ export class ShoppingListPage implements OnInit {
       ? this.shoppingListStore.addMealItem(cycleId, mealId, edit.name, edit.quantity)
       : this.shoppingListStore.addManualItem(cycleId, edit.name, edit.quantity);
     request.pipe(finalize(() => this.addingItem.set(false))).subscribe({
-      next: () => {
-        if (session !== this.itemEditorSession) return;
+      next: ({ refreshFailed }) => {
+        if (session !== this.itemEditorSession || this.cycleStore.currentCycle()?.id !== cycleId)
+          return;
         this.itemEditor().close();
         this.addingToMealId.set(null);
+        if (refreshFailed) {
+          this.loadError.set(
+            $localize`:@@shoppingList.page.theGroceriesListCouldNotBeLoaded:The shopping list could not be loaded. Please try again.`,
+          );
+          this.toast.success(
+            $localize`:@@shoppingList.itemAddedRefreshFailed:Item added. Retry loading the list to see it.`,
+          );
+        } else this.loadError.set(null);
       },
       error: (error: unknown) => {
         if (session !== this.itemEditorSession) return;

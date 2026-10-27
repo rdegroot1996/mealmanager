@@ -2,7 +2,6 @@ using System.Text.Json;
 using MealManager.Common.Enums;
 using MealManager.Common.Errors;
 using MealManager.Domain.Contracts;
-using MealManager.Domain.Entities;
 using MealManager.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

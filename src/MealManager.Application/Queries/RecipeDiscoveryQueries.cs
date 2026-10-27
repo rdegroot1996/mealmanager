@@ -1,7 +1,7 @@
 using MealManager.Application.Mapping;
-using MealManager.Domain.Entities;
 using MealManager.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
+using System.Text.RegularExpressions;
 
 namespace MealManager.Application.Queries;
 
@@ -22,8 +22,8 @@ public sealed class RecipeDiscoveryQueries(ApplicationDbContext dbContext)
         }
         if (!string.IsNullOrWhiteSpace(options.Search))
         {
-            var search = options.Search.Trim();
-            query = query.Where(recipe => recipe.Name.Contains(search));
+            var search = "(?i)" + Regex.Escape(options.Search.Trim());
+            query = query.Where(recipe => Regex.IsMatch(recipe.Name, search));
         }
         if (options.Favorite.HasValue) query = query.Where(recipe => recipe.IsFavorite == options.Favorite);
         var today = DateOnly.FromDateTime(DateTime.Today);

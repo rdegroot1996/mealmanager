@@ -22,7 +22,6 @@ export class PlannedMealRow {
   originalWeekday = input<string | null>(null);
   meal = input.required<ApiPlannedEntry>();
   disabled = input(false);
-  readOnly = input(false);
   groceriesRequested = output<void>();
   profileRequested = output<void>();
   leftoversRequested = output<void>();

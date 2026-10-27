@@ -96,7 +96,7 @@ public class LocalImageStorage : IImageStorage, IDisposable
         if (image.HasAlpha)
         {
             image.BackgroundColor = MagickColors.White;
-            image.Alpha(AlphaOption.Remove);
+            image.Alpha(AlphaAction.Remove);
         }
 
         image.Strip();
@@ -108,7 +108,7 @@ public class LocalImageStorage : IImageStorage, IDisposable
 
     private static void ValidatePixelCount(long width, long height)
     {
-        if (width == 0 || height == 0 || (long)width * height > MaximumPixelCount)
+        if (width == 0 || height == 0 || width * height > MaximumPixelCount)
         {
             throw new InvalidOperationError(message: "Upload an image with no more than 40 megapixels.");
         }

@@ -39,3 +39,13 @@ The [Dockerfile](../src/MealManager.Api/Dockerfile) builds the frontend and API 
 Persist `/app/data` containing `meal-manager.db`, `recipe-images`, and `data-protection-keys`. `Storage__DataRoot` overrides the root. Preserving keys keeps valid sessions across restarts.
 
 For backup, stop the container and copy the complete data volume; restore it as one unit. Live file-by-file copies are inconsistent.
+
+## Administrator recovery
+
+Run against the existing container and data volume:
+
+```sh
+docker exec -it <mealmanager-container> dotnet MealManager.Api.dll recover-admin admin@example.com
+```
+
+The command privately prompts for a temporary password, clears lockout, and revokes existing sessions. It preserves household data and roles. Sign in and choose a different password to continue. Passwords can also arrive through private stdin; keep them out of command arguments and shell history. Non-container deployments run the same command from the application directory with their normal configuration.

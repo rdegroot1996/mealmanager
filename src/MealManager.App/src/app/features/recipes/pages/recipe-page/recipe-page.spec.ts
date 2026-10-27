@@ -111,6 +111,28 @@ describe('RecipePage', () => {
     expect(fixture.nativeElement.textContent).toContain('Retry');
   });
 
+  it.each(['profile-2', 'missing-profile'])(
+    'opens the requested profile or explains its fallback: %s',
+    (requested) => {
+      vi.spyOn(component.activatedRoute.snapshot.paramMap, 'get').mockReturnValue('recipe-1');
+      vi.spyOn(component.activatedRoute.snapshot.queryParamMap, 'get').mockReturnValue(requested);
+      const error = vi.spyOn(component.toast, 'error');
+      component.loadRecipe();
+      const recipe = createRecipe();
+      http.expectOne('/api/recipes/recipe-1').flush(recipe);
+      const selected = requested === 'profile-2' ? 'profile-2' : 'profile-1';
+      http
+        .expectOne('/api/recipe-profiles/' + selected)
+        .flush(recipe.profiles.find((profile) => profile.id === selected)!);
+      expect(component.selectedProfileId()).toBe(selected);
+      if (requested === 'missing-profile')
+        expect(error).toHaveBeenCalledWith(
+          'The selected profile is no longer available. Showing the default profile.',
+        );
+      else expect(error).not.toHaveBeenCalled();
+    },
+  );
+
   it('does not remove a recipe when confirmation is cancelled', async () => {
     component.recipeStore.activeRecipe.set(createRecipe());
     fixture.detectChanges();

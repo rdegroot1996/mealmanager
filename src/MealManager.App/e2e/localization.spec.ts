@@ -1,22 +1,8 @@
 import { expect, test } from './test';
+import { createCycle } from './api';
 
 test('language choice persists across reloads without changing routes', async ({ page }) => {
-  const session = await (await page.request.get('/api/authentication/session')).json();
-  const today = await page.evaluate(() => {
-    const date = new Date();
-    return [
-      date.getFullYear(),
-      String(date.getMonth() + 1).padStart(2, '0'),
-      String(date.getDate()).padStart(2, '0'),
-    ].join('-');
-  });
-  const cycle = await page.request.post('/api/planning-cycles', {
-    headers: { 'X-XSRF-TOKEN': session.antiforgeryToken },
-    data: { startDate: today, endDate: today },
-  });
-  expect(cycle.ok()).toBe(true);
-  await expect(page.getByRole('link', { name: 'Planner', exact: true })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Shopping list', exact: true })).toBeVisible();
+  await createCycle(page, 0, 1);
   await page.getByRole('button', { name: 'Open account menu' }).click();
   await page.getByRole('combobox', { name: 'Language' }).selectOption('nl-NL');
 

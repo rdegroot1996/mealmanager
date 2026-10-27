@@ -20,6 +20,7 @@ public class UserQueries(
                 Id = u.Id,
                 Email = u.UserName!,
                 DisplayName = u.DisplayName,
+                MustChangePassword = u.MustChangePassword,
                 IsAdmin = dbContext.UserRoles
                     .Any(ur => ur.UserId == u.Id && dbContext.Roles
                         .Any(r => r.Id == ur.RoleId && r.Name == UserRoles.Admin)),
@@ -38,6 +39,7 @@ public class UserQueries(
             Id = user.Id,
             Email = user.Email!,
             DisplayName = user.DisplayName,
+            MustChangePassword = user.MustChangePassword,
             IsAdmin = isAdmin,
         };
     }

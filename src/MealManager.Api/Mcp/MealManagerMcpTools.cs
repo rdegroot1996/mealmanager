@@ -266,12 +266,12 @@ public sealed class MealManagerMcpTools(
         }));
 
     [McpServerTool(Name = "plan_meal", Title = "Plan meal", ReadOnly = false, Destructive = false, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Add a recipe and profile to an explicit date in the active planning cycle. This never adds groceries; grocery review is a separate deliberate action.")]
+    [Description("Add a recipe and profile to an explicit date in the selected planning cycle, including history. Omit cycleId to target the active cycle. This never adds groceries; grocery review is a separate deliberate action.")]
     public Task<PlannedEntryDto> PlanMeal(
         [Description("Recipe identifier.")] Guid recipeId,
         [Description("Profile identifier belonging to the recipe.")] Guid profileId,
-        [Description("Date inside the active planning cycle.")] DateOnly date,
-        [Description("Optional explicit active cycle identifier. Omit for the current active cycle; historical writes are rejected.")] Guid? cycleId = null) =>
+        [Description("Date inside the selected planning cycle.")] DateOnly date,
+        [Description("Optional explicit cycle identifier, including a historical cycle. Omit for the current active cycle.")] Guid? cycleId = null) =>
         Execute(async () =>
         {
             var cycle = cycleId.HasValue ? await planningCycleQueries.GetPlanningCycle(cycleId.Value) : await planningCycleQueries.GetCurrentPlanningCycle();

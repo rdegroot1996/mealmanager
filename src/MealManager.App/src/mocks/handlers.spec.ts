@@ -11,7 +11,7 @@ describe('mock meal plan contracts', () => {
       headers: { 'Content-Type': 'application/json' },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
-  beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+  beforeAll(() => server.listen({ onUnhandledFrame: 'error' }));
   beforeEach(() => resetMockData());
   afterAll(() => server.close());
 
@@ -65,12 +65,65 @@ describe('mock meal plan contracts', () => {
     expect((await api('/api/shopping-lists/cycle/missing')).status).toBe(404);
   });
 
-  it('rejects historical meal plan mutations while keeping historical shopping editable', async () => {
+  it('trims recipe search and treats punctuation as literal text', async () => {
+    const source = await (await api('/api/recipes/r1')).json();
+    const changed = await api('/api/recipes/r1', 'PUT', {
+      ...source,
+      name: 'Één %_.*[ dish',
+      tags: [],
+    });
+    expect(changed.status).toBe(200);
+    const matches = await (
+      await api('/api/recipes?search=' + encodeURIComponent('  éÉN %_.*[  '))
+    ).json();
+    expect(matches.map((recipe: { id: string }) => recipe.id)).toEqual(['r1']);
+  });
+
+  it('requires replacement after an administrator reset before household access', async () => {
+    const created = await api('/api/users', 'POST', {
+      displayName: 'Member',
+      email: 'member@example.test',
+      password: 'Member123!',
+      isAdmin: false,
+    });
+    const member = await created.json();
+    expect(
+      (
+        await api(`/api/users/${member.id}/reset-password`, 'POST', {
+          temporaryPassword: 'Temporary123!',
+        })
+      ).status,
+    ).toBe(204);
+    expect(
+      (
+        await api('/api/authentication/login', 'POST', {
+          email: member.email,
+          password: 'Temporary123!',
+        })
+      ).status,
+    ).toBe(204);
+    expect(await (await api('/api/users/me')).json()).toMatchObject({ mustChangePassword: true });
+    const blocked = await api('/api/recipes');
+    expect(blocked.status).toBe(403);
+    expect(await blocked.json()).toMatchObject({ code: 'PasswordChangeRequired' });
+    expect((await api('/api/users/me', 'PUT', { displayName: 'Blocked' })).status).toBe(403);
+    expect(
+      (
+        await api('/api/authentication/change-password', 'POST', {
+          currentPassword: 'Temporary123!',
+          newPassword: 'Personal123!',
+        })
+      ).status,
+    ).toBe(204);
+    expect((await api('/api/recipes')).status).toBe(200);
+  });
+
+  it('allows historical content and shopping edits while retaining cycle structure protection', async () => {
     expect((await api('/api/planning-cycles/c1', 'DELETE')).status).toBe(400);
     expect(
       (await api('/api/planned-meals/m-prev-1/groceries', 'POST', { groceries: [] })).status,
-    ).toBe(400);
-    expect((await api('/api/planned-meals/m-prev-1', 'DELETE')).status).toBe(400);
+    ).toBe(201);
+    expect((await api('/api/planned-meals/m-prev-1', 'DELETE')).status).toBe(204);
     expect(
       (await api('/api/shopping-lists/cycle/c1/items', 'POST', { name: 'Milk', quantity: 1 }))
         .status,

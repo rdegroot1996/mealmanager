@@ -11,6 +11,7 @@
 
     <app-form-field
       controlId="login-email"
+      [error]="fieldError('email')"
       i18n-label="@@common.email"
       label="Email"
       [required]="true"
@@ -18,6 +19,9 @@
       <input
         class="input w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
         id="login-email"
+        [disabled]="loading()"
+        [attr.aria-invalid]="!!fieldError('email')"
+        [attr.aria-describedby]="fieldError('email') ? 'login-email-error' : null"
         type="email"
         name="email"
         i18n-aria-label="@@common.email"
@@ -30,6 +34,7 @@
 
     <app-form-field
       controlId="login-password"
+      [error]="fieldError('password')"
       i18n-label="@@common.password"
       label="Password"
       [required]="true"
@@ -37,6 +42,9 @@
       <input
         class="input w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
         id="login-password"
+        [disabled]="loading()"
+        [attr.aria-invalid]="!!fieldError('password')"
+        [attr.aria-describedby]="fieldError('password') ? 'login-password-error' : null"
         type="password"
         name="password"
         i18n-aria-label="@@common.password"
@@ -60,4 +68,7 @@
       }
     </button>
   </form>
+  <p class="mt-4 text-sm text-base-content/75" i18n="@@authentication.passwordRecoveryHelp">
+    Forgot your password? Ask a household administrator to reset it.
+  </p>
 </app-auth-shell>

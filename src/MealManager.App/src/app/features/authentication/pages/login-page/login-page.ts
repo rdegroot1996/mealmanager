@@ -5,6 +5,7 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import { ConfigService } from '../../../../core/config/config.service';
 import { AuthShell } from '../../../../shared/components/auth-shell/auth-shell';
 import { FormField } from '../../../../shared/components/form-field/form-field';
+import { emailError, focusInvalidControl } from '../../authentication-validation';
 
 @Component({
   selector: 'app-login-page',
@@ -20,6 +21,15 @@ export class LoginPage implements OnInit {
   password = '';
   error = signal('');
   loading = signal(false);
+  attempted = signal(false);
+  fieldError(field: string): string | null {
+    if (!this.attempted()) return null;
+    return field === 'email'
+      ? emailError(this.email)
+      : this.password
+        ? null
+        : $localize`:@@authentication.passwordRequired:Enter your password.`;
+  }
 
   ngOnInit() {
     this.config.getConfig().subscribe({
@@ -34,12 +44,22 @@ export class LoginPage implements OnInit {
   }
 
   submit() {
+    if (this.loading()) return;
     this.error.set('');
+    this.attempted.set(true);
+    const invalid = ['email', 'password'].filter((field) => this.fieldError(field));
+    if (invalid.length) {
+      focusInvalidControl(invalid.map((field) => 'login-' + field));
+      return;
+    }
     this.loading.set(true);
-    this.auth.login(this.email, this.password).subscribe({
+    this.auth.login(this.email.trim(), this.password).subscribe({
       next: (authenticated) => {
         this.loading.set(false);
-        if (authenticated) void this.router.navigate(['/']);
+        if (authenticated)
+          void this.router.navigate([
+            this.auth.currentUser()?.mustChangePassword ? '/change-password' : '/',
+          ]);
         else
           this.error.set(
             $localize`:@@authentication.loginPage.signInCouldNotBeConfirmedPlease:Sign-in could not be confirmed. Please retry.`,

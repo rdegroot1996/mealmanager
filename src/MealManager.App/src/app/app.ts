@@ -32,9 +32,9 @@ export class App {
   pageTitle = signal($localize`:@@navigation.dashboard:Dashboard`);
   pageOwnsHeading = signal(false);
 
-  private recipeReturnContext = inject(RecipeReturnContext);
-
   constructor() {
+    // Start listening before the initial route so recipe return positions are retained.
+    inject(RecipeReturnContext);
     this.updatePageTitle();
     this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
@@ -51,6 +51,11 @@ export class App {
         void this.router.navigate(['/login']);
       },
     });
+  }
+
+  skipToContent(event: Event) {
+    event.preventDefault();
+    document.getElementById('main-content')?.focus();
   }
 
   menuItems: AppNavigationItem[] = [

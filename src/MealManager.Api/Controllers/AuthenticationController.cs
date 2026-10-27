@@ -58,4 +58,15 @@ public class AuthenticationController : ControllerBase
         await signInManager.SignOutAsync();
         return NoContent();
     }
+
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword(
+        [FromBody] ChangePasswordDto command,
+        [FromServices] PasswordCommands commands,
+        [FromServices] SignInManager<User> signInManager)
+    {
+        var user = await commands.ChangePassword(command);
+        await signInManager.RefreshSignInAsync(user);
+        return NoContent();
+    }
 }

@@ -81,18 +81,6 @@
   </div>
 }
 
-@if (isHistorical()) {
-  <div
-    class="rounded-field bg-accent text-accent-content flex items-start gap-3 px-4 py-3 mb-6 text-sm leading-[21px]"
-    role="status"
-  >
-    <app-icon name="lock" class="mt-0.5 size-5 shrink-0" />
-    <span i18n="@@planner.plannerPage.template.historicalPlanningIsReadOnly"
-      >Historical meal plan is read-only.</span
-    >
-  </div>
-}
-
 @if (loading()) {
   <app-loading-indicator
     i18n-message="@@planner.plannerPage.template.messageLoadingPlanner"
@@ -129,7 +117,6 @@
       <div class="min-w-0">
         <section
           class="planning-day relative grid min-w-0 grid-cols-1 overflow-visible app-surface min-[800px]:grid-cols-[minmax(150px,max-content)_minmax(0,1fr)] min-[800px]:gap-x-7 min-[800px]:px-5 min-[800px]:pt-4 min-[800px]:pb-0 group/day"
-          [class]="isHistorical() ? 'min-[800px]:pb-4' : ''"
           data-testid="planning-day"
           [attr.data-is-today]="day.isToday"
           tabindex="-1"
@@ -171,18 +158,16 @@
                     class="min-w-0 flex-1 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                     >{{ note.text }}</span
                   >
-                  @if (!isHistorical()) {
-                    <button
-                      class="btn btn-ghost btn-square size-11 min-h-11 shrink-0 min-[800px]:size-8 min-[800px]:min-h-8 [@media(pointer:coarse)]:size-11 [@media(pointer:coarse)]:min-h-11"
-                      type="button"
-                      [disabled]="mutationPending()"
-                      (click)="editNote(note)"
-                      aria-label="Edit note"
-                      i18n-aria-label="@@planner.plannerPage.editNote"
-                    >
-                      <app-icon name="edit" class="size-4" />
-                    </button>
-                  }
+                  <button
+                    class="btn btn-ghost btn-square size-11 min-h-11 shrink-0 min-[800px]:size-8 min-[800px]:min-h-8 [@media(pointer:coarse)]:size-11 [@media(pointer:coarse)]:min-h-11"
+                    type="button"
+                    [disabled]="mutationPending()"
+                    (click)="editNote(note)"
+                    aria-label="Edit note"
+                    i18n-aria-label="@@planner.plannerPage.editNote"
+                  >
+                    <app-icon name="edit" class="size-4" />
+                  </button>
                 </div>
               </div>
             }
@@ -201,7 +186,6 @@
                 <app-planned-meal-row
                   [meal]="meal"
                   [originalWeekday]="originalWeekday(meal)"
-                  [readOnly]="isHistorical()"
                   [disabled]="mutationPending()"
                   (groceriesRequested)="openGroceriesModal(meal)"
                   (profileRequested)="changeProfile(meal)"
@@ -213,30 +197,28 @@
             }
           </div>
 
-          @if (!isHistorical()) {
-            <footer
-              class="planning-day-actions mx-4 mt-3 flex items-center justify-between border-t border-base-300 py-1 min-[800px]:col-span-2 min-[800px]:mx-0 order-last"
+          <footer
+            class="planning-day-actions mx-4 mt-3 flex items-center justify-between border-t border-base-300 py-1 min-[800px]:col-span-2 min-[800px]:mx-0 order-last"
+          >
+            <button
+              type="button"
+              class="btn btn-ghost btn-sm min-h-11 px-0 font-normal text-secondary-content"
+              [disabled]="mutationPending()"
+              (click)="openAddMeal(day.date)"
             >
-              <button
-                type="button"
-                class="btn btn-ghost btn-sm min-h-11 px-0 font-normal text-secondary-content"
-                [disabled]="mutationPending()"
-                (click)="openAddMeal(day.date)"
-              >
-                <app-icon name="add" class="size-4" />
-                <ng-container i18n="@@planner.plannerPage.addMeal">Add meal</ng-container>
-              </button>
-              <button
-                type="button"
-                class="btn btn-ghost btn-sm min-h-11 px-0 font-normal text-secondary-content"
-                [disabled]="mutationPending()"
-                (click)="addNote(day.date)"
-              >
-                <app-icon name="add" class="size-4" />
-                <ng-container i18n="@@planner.plannerPage.addNote">Add note</ng-container>
-              </button>
-            </footer>
-          }
+              <app-icon name="add" class="size-4" />
+              <ng-container i18n="@@planner.plannerPage.addMeal">Add meal</ng-container>
+            </button>
+            <button
+              type="button"
+              class="btn btn-ghost btn-sm min-h-11 px-0 font-normal text-secondary-content"
+              [disabled]="mutationPending()"
+              (click)="addNote(day.date)"
+            >
+              <app-icon name="add" class="size-4" />
+              <ng-container i18n="@@planner.plannerPage.addNote">Add note</ng-container>
+            </button>
+          </footer>
         </section>
       </div>
     }

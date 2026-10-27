@@ -1,4 +1,3 @@
-using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.AspNetCore.Identity;
 

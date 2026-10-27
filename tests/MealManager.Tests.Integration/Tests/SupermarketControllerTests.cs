@@ -1,9 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Text.Json;
 using MealManager.Application.DTO;
+using MealManager.Application.Queries;
 using MealManager.Common.Enums;
-using MealManager.Domain.Entities;
 using MealManager.Infrastructure.Database;
 using MealManager.Infrastructure.Supermarkets;
 using MealManager.Tests.Integration.Configuration;
@@ -308,7 +307,7 @@ public class SupermarketControllerTests(CustomWebApplicationFactory factory) : T
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         (await db.PlanningCycles.SingleAsync()).StartDate = new(2030, 1, 1);
-        var queries = scope.ServiceProvider.GetRequiredService<MealManager.Application.Queries.SupermarketQueries>();
+        var queries = scope.ServiceProvider.GetRequiredService<SupermarketQueries>();
         await queries.Search(SupermarketProvider.Picnic, "wok", default);
         Assert.NotEqual(initial, (await Settings()).ProtectedToken);
         var searches = await Task.WhenAll(HttpClient.GetAsync("/api/supermarkets/picnic/products?query=wok"), HttpClient.GetAsync("/api/supermarkets/picnic/products?query=melk"));

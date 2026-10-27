@@ -48,7 +48,6 @@ public class PlanningDayNoteCommands(ApplicationDbContext dbContext, PlanningCyc
                 .Where(p => p.Notes.Any(n => n.Id == id))
                 .FirstOrDefaultAsync()
          ?? throw new NotFoundError(nameof(PlanningDayNote));
-        await cycleAccess.EnsureEditable(mealPlan.PlanningCycleId);
         var note = mealPlan.Notes.First(n => n.Id == id);
 
         dbContext.Remove(note);
@@ -62,7 +61,6 @@ public class PlanningDayNoteCommands(ApplicationDbContext dbContext, PlanningCyc
                 .Where(p => p.Notes.Any(n => n.Id == id))
                 .FirstOrDefaultAsync()
          ?? throw new NotFoundError(nameof(PlanningDayNote));
-        await cycleAccess.EnsureEditable(mealPlan.PlanningCycleId);
         var note = mealPlan.Notes.First(n => n.Id == id);
 
         note.Text = command.Text;

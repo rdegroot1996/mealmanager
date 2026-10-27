@@ -4,7 +4,7 @@ Angular frontend, served by the ASP.NET Core backend in production.
 
 ## Run
 
-Requires Node.js 22.22.3+ or 24.15.0+ and npm 12 (project version: 12.0.2).
+Requires Node.js 22.22.3+ or 24.15.0+ and npm 12 (project version: 12.2.1).
 From this directory:
 
 ```powershell
@@ -25,7 +25,12 @@ npm test
 npm run build
 ```
 
-Browser E2E requires Docker: install Chromium with `npm run test:e2e:install`, then run `npm run test:e2e`.
+Browser E2E requires Docker: install Chromium with `npm run test:e2e:install`.
+
+```powershell
+npm run test:e2e             # User journeys
+npm run test:e2e:deployment  # Backup/restore and production assets
+```
 
 ## Guides
 

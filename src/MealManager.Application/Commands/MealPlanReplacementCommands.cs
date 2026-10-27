@@ -19,7 +19,7 @@ public sealed class MealPlanReplacementCommands(
         await applyValidator.ValidateAndThrowAsync(command);
         return await InTransaction(async () =>
         {
-            await cycleAccess.EnsureEditable(command.CycleId);
+            await cycleAccess.EnsureActive(command.CycleId);
             await CheckVersion(command.ExpectedMealPlanVersion);
             var cycle = await dbContext.PlanningCycles.SingleAsync(item => item.Id == command.CycleId);
             var mealPlan = await dbContext.MealPlans.Include(item => item.Entries).Include(item => item.Notes)

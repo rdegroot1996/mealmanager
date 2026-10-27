@@ -48,6 +48,7 @@
     <a
       class="absolute inset-0 rounded-box focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       [routerLink]="link"
+      [queryParams]="recipeProfileId() ? { profile: recipeProfileId() } : null"
       [attr.aria-label]="viewRecipeLabel(name())"
     ></a>
   }

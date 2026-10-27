@@ -33,6 +33,7 @@ describe('AuthService', () => {
       email: 'user@example.com',
       displayName: 'User',
       isAdmin: false,
+      mustChangePassword: false,
     });
     expect(auth.isAuthenticated()).toBe(true);
     expect(auth.currentUser()?.displayName).toBe('User');
@@ -48,5 +49,17 @@ describe('AuthService', () => {
 
     expect(auth.isAuthenticated()).toBe(false);
     expect(auth.currentUser()).toBeNull();
+  });
+
+  it('acknowledges a changed password when refreshing the session fails', () => {
+    const result = vi.fn();
+    auth.changePassword('Temporary123!', 'Personal123!').subscribe(result);
+    http.expectOne('/api/authentication/change-password').flush(null);
+    http
+      .expectOne('/api/authentication/session')
+      .flush(null, { status: 503, statusText: 'Unavailable' });
+    expect(result).toHaveBeenCalledExactlyOnceWith(false);
+    expect(auth.isAuthenticated()).toBe(false);
+    http.expectNone('/api/authentication/change-password');
   });
 });
