@@ -1,7 +1,6 @@
 using MealManager.Application.DTO.Mcp;
 using MealManager.Application;
 using MealManager.Application.Commands;
-using MealManager.Application.DTO;
 using MealManager.Application.Queries;
 using MealManager.Common.Errors;
 using MealManager.Infrastructure.Database;

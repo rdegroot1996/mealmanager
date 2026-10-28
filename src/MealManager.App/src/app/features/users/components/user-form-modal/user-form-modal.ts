@@ -9,13 +9,16 @@ import { ConfirmationModal } from '../../../../shared/components/confirmation-mo
 import { apiErrorMessage } from '../../../../shared/services/api-error-message';
 import { ToastService } from '../../../../shared/services/toast.service';
 import { UsersStore } from '../../state/users.store';
+import { newPasswordError, passwordHint } from '../../../authentication/authentication-validation';
+import { ResetPasswordModal } from '../reset-password-modal/reset-password-modal';
 
 @Component({
   selector: 'app-user-form-modal',
-  imports: [ConfirmationModal, AppIcon, FormsModule, Modal, FormField],
+  imports: [ConfirmationModal, AppIcon, FormsModule, Modal, FormField, ResetPasswordModal],
   templateUrl: './user-form-modal.html',
 })
 export class UserFormModal {
+  readonly passwordHint = passwordHint;
   private savedDraft = '';
   readonly discardModal = viewChild.required<ConfirmationModal>('discardModal');
   readonly beforeDismiss = () =>
@@ -89,10 +92,9 @@ export class UserFormModal {
       this.error.set($localize`:@@users.userFormModal.enterAnEmailAddress:Enter an email address.`);
       return;
     }
-    if (!this.isEdit() && this.password().length < 6) {
-      this.error.set(
-        $localize`:@@users.userFormModal.passwordMustContainAtLeast6Characters:Password must contain at least 6 characters.`,
-      );
+    const passwordError = !this.isEdit() ? newPasswordError(this.password()) : null;
+    if (passwordError) {
+      this.error.set(passwordError);
       return;
     }
 

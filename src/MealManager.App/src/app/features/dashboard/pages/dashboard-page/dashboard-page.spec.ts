@@ -4,6 +4,7 @@ import { DashboardPage, timeOfDayGreeting } from './dashboard-page';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { AuthService } from '../../../../core/auth/auth.service';
 
 describe('DashboardPage', () => {
   let component: DashboardPage;
@@ -27,7 +28,29 @@ describe('DashboardPage', () => {
   it('uses a short heading with the greeting beneath it', () => {
     expect(fixture.nativeElement.querySelector('h1').textContent.trim()).toBe('Welcome home');
     expect(fixture.nativeElement.querySelector('h1 + p').textContent.trim()).toBe(
-      component.greeting,
+      component.greeting(),
+    );
+  });
+
+  it('updates the greeting with the signed-in user’s full display name', async () => {
+    const auth = TestBed.inject(AuthService);
+    auth.currentUser.set({
+      id: 'user-1',
+      email: 'alex@example.test',
+      displayName: 'Alex van Dijk',
+      isAdmin: false,
+      mustChangePassword: false,
+    });
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('h1 + p').textContent.trim()).toBe(
+      timeOfDayGreeting(new Date().getHours(), 'Alex van Dijk'),
+    );
+
+    auth.currentUser.set(null);
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('h1 + p').textContent.trim()).toBe(
+      timeOfDayGreeting(new Date().getHours()),
     );
   });
 
@@ -43,6 +66,19 @@ describe('DashboardPage', () => {
     [23, 'Good evening 👋'],
   ])('greets at hour %s', (hour, greeting) => {
     expect(timeOfDayGreeting(hour as number)).toBe(greeting);
+  });
+
+  it.each([
+    [0, 'Good night, Alex van Dijk 👋'],
+    [6, 'Good morning, Alex van Dijk 👋'],
+    [12, 'Good afternoon, Alex van Dijk 👋'],
+    [18, 'Good evening, Alex van Dijk 👋'],
+  ])('greets the user by name at hour %s', (hour, greeting) => {
+    expect(timeOfDayGreeting(hour as number, ' Alex van Dijk ')).toBe(greeting);
+  });
+
+  it('keeps the generic greeting for a blank display name', () => {
+    expect(timeOfDayGreeting(12, '   ')).toBe('Good afternoon 👋');
   });
 
   it('orders upcoming meals directly after active meal plan', () => {

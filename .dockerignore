@@ -1,5 +1,6 @@
 .git
 .vs
+artifacts
 .npm-cache
 .agents
 .codex

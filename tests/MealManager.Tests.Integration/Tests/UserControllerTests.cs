@@ -64,6 +64,20 @@ public class UserControllerTests(CustomWebApplicationFactory factory) : TestWebA
         Assert.False(user.IsAdmin);
     }
 
+    [Theory]
+    [InlineData("abcdef")]
+    [InlineData("ABC123!")]
+    [InlineData("Abcdef!")]
+    [InlineData("Äbc123!")]
+    public async Task CreateUser_EnforcesIdentityPasswordPolicy(string password)
+    {
+        var response = await HttpClient.PostAsJsonAsync("/api/users", new CreateUserDto
+        { Email = "member@example.test", DisplayName = "Member", Password = password, IsAdmin = false });
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var users = (await HttpClient.GetFromJsonAsync<UserDto[]>("/api/users", JsonOptions))!;
+        Assert.Single(users);
+    }
+
     [Fact]
     public async Task CreateUser_DuplicateEmail_ReturnsBadRequest()
     {

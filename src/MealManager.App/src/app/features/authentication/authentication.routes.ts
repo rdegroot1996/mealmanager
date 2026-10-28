@@ -1,6 +1,17 @@
 import { Routes } from '@angular/router';
+import { authGuard } from '../../core/auth/auth.guard';
 
 export const AUTHENTICATION_ROUTES: Routes = [
+  {
+    path: 'change-password',
+    loadComponent: () =>
+      import('./pages/change-password-page/change-password-page').then(
+        ({ ChangePasswordPage }) => ChangePasswordPage,
+      ),
+    canActivate: [authGuard],
+    title: $localize`:@@authentication.changePassword:Change password`,
+    data: { pageOwnsHeading: true },
+  },
   {
     path: 'setup',
     loadComponent: () => import('./pages/setup-page/setup-page').then(({ SetupPage }) => SetupPage),

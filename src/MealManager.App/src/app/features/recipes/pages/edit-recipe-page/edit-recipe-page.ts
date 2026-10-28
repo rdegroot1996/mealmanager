@@ -131,9 +131,15 @@ export class EditRecipePage implements OnInit {
     }
   }
   @HostListener('input', ['$event'])
+  @HostListener('change', ['$event'])
   clearServerField(event: Event) {
     const id = (event.target as HTMLElement)?.id;
     this.serverErrors.update((errors) => errors.filter((error) => error.id !== id));
+    if (this.validationAttempted()) {
+      const issues = [...this.validateFields(this.recipe()!), ...this.serverErrors()];
+      this.validationIssues.set(issues);
+      this.validationErrors.set(issues.map((issue) => issue.message));
+    }
   }
   validationAttempted = signal(false);
   readonly ingredientLabel = $localize`:@@recipes.ingredient:ingredient`;

@@ -35,7 +35,7 @@ Read the functional overview before changing behaviour and the relevant technica
 
 ## Product invariants
 
-- Historical cycles are read-only in the Planner; their Shopping lists remain editable.
+- Historical meal plans and Shopping lists remain editable. Adding from a recipe page always targets the active cycle.
 - Adding a planned meal never adds groceries automatically. Grocery review is explicit and may confirm that nothing must be bought.
 - Changing a planned meal's recipe profile invalidates its grocery selection.
 - Deleting a planned meal removes its grocery selection and leftover relationships.

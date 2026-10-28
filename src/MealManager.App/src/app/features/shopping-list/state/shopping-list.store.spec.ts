@@ -114,4 +114,17 @@ describe('ShoppingListStore', () => {
       notes: [],
     });
   });
+
+  it('acknowledges a successful add even when its subsequent list refresh fails', () => {
+    const result = vi.fn();
+    store.addManualItem('cycle-1', 'Milk', 2).subscribe(result);
+    const add = http.expectOne('/api/shopping-lists/cycle/cycle-1/items');
+    expect(add.request.method).toBe('POST');
+    add.flush({ id: 'milk' });
+    const list = http.expectOne('/api/shopping-lists/cycle/cycle-1');
+    http.expectOne('/api/meal-plans/cycle/cycle-1');
+    list.flush({}, { status: 503, statusText: 'Unavailable' });
+    expect(result).toHaveBeenCalledExactlyOnceWith({ refreshFailed: true });
+    http.expectNone((request) => request.method === 'POST');
+  });
 });

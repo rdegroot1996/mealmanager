@@ -99,7 +99,6 @@ export class PlannerPage implements OnInit {
   canConfirmMove() {
     return (
       !!this.movingMeal() &&
-      !this.isHistorical() &&
       !this.mutationPending() &&
       this.cycleStore.currentCycle()?.id === this.moveCycleId &&
       this.moveDays().some((day) => day.date === this.moveDate())
@@ -107,7 +106,7 @@ export class PlannerPage implements OnInit {
   }
 
   openMoveMeal(meal: ApiPlannedEntry) {
-    if (this.isHistorical() || this.mutationPending()) return;
+    if (this.mutationPending()) return;
     this.moveCycleId = this.cycleStore.currentCycle()?.id;
     this.movingMeal.set(meal);
     this.moveDate.set(meal.date);
@@ -150,10 +149,7 @@ export class PlannerPage implements OnInit {
     this.resumeDraft = null;
     afterNextRender(
       () => {
-        if (
-          this.isHistorical() ||
-          !this.mealPlanStore.days().some((day) => day.date === draft.date)
-        ) {
+        if (!this.mealPlanStore.days().some((day) => day.date === draft.date)) {
           this.toast.error(
             $localize`:@@planner.creationDestinationUnavailable:The original planning day is no longer editable. Choose another day to plan this recipe.`,
           );
@@ -236,7 +232,7 @@ export class PlannerPage implements OnInit {
   }
 
   openAddMeal(date: string) {
-    if (this.isHistorical() || this.mutationPending()) return;
+    if (this.mutationPending()) return;
     this.addMealModal()!.open(date);
   }
 
@@ -294,8 +290,20 @@ export class PlannerPage implements OnInit {
       });
   }
 
-  removeMeal(meal: ApiPlannedEntry) {
-    if (this.isHistorical() || this.mutationPending()) return;
+  async removeMeal(meal: ApiPlannedEntry) {
+    if (this.mutationPending()) return;
+    const cycleId = this.cycleStore.currentCycle()?.id;
+    if (meal.kind === 'Meal') {
+      const confirmed = await this.confirmationModal().open({
+        title: $localize`:@@planner.confirmRemoveMealTitle:Remove planned meal?`,
+        message: $localize`:@@planner.confirmRemoveMeal:Remove "${meal.recipe.name}:recipeName:" and its shopping selection? Any leftovers linked to this meal will also be removed.`,
+        confirmLabel: $localize`:@@planner.plannedMealRow.removeMeal:Remove meal`,
+        destructive: true,
+      });
+      if (!confirmed || this.mutationPending() || this.cycleStore.currentCycle()?.id !== cycleId)
+        return;
+    }
+    if (!this.mealPlanStore.activeMealPlan()?.entries.some((entry) => entry.id === meal.id)) return;
     this.mutationPending.set(true);
     this.mealPlanStore
       .removeMeal(meal.id)
@@ -312,27 +320,27 @@ export class PlannerPage implements OnInit {
   }
 
   planLeftovers(meal: ApiPlannedEntry) {
-    if (this.isHistorical() || this.mutationPending()) return;
+    if (this.mutationPending()) return;
     this.planLeftoversModal()!.open(meal);
   }
 
   changeProfile(meal: ApiPlannedEntry) {
-    if (this.isHistorical() || this.mutationPending()) return;
+    if (this.mutationPending()) return;
     this.changeProfileModal()!.open(meal);
   }
 
   addNote(date: string) {
-    if (this.isHistorical() || this.mutationPending()) return;
+    if (this.mutationPending()) return;
     this.addNoteModal()!.open(date);
   }
 
   editNote(note: ApiPlanningDayNote) {
-    if (this.isHistorical() || this.mutationPending()) return;
+    if (this.mutationPending()) return;
     this.addNoteModal()!.open(note.date, note);
   }
 
   deleteNote(noteId: string) {
-    if (this.isHistorical() || this.mutationPending()) return;
+    if (this.mutationPending()) return;
     this.mutationPending.set(true);
     this.mealPlanStore
       .deleteNote(noteId)
@@ -349,12 +357,12 @@ export class PlannerPage implements OnInit {
   }
 
   openGroceriesModal(meal: ApiPlannedEntry) {
-    if (this.isHistorical() || this.mutationPending()) return;
+    if (this.mutationPending()) return;
     if (meal.kind === 'Meal') this.mealGroceryReviewModal()!.open(meal);
   }
 
   private moveMealTo(meal: ApiPlannedEntry, targetDate: string) {
-    if (this.isHistorical() || this.mutationPending()) return;
+    if (this.mutationPending()) return;
 
     if (!this.canMoveToDate(targetDate, meal)) {
       const message =

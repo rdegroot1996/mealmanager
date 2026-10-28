@@ -45,6 +45,20 @@ export class UsersStore {
       .pipe(tap(() => this.users.update((users) => users.filter((user) => user.id !== userId))));
   }
 
+  resetPassword(userId: string, temporaryPassword: string) {
+    return this.http
+      .post<void>(`/api/users/${userId}/reset-password`, { temporaryPassword })
+      .pipe(
+        tap(() =>
+          this.users.update((users) =>
+            users.map((user) =>
+              user.id === userId ? { ...user, mustChangePassword: true } : user,
+            ),
+          ),
+        ),
+      );
+  }
+
   private sort(users: ApiUser[]) {
     return [...users].sort((a, b) => a.displayName.localeCompare(b.displayName));
   }

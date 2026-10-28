@@ -37,6 +37,7 @@ public static class MealPlanMappingExtensions
                 .OrderBy(i => i.Order)
                 .Select(image => $"/api/recipes/{image.RecipeId}/images/{image.Id}")
                 .FirstOrDefault() ?? string.Empty,
+            RecipeProfileId = profile.Id,
             ProfileName = profile.Name,
             ProfileServings = profile.Servings,
         };

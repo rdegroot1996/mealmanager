@@ -21,12 +21,11 @@ For sparse requests such as “Plan our next cycle”, proactively discover hous
 
 Infer sensible cooking-ahead or bulk opportunities from profile servings and tags, and explain the assumption. Tags are hints, not guarantees of freezing suitability or available portions. Do not invent freezer inventory, create profiles, or increase servings without approval. Present the complete proposed dated plan, selected profiles/servings, and linked leftovers for approval before writing. Revisions remain conversational until approved, preserving unaffected choices.
 
-
 1. Read `get_active_meal_plan` for the current inclusive range, entries, notes, and `mealPlanVersion`; without a cycle, its version is `none`.
 2. Determine the requested dates and daily/cycle-wide requirements. Default a new cycle to the day after the previous end and the same length unless explicit dates override this. Clarify requirements that cannot be resolved from the request and household data.
 3. Read recent cycles, known tags, and suitable recipe context. Account for remaining active meals as well as prior cycles. Consider variety in ingredients, preparation, and recipe choices without claiming unsupported nutritional or freezing facts.
 4. Propose exact inclusive cycle dates and dated meals, profile servings, notes, and linked leftovers. Include meaningful alternatives where helpful. Show generated plans and corrections for approval before writes. Precise user requests authorize their corresponding edits; do not ask again for an already-approved proposal.
-5. Persist the complete agreed plan with `create_planning_cycle` for a new cycle or `apply_meal_plan` for the active cycle, using the read `mealPlanVersion`. Include all retained entries and notes, existing IDs, and unique client keys for new records. Omitted entries and notes are removed. Historical meal plans are read-only.
+5. Persist the complete agreed plan with `create_planning_cycle` for a new cycle or `apply_meal_plan` for the active cycle, using the read `mealPlanVersion`. Include all retained entries and notes, existing IDs, and unique client keys for new records. Omitted entries and notes are removed. Individual meals, leftovers, notes, and grocery reviews in historical cycles remain editable; whole-plan replacement targets the active cycle.
 6. Reconcile `MealPlanChanged` with a fresh read. If a response is lost, read before retrying: creation is not safely repeatable. After saving, briefly confirm the actual result.
 
 Example: “Tuesday we eat out, Wednesday cook for Thursday too, Friday cook bulk to freeze portions.” Tuesday uses a day note. Wednesday uses an appropriate larger profile, with Thursday a `Leftover` linked to Wednesday's original meal. Friday uses a suitable bulk profile; clarify or propose creating one if none fits. Freezer inventory is not tracked. Use recent cycles to avoid repeating the same meals every week and explain alternatives that still satisfy the requirements.
@@ -38,7 +37,6 @@ Treat an uncommitted proposal as conversational working state. For “something 
 Categories are Meals, Baking, Desserts, Snacks, and Other. Baking covers bread, cakes, cookies, and pastries, even when served as dessert. Breakfast/lunch/dinner occasions can be optional tags. Recipes may have no ingredients or steps: reusable choices such as freezer pizza or a snack platter can be simple recipes with a serving profile. Use day notes for occasional snack nights or eating out when no reusable meal or grocery group is needed.
 
 Preserve a supplied source reference or cooking tips in the optional plain-text Notes field (maximum 4000 characters). Do not add a separate source field or fetch URLs. In edits, omitted notes are preserved and an empty string clears them.
-
 
 1. Interpret the supplied text, image, or source into recipe fields and ordered rows. The client handles sources; MealManager does not fetch URLs or import source photos through MCP.
 2. Preserve supplied quantities and units. Missing quantities or units require clarification. Apply requested substitutions or omissions and use existing exact tags rather than creating synonyms.

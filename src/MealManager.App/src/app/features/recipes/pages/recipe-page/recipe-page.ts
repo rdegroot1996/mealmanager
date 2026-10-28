@@ -139,7 +139,15 @@ export class RecipePage implements OnInit {
         .loadRecipe(recipeId)
         .pipe(
           switchMap((recipe) => {
-            const initialProfile = recipe.profiles[0];
+            const requestedProfileId = this.activatedRoute.snapshot.queryParamMap.get('profile');
+            const requestedProfile = recipe.profiles.find(
+              (profile) => profile.id === requestedProfileId,
+            );
+            const initialProfile = requestedProfile ?? recipe.profiles[0];
+            if (requestedProfileId && !requestedProfile)
+              this.toast.error(
+                $localize`:@@recipes.requestedProfileUnavailable:The selected profile is no longer available. Showing the default profile.`,
+              );
             if (!initialProfile) {
               this.profile.set(null);
               this.selectedProfileId.set('');

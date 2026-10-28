@@ -2,6 +2,7 @@
 using MealManager.Domain.Entities;
 using MealManager.Infrastructure.Database;
 using MealManager.Infrastructure.Identity;
+using MealManager.Infrastructure.Supermarkets;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.DataProtection;
@@ -42,7 +43,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
     public async Task Reset()
     {
-        Services.GetRequiredService<MealManager.Infrastructure.Supermarkets.PicnicMockHandler>().Reset();
+        Services.GetRequiredService<PicnicMockHandler>().Reset();
         // Reset database
         using var scope = Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();

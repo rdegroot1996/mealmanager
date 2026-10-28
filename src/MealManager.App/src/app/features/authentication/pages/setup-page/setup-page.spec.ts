@@ -47,7 +47,7 @@ describe('SetupPage', () => {
     component.submit();
 
     expect(config.initialize).not.toHaveBeenCalled();
-    expect(component.error()).toBe('The passwords do not match.');
+    expect(component.fieldError('confirm-password')).toBe('The passwords do not match.');
   });
 
   it('creates the administrator, signs in, and opens the dashboard', () => {

@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { promisify } from 'node:util';
-import { expect, test } from './test';
+import { expect, test } from '../test';
 
 const execute = promisify(execFile);
 const compose = [

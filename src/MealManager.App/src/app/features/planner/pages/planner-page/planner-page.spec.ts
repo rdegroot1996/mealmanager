@@ -231,7 +231,7 @@ describe('PlannerPage', () => {
     expect(rows[2].querySelector('[data-testid="recipe-meal-meta"]')).toBeNull();
     expect(rows[2].querySelector('app-action-dialog')).not.toBeNull();
     expect(rows[2].querySelectorAll('app-action-dialog li button')).toHaveLength(2);
-    const remove = vi.spyOn(component, 'removeMeal').mockImplementation(() => {});
+    const remove = vi.spyOn(component, 'removeMeal').mockImplementation(async () => {});
     const removeLeftover = rows[2].querySelector(
       'app-action-dialog li:last-child button',
     ) as HTMLButtonElement;
@@ -250,7 +250,7 @@ describe('PlannerPage', () => {
     expect(rows[2].querySelector('[cdkDragHandle]')).toBeNull();
   });
 
-  it('shows historical meal review as status and omits editing controls', () => {
+  it('keeps historical meal reviews and editing controls available', () => {
     const unreviewed = createMeal('meal-1', '2026-08-20', false);
     const reviewed = createMeal('meal-2', '2026-08-20', false);
     reviewed.hasReviewedGroceries = true;
@@ -266,12 +266,12 @@ describe('PlannerPage', () => {
       '[data-testid="planning-timeline"]',
     ) as HTMLElement;
     const statuses = days.querySelectorAll('[data-testid="meal-status"]');
-    expect(statuses[0].textContent).toContain('Not reviewed');
+    expect(statuses[0].textContent).toContain('Review');
     expect(statuses[1].textContent).toContain('Reviewed');
-    expect(days.querySelector('button')).toBeNull();
-    expect(days.querySelector('.planning-day-actions')).toBeNull();
-    expect(days.querySelector('app-action-dialog')).toBeNull();
-    expect(days.querySelector('a[href="/recipes/recipe-1"]')).not.toBeNull();
+    expect(days.querySelector('button')).not.toBeNull();
+    expect(days.querySelector('.planning-day-actions')).not.toBeNull();
+    expect(days.querySelector('app-action-dialog')).not.toBeNull();
+    expect(days.querySelector('a[href^="/recipes/recipe-1?profile="]')).not.toBeNull();
   });
 
   it('opens the grocery dialog from the add-groceries button', () => {

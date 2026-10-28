@@ -1,5 +1,3 @@
-using FluentValidation;
-
 namespace MealManager.Application.Validators;
 
 public class UpdateShoppingListItemDtoValidator : AbstractValidator<UpdateShoppingListItemDto>

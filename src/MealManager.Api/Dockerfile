@@ -1,5 +1,5 @@
 # Stage 1: Build the frontend
-FROM node:22-slim AS frontend
+FROM node:24-slim AS frontend
 WORKDIR /src/MealManager.App
 COPY src/MealManager.App/package*.json ./
 RUN npm ci

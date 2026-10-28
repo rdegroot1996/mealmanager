@@ -47,7 +47,6 @@ export class PlanLeftoversModal {
   });
 
   open(meal: ApiPlannedEntry) {
-    if (this.cycleStore.currentCycle()?.nextPlanningCycleId) return;
     this.cycleId = this.cycleStore.currentCycle()?.id;
     ++this.session;
     this.meal.set(meal);
@@ -59,11 +58,7 @@ export class PlanLeftoversModal {
   }
 
   confirm() {
-    if (
-      this.cycleStore.currentCycle()?.nextPlanningCycleId ||
-      this.cycleStore.currentCycle()?.id !== this.cycleId
-    )
-      return;
+    if (this.cycleStore.currentCycle()?.id !== this.cycleId) return;
     const session = this.session;
     const meal = this.meal();
     const cycleId = this.cycleStore.currentCycle()?.id;

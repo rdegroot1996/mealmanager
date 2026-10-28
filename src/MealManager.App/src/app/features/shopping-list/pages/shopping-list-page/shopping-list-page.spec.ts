@@ -44,6 +44,7 @@ describe('ShoppingListPage', () => {
             id: 'meal',
             date: '2026-10-11',
             recipeId: 'recipe',
+            recipeProfileId: 'profile',
             recipeName: 'Pasta',
             recipeImageUrl: '',
             profileName: 'Family',
@@ -56,7 +57,9 @@ describe('ShoppingListPage', () => {
     component.loading.set(false);
     fixture.detectChanges();
     const mealGroup = fixture.nativeElement.querySelector('.app-grocery-group') as HTMLElement;
-    expect(mealGroup.querySelector('a')?.getAttribute('href')).toBe('/recipes/recipe');
+    expect(mealGroup.querySelector('a')?.getAttribute('href')).toBe(
+      '/recipes/recipe?profile=profile',
+    );
     expect(mealGroup.textContent).toContain('Family');
     expect(mealGroup.textContent).toContain('4');
     expect(mealGroup.textContent).toContain('No groceries needed for this meal.');
@@ -103,14 +106,9 @@ describe('ShoppingListPage', () => {
       previousPlanningCycleId: null,
       nextPlanningCycleId: null,
     });
-    const addMealItem = vi.spyOn(component.shoppingListStore, 'addMealItem').mockReturnValue(
-      of({
-        id: 'list-1',
-        planningCycleId: 'cycle-1',
-        mealGroups: [],
-        items: [],
-      }),
-    );
+    const addMealItem = vi
+      .spyOn(component.shoppingListStore, 'addMealItem')
+      .mockReturnValue(of({ refreshFailed: false }));
     const success = vi.spyOn(component.toast, 'success');
     vi.spyOn(component.itemEditor(), 'openNew').mockImplementation(() => {});
     component.startAddMealItem('meal-1');
@@ -146,6 +144,30 @@ describe('ShoppingListPage', () => {
     expect(component.addingToMealId()).toBeNull();
   });
 
+  it('renders the same Other items section once during failed reads and once after recovery', () => {
+    component.cycleStore.currentCycle.set({
+      id: 'cycle',
+      startDate: '2026-10-25',
+      endDate: '2026-10-31',
+      previousPlanningCycleId: null,
+      nextPlanningCycleId: null,
+    });
+    component.loading.set(false);
+    component.loadError.set('Offline');
+    fixture.detectChanges();
+    const groups = () =>
+      Array.from<HTMLElement>(
+        fixture.nativeElement.querySelectorAll('section.app-grocery-group'),
+      ).filter((section) => section.querySelector('h2')?.textContent?.trim() === 'Other items');
+    expect(groups()).toHaveLength(1);
+    expect(groups()[0].querySelector('button')?.textContent).toContain('Add item');
+    expect(groups()[0].textContent).not.toContain('No other items yet.');
+    component.loadError.set(null);
+    fixture.detectChanges();
+    expect(groups()).toHaveLength(1);
+    expect(groups()[0].textContent).toContain('No other items yet.');
+  });
+
   it('preserves the add draft after a failed save and closes only after a successful retry', () => {
     component.cycleStore.currentCycle.set({
       id: 'c',
@@ -158,7 +180,7 @@ describe('ShoppingListPage', () => {
     const close = vi.spyOn(component.itemEditor(), 'close').mockImplementation(() => {});
     vi.spyOn(component.shoppingListStore, 'addManualItem')
       .mockReturnValueOnce(throwError(() => new Error('Offline')))
-      .mockReturnValue(of({ id: 'l', planningCycleId: 'c', items: [], mealGroups: [] }));
+      .mockReturnValue(of({ refreshFailed: false }));
     component.startAddManualItem();
     component.addItem({ name: 'Rice', quantity: 2 });
     expect(component.itemSaveError()).toBeTruthy();
@@ -177,7 +199,7 @@ describe('ShoppingListPage', () => {
       nextPlanningCycleId: null,
     });
     vi.spyOn(component.itemEditor(), 'openNew').mockImplementation(() => {});
-    const pending = new Subject<null>();
+    const pending = new Subject<{ refreshFailed: boolean }>();
     vi.spyOn(component.shoppingListStore, 'addManualItem').mockReturnValue(pending);
     component.startAddManualItem();
     component.addItem({ name: 'Rice', quantity: 2 });
@@ -233,7 +255,7 @@ describe('ShoppingListPage review notice', () => {
     );
   });
 
-  it('describes historical reviews in the past tense', () => {
+  it('keeps historical review notices actionable', () => {
     page.cycleStore.currentCycle.set({
       id: 'old',
       startDate: '2026-10-01',
@@ -241,8 +263,10 @@ describe('ShoppingListPage review notice', () => {
       previousPlanningCycleId: null,
       nextPlanningCycleId: 'active',
     });
-    expect(page.unconfirmedMealsMessage(1)).toBe('Groceries for 1 meal were not reviewed.');
-    expect(page.unconfirmedMealsMessage(2)).toBe('Groceries for 2 meals were not reviewed.');
+    expect(page.unconfirmedMealsMessage(1)).toBe("Groceries for 1 meal haven't been reviewed yet.");
+    expect(page.unconfirmedMealsMessage(2)).toBe(
+      "Groceries for 2 meals haven't been reviewed yet.",
+    );
   });
 
   it('does not warn for confirmed empty reviews or derived leftovers', () => {

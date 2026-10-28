@@ -13,12 +13,14 @@ describe('UsersStore', () => {
     email: 'admin@example.test',
     displayName: 'Admin',
     isAdmin: true,
+    mustChangePassword: false,
   };
   const member: ApiUser = {
     id: 'member-id',
     email: 'member@example.test',
     displayName: 'Member',
     isAdmin: false,
+    mustChangePassword: false,
   };
 
   beforeEach(() => {

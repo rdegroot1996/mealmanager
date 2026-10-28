@@ -121,6 +121,7 @@ describe('GroceryEditModal', () => {
 
   it('selects a suggestion without changing quantity or saving', async () => {
     const { fixture, editor, saved } = await setup();
+    (fixture.nativeElement.querySelector('dialog') as HTMLDialogElement).open = true;
     fixture.componentRef.setInput('suggestionsEnabled', true);
     fixture.componentRef.setInput('suggestions', ['Oat milk']);
     editor.changeName('Oat');
@@ -139,6 +140,7 @@ describe('GroceryEditModal', () => {
 
   it('supports arrow navigation and dismisses suggestions before the native dialog', async () => {
     const { fixture, editor } = await setup();
+    (fixture.nativeElement.querySelector('dialog') as HTMLDialogElement).open = true;
     fixture.componentRef.setInput('suggestionsEnabled', true);
     fixture.componentRef.setInput('suggestions', ['Milk', 'Oat milk']);
     editor.changeName('mi');

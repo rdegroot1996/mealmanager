@@ -6,8 +6,8 @@
 
 ### Prerequisites
 
-- [.NET SDK 10](https://dotnet.microsoft.com/download/dotnet/10.0)
-- Node.js 22.22.3+ or 24.15.0+
+- [.NET SDK 10](https://dotnet.microsoft.com/download/dotnet/10.0), as selected by `global.json`
+- Node.js 24 LTS
 - npm 12
 
 Install the frontend dependencies and start the Angular development server:
@@ -38,6 +38,7 @@ For backend changes, from the repository root:
 dotnet build mealmanager.slnx --no-restore
 dotnet test --solution mealmanager.slnx --no-restore
 dotnet format whitespace mealmanager.slnx --no-restore --verify-no-changes
+dotnet format style mealmanager.slnx --no-restore --severity hidden --diagnostics IDE0005 IDE0051 IDE0052 IDE0059 IDE0060 --verify-no-changes
 dotnet tool restore
 dotnet ef migrations has-pending-model-changes --project src/MealManager.Infrastructure --startup-project src/MealManager.Api --no-build
 git diff --check
@@ -51,6 +52,8 @@ npm run build
 ```
 
 The browser end-to-end suite requires Docker. Install its browser once with `npm run test:e2e:install`, then run `npm run test:e2e` from the frontend directory.
+
+Run `npm run test:e2e:deployment` separately for backup/restore and production asset checks.
 
 See the [frontend checks](../src/MealManager.App/README.md#check) for translation,
 type, and formatting checks.

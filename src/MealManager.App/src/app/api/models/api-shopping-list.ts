@@ -14,6 +14,7 @@ export interface ApiPlannedMealSummary {
   recipeId: string;
   recipeName: string;
   recipeImageUrl: string;
+  recipeProfileId: string;
   profileName: string;
   profileServings: number;
 }

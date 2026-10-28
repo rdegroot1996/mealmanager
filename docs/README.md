@@ -12,7 +12,7 @@ One Linux container serves the Angular frontend and ASP.NET Core API, with SQLit
 - **Infrastructure:** EF Core, Identity, storage, external adapters.
 - **Common:** errors and serialization.
 
-Controllers remain thin. Mutations use commands; reads use queries. API errors expose stable ProblemDetails codes translated by the frontend. Keep backend contracts, Angular models, stores, mocks, and tests aligned.
+Controllers delegate mutations to commands and reads to queries. Stable ProblemDetails codes provide translated API errors. Keep contracts, frontend state, mocks, and tests aligned.
 
 .NET packages use `Directory.Packages.props`. Keep `EfCoreVersion` and the local `dotnet-ef` tool version aligned.
 
@@ -42,11 +42,13 @@ Startup applies EF migrations. Generate changes under `src/MealManager.Infrastru
 
 ASP.NET Core Identity uses a persistent 14-day sliding cookie. API access requires authentication; administration requires the Admin role. Setup creates the first administrator. State-changing requests require antiforgery protection. Browser storage contains no credentials.
 
+Identity handles password validation, change/reset tokens, and security stamps. A persisted flag requires temporary-password replacement; the API restricts those sessions to account access, replacement, and logout. Security stamps are checked on every request so password changes and resets revoke other sessions immediately. See [administrator recovery](deployment.md#administrator-recovery).
+
 Production requires HTTPS. For TLS termination, set `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` and keep port `8080` private to the proxy. Trusted-network HTTP may use `Authentication__AllowInsecureHttp=true`.
 
 ## Frontend architecture
 
-Angular calls relative `/api` URLs. One build supports English and Dutch with browser-local language selection. The [frontend technical guide](../src/MealManager.App/docs/README.md) covers state, shared controls, mocks, and tests; [localization](../src/MealManager.App/docs/localization.md) has its own guide.
+Angular uses relative `/api` URLs and one build for English and Dutch, with browser-local language selection. See the [frontend guide](../src/MealManager.App/docs/README.md) and [localization guide](../src/MealManager.App/docs/localization.md).
 
 The manifest supports home-screen installation; household data remains server-backed, with no offline service worker.
 

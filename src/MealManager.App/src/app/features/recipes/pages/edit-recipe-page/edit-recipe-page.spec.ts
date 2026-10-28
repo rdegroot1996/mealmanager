@@ -45,6 +45,22 @@ describe('EditRecipePage', () => {
     expect([...category.options].map((option) => option.value)).toContain('Other');
   });
 
+  it('updates the validation summary when a field is corrected while retaining other issues', async () => {
+    component.ngOnInit();
+    component.addIngredient();
+    component.saveRecipe();
+    fixture.detectChanges();
+    expect(component.validationIssues().some((issue) => issue.id === 'recipe-name')).toBe(true);
+    const input = fixture.nativeElement.querySelector('#recipe-name') as HTMLInputElement;
+    input.value = 'Soup';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await fixture.whenStable();
+    expect(component.validationIssues().some((issue) => issue.id === 'recipe-name')).toBe(false);
+    expect(component.validationIssues().some((issue) => issue.id === 'ingredient-name-0')).toBe(
+      true,
+    );
+  });
+
   it('associates the servings label with the number input without changing servings', () => {
     component.ngOnInit();
     fixture.detectChanges();

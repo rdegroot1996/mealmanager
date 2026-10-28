@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { ApiShoppingListItem, ApiShoppingList } from '../../../api/models/api-shopping-list';
 import { ApiMealPlan } from '../../../api/models/api-meal-plan';
 import { PlanningCycleStore } from '../../planning-cycle/state/planning-cycle.store';
-import { forkJoin, map, Observable, of, switchMap, tap } from 'rxjs';
+import { catchError, forkJoin, map, Observable, of, switchMap, tap } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -20,7 +20,7 @@ export class ShoppingListStore {
     return this.http.get<string[]>('/api/shopping-lists/suggestions', { params: { search } });
   }
 
-  private reloadIfSelected(cycleId: string) {
+  private reloadIfSelected(cycleId: string): Observable<ApiShoppingList | null> {
     return !this.cycles.currentCycle() || this.cycles.currentCycle()?.id === cycleId
       ? this.loadForCycle(cycleId)
       : of(null);
@@ -48,7 +48,14 @@ export class ShoppingListStore {
   addManualItem(cycleId: string, name: string, quantity: number) {
     return this.http
       .post<ApiShoppingListItem>(`/api/shopping-lists/cycle/${cycleId}/items`, { name, quantity })
-      .pipe(switchMap(() => this.reloadIfSelected(cycleId)));
+      .pipe(switchMap(() => this.refreshAfterAdd(cycleId)));
+  }
+
+  private refreshAfterAdd(cycleId: string) {
+    return this.reloadIfSelected(cycleId).pipe(
+      map(() => ({ refreshFailed: false })),
+      catchError(() => of({ refreshFailed: true })),
+    );
   }
 
   updateItem(item: ApiShoppingListItem) {
@@ -82,7 +89,7 @@ export class ShoppingListStore {
         name,
         quantity,
       })
-      .pipe(switchMap(() => this.reloadIfSelected(cycleId)));
+      .pipe(switchMap(() => this.refreshAfterAdd(cycleId)));
   }
 
   removeItem(itemId: string) {

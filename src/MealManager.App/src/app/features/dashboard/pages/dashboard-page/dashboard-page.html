@@ -4,7 +4,7 @@
     <h1 class="font-display text-[32px] min-[800px]:text-[34px] font-medium tracking-tight">
       {{ title }}
     </h1>
-    <p class="mt-2 text-sm text-base-content/75">{{ greeting }}</p>
+    <p class="mt-2 text-sm text-base-content/75 [overflow-wrap:anywhere]">{{ greeting() }}</p>
   </header>
   <app-active-meal-plan class="block min-w-0" />
 </div>

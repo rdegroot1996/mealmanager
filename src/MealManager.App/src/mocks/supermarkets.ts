@@ -1,5 +1,5 @@
 import { ApiPicnicConnection } from '../app/api/models/api-picnic';
-import { http, HttpResponse } from 'msw';
+import { http, HttpResponse } from 'msw/http';
 import { ApiShoppingList } from '../app/api/models/api-shopping-list';
 import {
   SupermarketProviderId,

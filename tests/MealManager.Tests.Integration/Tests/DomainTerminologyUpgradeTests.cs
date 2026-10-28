@@ -32,7 +32,8 @@ public sealed class DomainTerminologyUpgradeTests
         {
             await using (var before = new ApplicationDbContext(options))
             {
-                var previousMigration = before.Database.GetMigrations().SkipLast(1).Last();
+                var previousMigration = before.Database.GetMigrations()
+                    .TakeWhile(migration => !migration.EndsWith("_AlignDomainTerminology", StringComparison.Ordinal)).Last();
                 await before.GetService<IMigrator>().MigrateAsync(previousMigration);
                 // Seed using the deployed identifiers, independently of current EF mappings.
                 await before.Database.ExecuteSqlInterpolatedAsync($"""

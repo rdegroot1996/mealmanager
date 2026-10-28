@@ -52,6 +52,14 @@ Mock sign-in accepts nonempty credentials. Picnic starts connected without mappi
 
 See [frontend checks](../README.md#check) and [full-stack checks](../../../docs/development.md#verify-changes). Tests live beside source as `*.spec.ts`. Cover behavior, transformations, failure paths, and accessibility rather than mirroring implementation.
 
-The production E2E suite builds the Docker image and uses its own Compose project, SQLite volume, and port `8081`, removed before/after the run. Docker and Playwright Chromium are required.
+E2E requires Docker and Playwright Chromium. Tests use an isolated production image, SQLite volume, and port `8081`. Fixtures reset data per test and seed prerequisites through the API; the setup journey uses the UI.
+
+| Command                            | Coverage                                                                    |
+| ---------------------------------- | --------------------------------------------------------------------------- |
+| `npm run test:e2e`                 | Account, recipe, planning, shopping, export, and language journeys          |
+| `npm run test:e2e:deployment`      | Backup/restore and production assets                                        |
+| `npm run test:e2e:reuse -- <spec>` | Local investigation without rebuilding or final teardown; data still resets |
+
+Journeys check user-visible outcomes, with selected phone and keyboard flows. Component/store and API tests cover validation, request races, and outcome combinations. `npm run typecheck` checks application, unit-test, and E2E TypeScript, including unused imports, locals, and parameters.
 
 `npm run build` writes `dist/mealmanager/browser`. The API Dockerfile copies it into `wwwroot`, and ASP.NET Core serves the SPA and API from one origin.

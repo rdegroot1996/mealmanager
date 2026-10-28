@@ -84,7 +84,6 @@ public class PlannedMealCommands(ApplicationDbContext dbContext, PlanningCycleAc
     public async Task<MealShoppingGroupDto> ReviewMealGroceries(Guid id, ReviewMealGroceriesDto command)
     {
         var mealPlan = await LoadMealPlanForEntry(id);
-        await cycleAccess.EnsureEditable(mealPlan.PlanningCycleId);
         var meal = mealPlan.Entries.OfType<PlannedMeal>().SingleOrDefault(entry => entry.Id == id)
             ?? throw new NotFoundError(nameof(PlannedMeal));
         var (recipe, profile) = await LoadRecipeAndProfile(meal);
@@ -125,7 +124,6 @@ public class PlannedMealCommands(ApplicationDbContext dbContext, PlanningCycleAc
     public async Task<PlannedEntryDto> UpdatePlannedMealProfile(Guid id, Guid profileId)
     {
         var mealPlan = await LoadMealPlanForEntry(id);
-        await cycleAccess.EnsureEditable(mealPlan.PlanningCycleId);
         var meal = mealPlan.Entries.OfType<PlannedMeal>().SingleOrDefault(entry => entry.Id == id)
             ?? throw new NotFoundError(nameof(PlannedMeal));
         var (recipe, profile) = await LoadRecipeAndProfile(meal.RecipeId, profileId);
@@ -142,7 +140,6 @@ public class PlannedMealCommands(ApplicationDbContext dbContext, PlanningCycleAc
     public async Task DeletePlannedMeal(Guid id)
     {
         var mealPlan = await LoadMealPlanForEntry(id);
-        await cycleAccess.EnsureEditable(mealPlan.PlanningCycleId);
         var entryToRemove = mealPlan.Entries.Single(entry => entry.Id == id);
         var list = await dbContext.ShoppingLists.Include(g => g.Items)
             .SingleAsync(g => g.PlanningCycleId == mealPlan.PlanningCycleId);

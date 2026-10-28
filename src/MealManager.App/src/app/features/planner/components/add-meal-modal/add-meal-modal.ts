@@ -67,7 +67,6 @@ export class AddMealModal {
   private router = inject(Router);
   private creationContext = inject(RecipePlanningContext);
   open(date: string, search = '', recipeId?: string) {
-    if (this.cycleStore.currentCycle()?.nextPlanningCycleId) return;
     this.cycleId = this.cycleStore.currentCycle()?.id;
     ++this.session;
     this.recipeRequest?.unsubscribe();
@@ -138,7 +137,7 @@ export class AddMealModal {
 
   createMissingRecipe() {
     const search = this.searchQuery().trim();
-    if (!search || !this.cycleId || this.cycleStore.currentCycle()?.nextPlanningCycleId) return;
+    if (!search || !this.cycleId) return;
     this.creationContext.set({ cycleId: this.cycleId, date: this.date(), search });
     this.modal()?.close();
     void this.router.navigate(['/recipes/new'], { queryParams: { plan: '1' } });
@@ -148,11 +147,7 @@ export class AddMealModal {
   }
 
   confirm() {
-    if (
-      this.cycleStore.currentCycle()?.nextPlanningCycleId ||
-      this.cycleStore.currentCycle()?.id !== this.cycleId
-    )
-      return;
+    if (this.cycleStore.currentCycle()?.id !== this.cycleId) return;
     const session = this.session;
     const recipe = this.selectedRecipe();
     const profileId = this.selectedProfileId();

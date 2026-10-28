@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using MealManager.Api.Mcp;
 using MealManager.Application.DTO;
 using Xunit;
 
@@ -87,7 +88,7 @@ public sealed partial class McpServerTests
         using var client = CreateAuthenticatedClient();
         var initialization = await Initialize(client);
         var instructions = initialization.RootElement.GetProperty("result").GetProperty("instructions").GetString()!;
-        using var reader = new StreamReader(typeof(MealManager.Api.Mcp.MealManagerMcpTools).Assembly
+        using var reader = new StreamReader(typeof(MealManagerMcpTools).Assembly
             .GetManifestResourceStream("MealManager.Api.Mcp.Instructions.md")!);
         Assert.Equal(reader.ReadToEnd(), instructions);
         Assert.Contains("list_recent_planning_cycles", instructions);

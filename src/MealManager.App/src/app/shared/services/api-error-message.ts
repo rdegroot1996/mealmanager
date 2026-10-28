@@ -38,6 +38,10 @@ function localizedProblemCode(code: string): string | null {
       return $localize`:@@apiError.cannotRemoveOwnAdminRole:You cannot remove your own administrator role.`;
     case 'CannotDeleteSelf':
       return $localize`:@@apiError.cannotDeleteSelf:You cannot delete your own account.`;
+    case 'CannotResetOwnPassword':
+      return $localize`:@@apiError.cannotResetOwnPassword:Use Change password to change your own password.`;
+    case 'PasswordChangeRequired':
+      return $localize`:@@apiError.passwordChangeRequired:Replace your temporary password before continuing.`;
     case 'RecipeInUse':
       return $localize`:@@apiError.recipeInUse:This recipe is used in a meal plan and cannot be deleted.`;
     case 'LeftoverAlreadyPlanned':
@@ -62,8 +66,8 @@ function localizedProblemCode(code: string): string | null {
       return $localize`:@@apiError.leftoverMustFollowOriginal:Plan leftovers after their original meal.`;
     case 'CycleCannotExcludeEntries':
       return $localize`:@@apiError.cycleCannotExcludeEntries:The cycle cannot exclude existing meals, leftovers, or notes.`;
-    case 'HistoricalCycleReadOnly':
-      return $localize`:@@apiError.historicalCycleReadOnly:Historical planning cycles are read-only.`;
+    case 'ActiveCycleRequired':
+      return $localize`:@@apiError.activeCycleRequired:This operation requires the active planning cycle.`;
     case 'ApplicationAlreadyInitialized':
       return $localize`:@@apiError.applicationAlreadyInitialized:Setup has already been completed.`;
     case 'InvalidRecipeImageOrder':

@@ -55,11 +55,7 @@
         <span class="min-w-0">
           {{ unconfirmedMealsMessage(unconfirmedMealCount()) }}
           <span class="font-medium underline underline-offset-2">
-            @if (cycleStore.currentCycle()?.nextPlanningCycleId) {
-              <ng-container i18n="@@groceries.viewPlanner">View planner</ng-container>
-            } @else {
-              <ng-container i18n="@@groceries.reviewInPlanner">Review in planner</ng-container>
-            }
+            <ng-container i18n="@@groceries.reviewInPlanner">Review in planner</ng-container>
           </span>
         </span>
       </a>
@@ -113,6 +109,7 @@
               <a
                 class="min-w-0 flex-1"
                 [routerLink]="['/recipes', group.meal.recipeId]"
+                [queryParams]="{ profile: group.meal.recipeProfileId }"
                 [attr.aria-label]="viewRecipeLabel(group.meal.recipeName)"
               >
                 <app-recipe-summary
@@ -176,53 +173,63 @@
         }
       </div>
 
-      <section class="app-grocery-group mt-8 min-w-0 text-sm">
-        <div class="mb-2 flex items-center justify-between gap-3">
-          <h2 class="app-section-title">{{ otherItemsLabel }}</h2>
-        </div>
-        <div
-          cdkDropList
-          [cdkDropListData]="manualItems()"
-          [cdkDropListDisabled]="reordering()"
-          class="flex flex-col divide-y divide-base-300 [&>app-grocery-row:last-child]:pb-0 [&>:last-child_app-grocery-row]:pb-0"
-          (cdkDropListDropped)="reorderItems($event, null)"
-        >
-          @if (manualItems().length === 0) {
-            <p
-              class="flex min-h-11 items-center text-sm leading-[21px] text-base-content/75"
-              i18n="@@shoppingList.page.template.noOtherItemsYet"
-            >
-              No other items yet.
-            </p>
-          }
-          @for (item of manualItems(); track item.id) {
-            <app-shopping-list-item-row
-              cdkDrag
-              [cdkDragData]="item"
-              [item]="item"
-              [pending]="reordering() || pendingItemIds().has(item.id)"
-              (moveRequested)="moveItemWithKeyboard(item, $event, null)"
-              (toggled)="toggleChecked($event)"
-              (updated)="updateItem($event)"
-              (removed)="removeItem($event)"
-            />
-          }
-        </div>
-        <div>
-          <button
-            class="btn btn-ghost btn-sm min-h-11"
-            type="button"
-            [disabled]="addingItem()"
-            (click)="startAddManualItem()"
-          >
-            <app-icon name="add" class="size-5" />
-            <ng-container i18n="@@common.addItem">Add item</ng-container>
-          </button>
-        </div>
-      </section>
+      <div class="mt-8"><ng-container [ngTemplateOutlet]="otherItems" /></div>
     </div>
   </div>
 }
+
+@if (cycleStore.currentCycle() && !noCycle() && (loading() || loadError())) {
+  <div class="app-surface mt-6 p-4"><ng-container [ngTemplateOutlet]="otherItems" /></div>
+}
+
+<ng-template #otherItems>
+  <section class="app-grocery-group min-w-0 text-sm">
+    <div class="mb-2 flex items-center justify-between gap-3">
+      <h2 class="app-section-title">{{ otherItemsLabel }}</h2>
+    </div>
+    @if (!loading() && !loadError()) {
+      <div
+        cdkDropList
+        [cdkDropListData]="manualItems()"
+        [cdkDropListDisabled]="reordering()"
+        class="flex flex-col divide-y divide-base-300 [&>app-grocery-row:last-child]:pb-0 [&>:last-child_app-grocery-row]:pb-0"
+        (cdkDropListDropped)="reorderItems($event, null)"
+      >
+        @if (manualItems().length === 0) {
+          <p
+            class="flex min-h-11 items-center text-sm leading-[21px] text-base-content/75"
+            i18n="@@shoppingList.page.template.noOtherItemsYet"
+          >
+            No other items yet.
+          </p>
+        }
+        @for (item of manualItems(); track item.id) {
+          <app-shopping-list-item-row
+            cdkDrag
+            [cdkDragData]="item"
+            [item]="item"
+            [pending]="reordering() || pendingItemIds().has(item.id)"
+            (moveRequested)="moveItemWithKeyboard(item, $event, null)"
+            (toggled)="toggleChecked($event)"
+            (updated)="updateItem($event)"
+            (removed)="removeItem($event)"
+          />
+        }
+      </div>
+    }
+    <div>
+      <button
+        class="btn btn-ghost btn-sm min-h-11"
+        type="button"
+        [disabled]="addingItem()"
+        (click)="startAddManualItem()"
+      >
+        <app-icon name="add" class="size-5" />
+        <ng-container i18n="@@common.addItem">Add item</ng-container>
+      </button>
+    </div>
+  </section>
+</ng-template>
 
 <app-grocery-edit-modal
   #itemEditor

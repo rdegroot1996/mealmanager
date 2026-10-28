@@ -57,7 +57,7 @@ describe('AddNoteModal removal handoff', () => {
     discard.mockResolvedValue(true);
     expect(await component.beforeDismiss()).toBe(true);
   });
-  it('blocks removal of a new note, pending save, changed cycle, or historical cycle', async () => {
+  it('blocks unsafe removal but allows historical note removal', async () => {
     const { component, currentCycle, removed } = await setup();
     component.open(note.date);
     component.remove();
@@ -67,8 +67,9 @@ describe('AddNoteModal removal handoff', () => {
     component.saving.set(false);
     currentCycle.set({ ...cycle, id: 'cycle-2' });
     component.remove();
+    expect(removed).not.toHaveBeenCalled();
     currentCycle.set({ ...cycle, nextPlanningCycleId: 'cycle-2' });
     component.remove();
-    expect(removed).not.toHaveBeenCalled();
+    expect(removed).toHaveBeenCalledWith(note.id);
   });
 });

@@ -3,4 +3,5 @@ export interface ApiUser {
   email: string;
   displayName: string;
   isAdmin: boolean;
+  mustChangePassword: boolean;
 }

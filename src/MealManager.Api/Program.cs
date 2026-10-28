@@ -9,7 +9,6 @@ using MealManager.Infrastructure;
 using MealManager.Infrastructure.Database;
 using MealManager.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -30,12 +29,15 @@ public class Program
 {
     public static async Task Main(string[] args)
     {
-        var builder = WebApplication.CreateBuilder(args);
+        var recovery = args.FirstOrDefault() == "recover-admin";
+        if (recovery && args.Length != 2) throw new ArgumentException("Usage: recover-admin <administrator-email>. The temporary password is read from stdin.");
+        var builder = WebApplication.CreateBuilder(recovery ? [] : args);
 
         builder
             .Services.AddControllersWithViews(options =>
             {
                 options.Filters.Add<FluentValidationFilter>();
+                options.Filters.Add<PasswordChangeRequiredFilter>();
                 options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
             })
             .AddProblemDetailsConventions()
@@ -72,6 +74,12 @@ public class Program
                     Name = UserRoles.Admin,
                 })).EnsureSucceeded();
             await dbContext.SaveChangesAsync();
+        }
+
+        if (recovery)
+        {
+            await AdministratorRecovery.Run(args[1], scope.ServiceProvider.GetRequiredService<PasswordCommands>());
+            return;
         }
 
         app.UseDefaultFiles();

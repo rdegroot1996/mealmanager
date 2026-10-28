@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Text.Json;
 using MealManager.Application.DTO;
 using MealManager.Common.Enums;
 using MealManager.Tests.Integration.Configuration;
@@ -79,6 +78,27 @@ public class PlannedMealControllerTests(CustomWebApplicationFactory factory) : T
         });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task HistoricalPlan_AllowsMealAndGroceryEdits()
+    {
+        var (mealPlan, recipe, profile) = await SetupAsync();
+        (await HttpClient.PostAsJsonAsync("/api/planning-cycles", new CreatePlanningCycleDto
+        { StartDate = new DateOnly(2025, 1, 13), EndDate = new DateOnly(2025, 1, 19) })).EnsureSuccessStatusCode();
+        var command = new AddPlannedMealDto
+        { MealPlanId = mealPlan.Id, RecipeId = recipe.Id, RecipeProfileId = profile.Id, Date = new DateOnly(2025, 1, 7) };
+        var added = await HttpClient.PostAsJsonAsync("/api/planned-meals", command);
+        added.EnsureSuccessStatusCode();
+        var meal = (await added.Content.ReadFromJsonAsync<PlannedEntryDto>(JsonOptions))!;
+        var reviewed = await HttpClient.PostAsJsonAsync($"/api/planned-meals/{meal.Id}/groceries", new ReviewMealGroceriesDto { Groceries = [] });
+        reviewed.EnsureSuccessStatusCode();
+        Assert.Equal(profile.Id, (await reviewed.Content.ReadFromJsonAsync<MealShoppingGroupDto>(JsonOptions))!.Meal.RecipeProfileId);
+        (await HttpClient.PostAsJsonAsync($"/api/planned-meals/{meal.Id}/leftovers",
+            new PlanLeftoversDto { Date = new DateOnly(2025, 1, 8) })).EnsureSuccessStatusCode();
+        (await HttpClient.DeleteAsync($"/api/planned-meals/{meal.Id}")).EnsureSuccessStatusCode();
+        var persisted = (await HttpClient.GetFromJsonAsync<MealPlanDto>($"/api/meal-plans/cycle/{mealPlan.PlanningCycleId}", JsonOptions))!;
+        Assert.Empty(persisted.Entries);
     }
 
     [Fact]
@@ -165,18 +185,17 @@ public class PlannedMealControllerTests(CustomWebApplicationFactory factory) : T
             })).EnsureSuccessStatusCode();
 
         var deletion = await HttpClient.DeleteAsync($"/api/planned-meals/{leftovers[0].Id}");
-        Assert.Equal(historical ? HttpStatusCode.BadRequest : HttpStatusCode.NoContent, deletion.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, deletion.StatusCode);
         var persisted = (await HttpClient.GetFromJsonAsync<MealPlanDto>(
             $"/api/meal-plans/cycle/{mealPlan.PlanningCycleId}", JsonOptions))!;
         Assert.Contains(persisted.Entries.Where(entry => entry.Kind == PlannedEntryKind.Meal), item => item.Id == original.Id && item.HasReviewedGroceries);
-        Assert.Contains(persisted.Entries.Where(entry => entry.Kind == PlannedEntryKind.Meal), item => item.Id == companion.Id && item.SortOrder == (historical ? 1 : 0));
+        Assert.Contains(persisted.Entries.Where(entry => entry.Kind == PlannedEntryKind.Meal), item => item.Id == companion.Id && item.SortOrder == 0);
         Assert.Contains(persisted.Entries.Where(entry => entry.Kind == PlannedEntryKind.Leftover), item => item.Id == leftovers[1].Id);
-        Assert.Equal(historical, persisted.Entries.Where(entry => entry.Kind == PlannedEntryKind.Leftover).Any(item => item.Id == leftovers[0].Id));
+        Assert.DoesNotContain(persisted.Entries, item => item.Id == leftovers[0].Id);
         var groceries = (await HttpClient.GetFromJsonAsync<MealShoppingGroupDto>(
             $"/api/planned-meals/{original.Id}/groceries", JsonOptions))!;
         Assert.Equal("Pasta", Assert.Single(groceries.Items).Name);
-        if (!historical)
-            Assert.Equal(HttpStatusCode.NotFound,
+        Assert.Equal(HttpStatusCode.NotFound,
                 (await HttpClient.DeleteAsync($"/api/planned-meals/{leftovers[0].Id}")).StatusCode);
     }
 
@@ -349,7 +368,7 @@ public class PlannedMealControllerTests(CustomWebApplicationFactory factory) : T
     }
 
     [Fact]
-    public async Task MovePlannedMeal_InHistoricalCycle_ReturnsBadRequestWithoutChangingOrder()
+    public async Task MovePlannedMeal_InHistoricalCycle_PersistsDateAndOrder()
     {
         var (mealPlan, recipe, profile) = await SetupAsync();
         var meal = (await (await HttpClient.PostAsJsonAsync("/api/planned-meals", new AddPlannedMealDto
@@ -371,14 +390,12 @@ public class PlannedMealControllerTests(CustomWebApplicationFactory factory) : T
             TargetIndex = 0,
         });
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        using var problem = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        Assert.Equal("HistoricalCycleReadOnly", problem.RootElement.GetProperty("code").GetString());
+        response.EnsureSuccessStatusCode();
         var persisted = (await HttpClient.GetFromJsonAsync<MealPlanDto>(
             $"/api/meal-plans/cycle/{mealPlan.PlanningCycleId}", JsonOptions))!;
-        var unchanged = persisted.Entries.Where(entry => entry.Kind == PlannedEntryKind.Meal).Single(item => item.Id == meal.Id);
-        Assert.Equal(new DateOnly(2025, 1, 7), unchanged.Date);
-        Assert.Equal(0, unchanged.SortOrder);
+        var moved = persisted.Entries.Single(item => item.Id == meal.Id);
+        Assert.Equal(new DateOnly(2025, 1, 8), moved.Date);
+        Assert.Equal(0, moved.SortOrder);
     }
 
     [Fact]
@@ -562,7 +579,7 @@ public class PlannedMealControllerTests(CustomWebApplicationFactory factory) : T
     }
 
     [Fact]
-    public async Task MovePlannedLeftovers_InHistoricalCycle_ReturnsBadRequestWithoutChangingOrder()
+    public async Task MovePlannedLeftovers_InHistoricalCycle_PersistsDateAndOrder()
     {
         var (mealPlan, recipe, profile) = await SetupAsync();
         var original = (await (await HttpClient.PostAsJsonAsync("/api/planned-meals", new AddPlannedMealDto
@@ -588,11 +605,11 @@ public class PlannedMealControllerTests(CustomWebApplicationFactory factory) : T
             TargetIndex = 0,
         });
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.EnsureSuccessStatusCode();
         var persisted = (await HttpClient.GetFromJsonAsync<MealPlanDto>(
             $"/api/meal-plans/cycle/{mealPlan.PlanningCycleId}", JsonOptions))!;
         Assert.Contains(persisted.Entries.Where(entry => entry.Kind == PlannedEntryKind.Leftover), item =>
-            item.Id == leftovers.Id && item.Date == new DateOnly(2025, 1, 8) && item.SortOrder == 0);
+            item.Id == leftovers.Id && item.Date == new DateOnly(2025, 1, 9) && item.SortOrder == 0);
     }
 
     [Fact]

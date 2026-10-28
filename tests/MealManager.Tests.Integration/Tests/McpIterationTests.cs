@@ -1,12 +1,10 @@
 using MealManager.Application.DTO.Mcp;
 using System.Text.Json;
 using MealManager.Application.Commands;
-using MealManager.Application.DTO;
 using MealManager.Application.Queries;
 using MealManager.Common.Enums;
 using MealManager.Domain.Entities;
 using MealManager.Infrastructure.Database;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -374,8 +372,8 @@ public sealed partial class McpServerTests
             expectedMealPlanVersion = beforeCycle.GetProperty("mealPlanVersion").GetString(),
             entries = Array.Empty<object>(),
             notes = Array.Empty<object>(),
-        }, "HistoricalCycleReadOnly");
-        await ToolError(client, "plan_meal", new { cycleId, recipeId, profileId, date = CycleStart }, "HistoricalCycleReadOnly");
+        }, "ActiveCycleRequired");
+        await Tool(client, "plan_meal", new { cycleId, recipeId, profileId, date = CycleStart });
         await ToolError(client, "create_planning_cycle", new
         {
             startDate = CycleStart.AddDays(14),

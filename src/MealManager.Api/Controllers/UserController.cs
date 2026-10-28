@@ -43,4 +43,12 @@ public class UserController : ControllerBase
         await commands.DeleteUser(userId);
         return NoContent();
     }
+
+    [HttpPost("{userId:guid}/reset-password")]
+    [Authorize(Roles = UserRoles.Admin)]
+    public async Task<IActionResult> ResetPassword(Guid userId, [FromBody] ResetUserPasswordDto command, [FromServices] PasswordCommands commands)
+    {
+        await commands.ResetPassword(userId, command);
+        return NoContent();
+    }
 }

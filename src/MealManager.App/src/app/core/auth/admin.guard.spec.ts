@@ -14,6 +14,7 @@ describe('adminGuard', () => {
       email: 'admin@example.test',
       displayName: 'Admin',
       isAdmin: true,
+      mustChangePassword: false,
     });
 
     const result = TestBed.runInInjectionContext(() => adminGuard({} as never, {} as never));
@@ -26,6 +27,7 @@ describe('adminGuard', () => {
       email: 'member@example.test',
       displayName: 'Member',
       isAdmin: false,
+      mustChangePassword: false,
     });
 
     const result = TestBed.runInInjectionContext(() => adminGuard({} as never, {} as never));

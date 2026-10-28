@@ -1,11 +1,13 @@
 ﻿using MealManager.Domain.Entities;
 using MealManager.Infrastructure.Authentication;
+using MealManager.Infrastructure.Identity;
 using MealManager.Infrastructure.Configuration;
 using MealManager.Infrastructure.Database;
 using MealManager.Infrastructure.Storage;
 using MealManager.Domain.Contracts;
 using MealManager.Infrastructure.Supermarkets;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,7 +39,11 @@ public static class InfrastructureServiceExtensions
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
             })
             .AddRoles<Role>()
-            .AddEntityFrameworkStores<ApplicationDbContext>();
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddClaimsPrincipalFactory<HouseholdClaimsPrincipalFactory>()
+            .AddDefaultTokenProviders();
+
+        services.Configure<SecurityStampValidatorOptions>(options => options.ValidationInterval = TimeSpan.Zero);
 
         services
             .AddDataProtection()

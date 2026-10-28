@@ -6,14 +6,9 @@ namespace MealManager.Application.Commands;
 
 public class PlanningCycleAccess(ApplicationDbContext dbContext)
 {
-    public async Task EnsureEditable(Guid cycleId)
-    {
-        _ = await EnsureEditableCycle(cycleId);
-    }
-
     public async Task EnsureDateInCycle(Guid cycleId, DateOnly date)
     {
-        var cycle = await EnsureEditableCycle(cycleId);
+        var cycle = await LoadCycle(cycleId);
         if (date < cycle.StartDate || date > cycle.EndDate)
         {
             throw new InvalidOperationError(
@@ -35,7 +30,7 @@ public class PlanningCycleAccess(ApplicationDbContext dbContext)
 
     public async Task EnsureCanResize(Guid cycleId, DateOnly startDate, DateOnly endDate)
     {
-        _ = await EnsureEditableCycle(cycleId);
+        await EnsureActive(cycleId);
 
         if (await dbContext.PlanningCycles.AnyAsync(cycle => cycle.Id != cycleId && cycle.StartDate > startDate))
         {
@@ -60,20 +55,20 @@ public class PlanningCycleAccess(ApplicationDbContext dbContext)
         }
     }
 
-    private async Task<PlanningCycle> EnsureEditableCycle(Guid cycleId)
+    private async Task<PlanningCycle> LoadCycle(Guid cycleId) =>
+        await dbContext.PlanningCycles.FirstOrDefaultAsync(c => c.Id == cycleId)
+        ?? throw new NotFoundError(nameof(PlanningCycle));
+
+    public async Task EnsureActive(Guid cycleId)
     {
-        var cycle = await dbContext.PlanningCycles
-            .FirstOrDefaultAsync(c => c.Id == cycleId)
-            ?? throw new NotFoundError(nameof(PlanningCycle));
+        var cycle = await LoadCycle(cycleId);
 
         var latestStartDate = await dbContext.PlanningCycles.MaxAsync(c => c.StartDate);
         if (cycle.StartDate != latestStartDate)
         {
             throw new InvalidOperationError(
-                ErrorCodes.HistoricalCycleReadOnly,
-                "Historical planning cycles are read-only.");
+                ErrorCodes.ActiveCycleRequired,
+                "This operation requires the active planning cycle.");
         }
-
-        return cycle;
     }
 }
