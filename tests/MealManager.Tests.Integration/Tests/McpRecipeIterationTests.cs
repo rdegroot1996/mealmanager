@@ -6,6 +6,35 @@ namespace MealManager.Tests.Integration.Tests;
 public sealed partial class McpServerTests
 {
     [Fact]
+    public async Task Mcp_UnmeasuredIngredientsRoundTripWithoutInventedQuantities()
+    {
+        using var client = CreateAuthenticatedClient();
+        await Initialize(client);
+        var recipe = await Tool(client, "create_recipe", new
+        {
+            name = "Seasoning",
+            category = "Other",
+            baseServings = 2,
+            tags = Array.Empty<string>(),
+            ingredients = new[] { new { name = "Black pepper", quantityText = "to taste" } },
+            steps = Array.Empty<string>(),
+        });
+        var id = recipe.GetProperty("id").GetGuid();
+        var saved = await Tool(client, "get_recipe", new { recipeId = id });
+        Assert.Equal(JsonValueKind.Null, saved.GetProperty("ingredients")[0].GetProperty("quantity").ValueKind);
+        Assert.Equal("to taste", saved.GetProperty("ingredients")[0].GetProperty("quantityText").GetString());
+        var updated = await Tool(client, "update_recipe", new
+        {
+            recipeId = id,
+            expectedRecipeVersion = saved.GetProperty("recipeVersion").GetString(),
+            ingredients = new[] { new { id = saved.GetProperty("ingredients")[0].GetProperty("id").GetGuid(), name = "Black pepper", quantity = (decimal?)null, quantityText = "as needed" } },
+        });
+        Assert.Equal(JsonValueKind.Null, updated.GetProperty("ingredients")[0].GetProperty("quantity").ValueKind);
+        Assert.Equal("as needed", updated.GetProperty("ingredients")[0].GetProperty("quantityText").GetString());
+        Assert.Equal("", updated.GetProperty("ingredients")[0].GetProperty("unit").GetString());
+    }
+
+    [Fact]
     public async Task Mcp_NotesArePreservedClearedAndVersionProtected()
     {
         using var client = CreateAuthenticatedClient();

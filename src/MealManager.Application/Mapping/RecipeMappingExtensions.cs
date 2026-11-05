@@ -100,6 +100,7 @@ public static class RecipeMappingExtensions
             Id = ingredient.Id,
             Name = ingredient.Name,
             Quantity = ingredient.Quantity,
+            QuantityText = ingredient.QuantityText,
             Unit = ingredient.Unit,
             Order = ingredient.Order,
         };
@@ -150,6 +151,7 @@ public static class RecipeMappingExtensions
         Id = row.Id,
         Name = row.Name,
         Quantity = row.Quantity,
+        QuantityText = row.QuantityText,
         Unit = row.Unit,
     };
 

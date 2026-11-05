@@ -432,7 +432,15 @@ export const handlers = [
     if (
       !['Meals', 'Baking', 'Desserts', 'Snacks', 'Other'].includes(body.category) ||
       (body.notes?.length ?? 0) > 4000 ||
-      body.tags.some((tag) => !tag.trim())
+      body.tags.some((tag) => !tag.trim()) ||
+      body.ingredients.some(
+        (row) =>
+          !row.name.trim() ||
+          row.unit === null ||
+          (row.quantityText?.length ?? 0) > 200 ||
+          (row.quantity != null && !!row.quantityText?.trim()) ||
+          (row.quantity != null && (!Number.isFinite(row.quantity) || row.quantity <= 0)),
+      )
     )
       return HttpResponse.json(
         { detail: 'Invalid category or notes longer than 4000 characters.' },
@@ -442,6 +450,9 @@ export const handlers = [
       ...body,
       ingredients: body.ingredients.map((ingredient, order) => ({
         ...ingredient,
+        quantity: ingredient.quantity ?? null,
+        quantityText: ingredient.quantityText?.trim() || null,
+        unit: ingredient.unit ?? '',
         id: crypto.randomUUID(),
         order,
       })),
@@ -475,7 +486,15 @@ export const handlers = [
     if (
       !['Meals', 'Baking', 'Desserts', 'Snacks', 'Other'].includes(body.category) ||
       (body.notes?.length ?? 0) > 4000 ||
-      body.tags.some((tag) => !tag.trim())
+      body.tags.some((tag) => !tag.trim()) ||
+      body.ingredients.some(
+        (row) =>
+          !row.name.trim() ||
+          row.unit === null ||
+          (row.quantityText?.length ?? 0) > 200 ||
+          (row.quantity != null && !!row.quantityText?.trim()) ||
+          (row.quantity != null && (!Number.isFinite(row.quantity) || row.quantity <= 0)),
+      )
     )
       return HttpResponse.json(
         { detail: 'Invalid category or notes longer than 4000 characters.' },
@@ -496,6 +515,9 @@ export const handlers = [
       ...body,
       ingredients: body.ingredients.map((ingredient, order) => ({
         ...ingredient,
+        quantity: ingredient.quantity ?? null,
+        quantityText: ingredient.quantityText?.trim() || null,
+        unit: ingredient.unit ?? '',
         id: ingredient.id || crypto.randomUUID(),
         order,
       })),

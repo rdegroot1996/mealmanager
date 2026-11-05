@@ -203,6 +203,7 @@
             <div class="mt-2 flex gap-2">
               <input
                 type="search"
+                enterkeyhint="done"
                 class="input w-full max-[799px]:text-base border-base-300 bg-base-100 h-11"
                 i18n-aria-label="@@recipes.editRecipePage.template.ariaLabelSearchOrAddATag"
                 id="recipe-tags"
@@ -436,34 +437,35 @@
                     <app-icon name="delete" class="size-5" />
                   </button>
                 </div>
-                <div class="grid grid-cols-2 gap-3">
+                <div class="grid grid-cols-[minmax(0,5fr)_minmax(0,3fr)] gap-3">
                   <app-form-field
                     controlId="ingredient-quantity-{{ $index }}"
-                    [required]="true"
                     [error]="fieldError('ingredient-quantity-' + $index)"
                     [compact]="true"
                     label="Quantity"
                     i18n-label="@@common.quantity"
                   >
-                    <input
-                      id="ingredient-quantity-{{ $index }}"
-                      required
-                      [attr.aria-describedby]="
+                    <app-number-input
+                      controlId="ingredient-quantity-{{ $index }}"
+                      label="Quantity"
+                      i18n-label="@@common.quantity"
+                      [fullWidth]="true"
+                      [allowText]="true"
+                      [minimum]="0.001"
+                      [value]="ingredient.quantity"
+                      [textValue]="quantityDraft(ingredient)"
+                      (textValueChange)="updateQuantity(ingredient, $event)"
+                      (valueChange)="adjustQuantity(ingredient, $event)"
+                      [describedBy]="
                         fieldError('ingredient-quantity-' + $index)
                           ? 'ingredient-quantity-' + $index + '-error'
                           : null
                       "
-                      type="text"
-                      inputmode="decimal"
-                      class="input h-11 w-full max-[799px]:text-base border-base-300 bg-base-100 aria-invalid:border-error"
-                      [ngModel]="quantityDraft(ingredient)"
-                      (ngModelChange)="updateQuantity(ingredient, $event)"
-                      [attr.aria-invalid]="!!fieldError('ingredient-quantity-' + $index)"
+                      [invalid]="!!fieldError('ingredient-quantity-' + $index)"
                     />
                   </app-form-field>
                   <app-form-field
                     controlId="ingredient-unit-{{ $index }}"
-                    [required]="true"
                     [error]="fieldError('ingredient-unit-' + $index)"
                     [compact]="true"
                     label="Unit"
@@ -471,7 +473,6 @@
                   >
                     <app-unit-selector
                       [controlId]="'ingredient-unit-' + $index"
-                      [required]="true"
                       [invalid]="!!fieldError('ingredient-unit-' + $index)"
                       [describedBy]="
                         fieldError('ingredient-unit-' + $index)

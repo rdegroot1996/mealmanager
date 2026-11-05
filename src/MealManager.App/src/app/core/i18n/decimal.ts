@@ -4,8 +4,8 @@ export function formatDecimal(value: number, locale: string): string {
   );
 }
 
-/** Ingredient quantities have at most three fractional digits in the API. */
-export function parseDecimal(value: string, locale: string): number {
+/** Defaults to the editor's three-decimal limit; Infinity recognizes numeric drafts of any precision. */
+export function parseDecimal(value: string, locale: string, maximumFractionDigits = 3): number {
   const formatter = new Intl.NumberFormat(locale, { useGrouping: false });
   const decimalSeparator = formatter
     .formatToParts(1.1)
@@ -14,11 +14,12 @@ export function parseDecimal(value: string, locale: string): number {
   let normalized = value.trim();
   for (const [digit, glyph] of digits.entries())
     normalized = normalized.replaceAll(glyph, String(digit));
+  normalized = normalized.replace(/^−/, '-');
   const parts = decimalSeparator ? normalized.split(decimalSeparator) : [normalized];
   if (
     parts.length > 2 ||
-    !/^\d+$/.test(parts[0]) ||
-    (parts.length === 2 && !/^\d{1,3}$/.test(parts[1]))
+    !/^[+-]?\d+$/.test(parts[0]) ||
+    (parts.length === 2 && (!/^\d+$/.test(parts[1]) || parts[1].length > maximumFractionDigits))
   ) {
     return Number.NaN;
   }

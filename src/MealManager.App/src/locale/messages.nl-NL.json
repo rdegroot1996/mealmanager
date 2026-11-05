@@ -351,7 +351,7 @@
     "recipes.editRecipePage.baseServingsMustBeAPositiveWhole": "Het aantal basisporties moet een geheel getal van minstens 1 zijn.",
     "recipes.ingredientNameRequired": "Vul een ingrediëntnaam in.",
     "recipes.ingredientQuantityRequired": "Vul een hoeveelheid groter dan nul in.",
-    "recipes.ingredientUnitRequired": "Vul een eenheid in.",
+    "recipes.ingredientQuantityTextTooLong": "Een hoeveelheid als tekst mag maximaal 200 tekens bevatten.",
     "recipes.stepDescriptionRequired": "Beschrijf deze bereidingsstap.",
     "recipes.recipeCatalogPage.template.titleNoRecipesFound": "Geen recepten gevonden",
     "recipes.recipeCatalogPage.template.descriptionTryADifferentSearchOrFilter": "Probeer een andere zoekopdracht of filter.",

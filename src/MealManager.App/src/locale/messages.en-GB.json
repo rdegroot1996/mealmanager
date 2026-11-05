@@ -354,7 +354,7 @@
     "recipes.editRecipePage.baseServingsMustBeAPositiveWhole": "Base servings must be a positive whole number.",
     "recipes.ingredientNameRequired": "Enter an ingredient name.",
     "recipes.ingredientQuantityRequired": "Enter a quantity greater than zero.",
-    "recipes.ingredientUnitRequired": "Enter an ingredient unit.",
+    "recipes.ingredientQuantityTextTooLong": "Text amounts must be at most 200 characters.",
     "recipes.stepDescriptionRequired": "Enter a description for this step.",
     "recipes.recipeCatalogPage.template.titleNoRecipesFound": "No recipes found",
     "recipes.recipeCatalogPage.template.descriptionTryADifferentSearchOrFilter": "Try a different search or filter.",

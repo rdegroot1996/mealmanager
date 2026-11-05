@@ -30,7 +30,7 @@ Exports validate the reviewed list and connection. Only acknowledged additions u
 
 `PlanningCycle`, `MealPlan`, and `ShoppingList` are separate roots coordinated by Application commands. Meals and linked leftovers share one ordered planning-entry hierarchy. Reordering uses transactions and temporary positions. An explicit grocery-review record distinguishes unreviewed meals from confirmed empty selections.
 
-Meal groceries retain nullable profile-grocery identifiers; deleting a source grocery item preserves shopping history. Referenced recipes and profiles cannot be deleted. Ingredients use decimal quantities; purchase quantities use whole units.
+Meal groceries retain nullable profile-grocery identifiers; deleting a source grocery item preserves shopping history. Referenced recipes and profiles cannot be deleted. Ingredient amounts use mutually exclusive nullable decimal `quantity` and optional `quantityText` (up to 200 characters); only numeric amounts scale. Both may be omitted for an unspecified amount. The editor presents one Quantity field and separates numeric and text values before saving. Units are optional and default to an empty string in REST and MCP. Provided numeric quantities must be positive. Purchase quantities use whole units.
 
 Mutation row DTOs are separate from response DTOs. Ingredient, step, and profile-grocery replacement arrays define their order. Creation assigns server IDs; REST updates accept retained IDs and new client-generated UUIDs, rejecting duplicate IDs or IDs owned by another recipe or profile. MCP updates require known retained IDs and omit IDs for new rows.
 

@@ -68,7 +68,9 @@ describe('RecipesStore', () => {
       category: 'Meals',
       baseServings: 2,
       tags: ['quick'],
-      ingredients: [{ id: 'ingredient-1', name: 'Pasta', quantity: 200, unit: 'g' }],
+      ingredients: [
+        { id: 'ingredient-1', name: 'Pasta', quantity: 200, quantityText: null, unit: 'g' },
+      ],
       steps: [],
     });
     request.flush({

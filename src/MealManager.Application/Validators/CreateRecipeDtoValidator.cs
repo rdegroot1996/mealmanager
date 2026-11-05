@@ -15,7 +15,10 @@ public class CreateRecipeDtoValidator : AbstractValidator<CreateRecipeDto>
         {
             i.RuleFor(x => x.Name).NotEmpty();
             i.RuleFor(x => x.Quantity).GreaterThan(0);
-            i.RuleFor(x => x.Unit).NotEmpty();
+            i.RuleFor(x => x.QuantityText).MaximumLength(200)
+                .Must((row, text) => string.IsNullOrWhiteSpace(text) || row.Quantity is null)
+                .WithMessage("Use either a numeric quantity or a text amount.");
+            i.RuleFor(x => x.Unit).NotNull();
         });
         RuleFor(x => x.Steps).NotNull();
         RuleForEach(x => x.Steps).ChildRules(s =>

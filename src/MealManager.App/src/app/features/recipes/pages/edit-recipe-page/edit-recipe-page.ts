@@ -356,12 +356,15 @@ export class EditRecipePage implements OnInit {
             };
             let id = basic[path];
             if (/^tags(?:\[\d+\])?$/.test(path)) id = 'recipe-tags';
-            const ingredient = /^ingredients\[(\d+)\]\.(name|quantity|unit)$/.exec(path);
+            const ingredient = /^ingredients\[(\d+)\]\.(name|quantity|quantitytext|unit)$/.exec(
+              path,
+            );
             const step = /^steps\[(\d+)\]\.description$/.exec(path);
             if (ingredient) {
               const rowId = submitted.ingredients[Number(ingredient[1])]?.id;
               const index = this.recipe()?.ingredients.findIndex((row) => row.id === rowId) ?? -1;
-              if (index >= 0) id = `ingredient-${ingredient[2]}-${index}`;
+              if (index >= 0)
+                id = `ingredient-${ingredient[2] === 'quantitytext' ? 'quantity' : ingredient[2]}-${index}`;
             }
             if (step) {
               const rowId = submitted.steps[Number(step[1])]?.id;
@@ -433,8 +436,9 @@ export class EditRecipePage implements OnInit {
     recipe.ingredients.push({
       id: crypto.randomUUID(),
       name: '',
-      quantity: 1,
-      unit: 'pcs',
+      quantity: null,
+      quantityText: null,
+      unit: '',
       order: recipe.ingredients.length,
     });
     this.recipe.set({ ...recipe });
@@ -443,18 +447,31 @@ export class EditRecipePage implements OnInit {
 
   quantityDraft(ingredient: Recipe['ingredients'][number]): string {
     if (!this.quantityDrafts.has(ingredient.id)) {
-      this.quantityDrafts.set(ingredient.id, formatDecimal(ingredient.quantity, this.locale));
+      this.quantityDrafts.set(
+        ingredient.id,
+        ingredient.quantity === null
+          ? (ingredient.quantityText ?? '')
+          : formatDecimal(ingredient.quantity, this.locale),
+      );
     }
     return this.quantityDrafts.get(ingredient.id)!;
   }
 
   updateQuantity(ingredient: Recipe['ingredients'][number], value: string) {
     this.quantityDrafts.set(ingredient.id, value);
-    ingredient.quantity = parseDecimal(value, this.locale);
+    const trimmed = value.trim();
+    const parsed = parseDecimal(trimmed, this.locale);
+    const isText = trimmed !== '' && Number.isNaN(parseDecimal(trimmed, this.locale, Infinity));
+    ingredient.quantity = trimmed === '' || isText ? null : parsed;
+    ingredient.quantityText = isText ? trimmed : null;
   }
 
-  isFiniteQuantity(value: number): boolean {
-    return Number.isFinite(value) && value > 0;
+  isValidQuantity(value: number | null): boolean {
+    return value === null || (Number.isFinite(value) && value > 0);
+  }
+
+  adjustQuantity(ingredient: Recipe['ingredients'][number], value: number) {
+    this.updateQuantity(ingredient, formatDecimal(value, this.locale));
   }
 
   removeIngredientLabel(name: string): string {
@@ -799,8 +816,8 @@ export class EditRecipePage implements OnInit {
       return 'recipe-base-servings';
     for (const [index, ingredient] of recipe.ingredients.entries()) {
       if (!ingredient.name.trim()) return `ingredient-name-${index}`;
-      if (!this.isFiniteQuantity(ingredient.quantity)) return `ingredient-quantity-${index}`;
-      if (!ingredient.unit) return `ingredient-unit-${index}`;
+      if (!this.isValidQuantity(ingredient.quantity)) return `ingredient-quantity-${index}`;
+      if ((ingredient.quantityText?.length ?? 0) > 200) return `ingredient-quantity-${index}`;
     }
     const stepIndex = recipe.steps.findIndex((step) => !step.description.trim());
     return stepIndex >= 0 ? `step-description-${stepIndex}` : 'recipe-validation';
@@ -843,15 +860,15 @@ export class EditRecipePage implements OnInit {
           `ingredient-name-${index}`,
           $localize`:@@recipes.ingredientNameRequired:Enter an ingredient name.`,
         );
-      if (!this.isFiniteQuantity(row.quantity))
+      if (!this.isValidQuantity(row.quantity))
         add(
           `ingredient-quantity-${index}`,
           $localize`:@@recipes.ingredientQuantityRequired:Enter a quantity greater than zero.`,
         );
-      if (!row.unit.trim())
+      if ((row.quantityText?.length ?? 0) > 200)
         add(
-          `ingredient-unit-${index}`,
-          $localize`:@@recipes.ingredientUnitRequired:Enter an ingredient unit.`,
+          `ingredient-quantity-${index}`,
+          $localize`:@@recipes.ingredientQuantityTextTooLong:Text amounts must be at most 200 characters.`,
         );
     });
     recipe.steps.forEach((row, index) => {
@@ -871,9 +888,10 @@ export class EditRecipePage implements OnInit {
       category: recipe.category,
       baseServings: recipe.baseServings,
       tags: recipe.tags.map((tag) => tag.name),
-      ingredients: recipe.ingredients.map(({ name, quantity, unit, order }) => ({
+      ingredients: recipe.ingredients.map(({ name, quantity, quantityText, unit, order }) => ({
         name,
-        quantity,
+        quantity: quantity !== null && !Number.isFinite(quantity) ? 'invalid' : quantity,
+        quantityText: quantityText ?? null,
         unit,
         order,
       })),

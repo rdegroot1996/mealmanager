@@ -23,6 +23,66 @@ public partial class RecipeControllerTests
         Steps = recipe.Steps.Select(row => row.ToInput()).ToArray(),
     };
 
+    [Fact]
+    public async Task RecipeMutations_PreserveUnmeasuredIngredientsAndAllowChangingMeasurement()
+    {
+        var request = CreateTestRecipe() with
+        {
+            Ingredients = [new RecipeIngredientInputDto { Name = "Black pepper", QuantityText = "to taste" }],
+        };
+        var created = await HttpClient.PostAsJsonAsync("/api/recipes", request);
+        created.EnsureSuccessStatusCode();
+        var recipe = (await created.Content.ReadFromJsonAsync<RecipeDto>(JsonOptions))!;
+        var saved = (await HttpClient.GetFromJsonAsync<RecipeDto>($"/api/recipes/{recipe.Id}", JsonOptions))!;
+        Assert.Null(Assert.Single(saved.Ingredients).Quantity);
+        Assert.Equal("to taste", saved.Ingredients.Single().QuantityText);
+        Assert.Equal("", saved.Ingredients.Single().Unit);
+
+        foreach (decimal? quantity in new decimal?[] { 0.5m, null })
+        {
+            var edit = EditRecipe(saved) with
+            {
+                Ingredients = [saved.Ingredients.Single().ToInput() with { Quantity = quantity, QuantityText = quantity.HasValue ? null : "as needed", Unit = quantity.HasValue ? "tsp" : "" }],
+            };
+            (await HttpClient.PutAsJsonAsync($"/api/recipes/{recipe.Id}", edit)).EnsureSuccessStatusCode();
+            saved = (await HttpClient.GetFromJsonAsync<RecipeDto>($"/api/recipes/{recipe.Id}", JsonOptions))!;
+            Assert.Equal(quantity, Assert.Single(saved.Ingredients).Quantity);
+            Assert.Equal(recipe.Ingredients.Single().Id, saved.Ingredients.Single().Id);
+            Assert.Equal(quantity.HasValue ? null : "as needed", saved.Ingredients.Single().QuantityText);
+            Assert.Equal(quantity.HasValue ? "tsp" : "", saved.Ingredients.Single().Unit);
+        }
+    }
+
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task RecipeMutations_RejectConflictingOrOversizedAmounts(bool conflicting, bool oversized)
+    {
+        var invalid = CreateTestRecipe() with
+        {
+            Ingredients = [new RecipeIngredientInputDto { Name = "Pepper", Quantity = conflicting ? 1m : null, QuantityText = oversized ? new string('x', 201) : "to taste" }],
+        };
+        Assert.Equal(HttpStatusCode.BadRequest, (await HttpClient.PostAsJsonAsync("/api/recipes", invalid)).StatusCode);
+        var created = await HttpClient.PostAsJsonAsync("/api/recipes", CreateTestRecipe());
+        var recipe = (await created.Content.ReadFromJsonAsync<RecipeDto>(JsonOptions))!;
+        Assert.Equal(HttpStatusCode.BadRequest, (await HttpClient.PutAsJsonAsync($"/api/recipes/{recipe.Id}", EditRecipe(recipe) with { Ingredients = invalid.Ingredients })).StatusCode);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task RecipeMutations_RejectNonPositiveIngredientQuantities(decimal quantity)
+    {
+        var invalid = CreateTestRecipe() with
+        {
+            Ingredients = [new RecipeIngredientInputDto { Name = "Pepper", Quantity = quantity, Unit = "tsp" }],
+        };
+        Assert.Equal(HttpStatusCode.BadRequest, (await HttpClient.PostAsJsonAsync("/api/recipes", invalid)).StatusCode);
+        var created = await HttpClient.PostAsJsonAsync("/api/recipes", CreateTestRecipe());
+        var recipe = (await created.Content.ReadFromJsonAsync<RecipeDto>(JsonOptions))!;
+        Assert.Equal(HttpStatusCode.BadRequest, (await HttpClient.PutAsJsonAsync($"/api/recipes/{recipe.Id}", EditRecipe(recipe) with { Ingredients = invalid.Ingredients })).StatusCode);
+    }
+
     [Theory]
     [InlineData(false, false)]
     [InlineData(false, true)]

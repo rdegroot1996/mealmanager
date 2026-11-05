@@ -35,6 +35,159 @@ describe('EditRecipePage', () => {
     expect(component).toBeTruthy();
   });
 
+  it('saves a blank quantity as null and reopens it as an empty field', () => {
+    component.ngOnInit();
+    component.recipe()!.name = 'Seasoned pasta';
+    component.addIngredient();
+    const ingredient = component.recipe()!.ingredients[0];
+    ingredient.name = 'Black pepper';
+    ingredient.unit = '';
+    component.updateQuantity(ingredient, '  ');
+    const savedRecipe = { ...component.recipe()!, id: 'recipe-1' };
+    const save = vi.spyOn(component.recipeStore, 'saveRecipe').mockReturnValue(of(savedRecipe));
+    vi.spyOn(component.router, 'navigate').mockResolvedValue(true);
+
+    component.saveRecipe();
+
+    expect(component.validationErrors()).toEqual([]);
+    expect(save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ingredients: [
+          expect.objectContaining({
+            name: 'Black pepper',
+            quantity: null,
+            quantityText: null,
+            unit: '',
+          }),
+        ],
+      }),
+    );
+    expect(component.quantityDraft({ ...ingredient, id: 'reloaded' })).toBe('');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('#ingredient-quantity-0').required).toBe(false);
+  });
+
+  it.each(['0', '-1', '−0.5', '1.2345'])('rejects invalid entered quantity %s', (draft) => {
+    component.ngOnInit();
+    component.recipe()!.name = 'Seasoning';
+    component.addIngredient();
+    const ingredient = component.recipe()!.ingredients[0];
+    ingredient.name = 'Pepper';
+    component.updateQuantity(ingredient, draft);
+    component.saveRecipe();
+    expect(component.validationIssues()).toContainEqual(
+      expect.objectContaining({ id: 'ingredient-quantity-0' }),
+    );
+    expect(component.saving()).toBe(false);
+  });
+
+  it.each(['1.2.3', '1/2', '1-2'])('saves non-numeric amount %s as text', (draft) => {
+    component.ngOnInit();
+    component.recipe()!.name = 'Seasoning';
+    component.addIngredient();
+    const ingredient = component.recipe()!.ingredients[0];
+    ingredient.name = 'Pepper';
+    component.updateQuantity(ingredient, draft);
+    const save = vi
+      .spyOn(component.recipeStore, 'saveRecipe')
+      .mockReturnValue(of({ ...component.recipe()!, id: 'r' }));
+    vi.spyOn(component.router, 'navigate').mockResolvedValue(true);
+    component.saveRecipe();
+    expect(component.validationErrors()).toEqual([]);
+    expect(save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ingredients: [expect.objectContaining({ quantity: null, quantityText: draft })],
+      }),
+    );
+    expect(component.quantityDraft({ ...ingredient, id: 'reloaded' })).toBe(draft);
+  });
+
+  it.each(['1.2.3', '1.2345'])(
+    'protects amount draft %s when the saved amount is blank',
+    async (draft) => {
+      component.loadRecipe('saved');
+      http.expectOne('/api/recipes/saved').flush({
+        id: 'saved',
+        name: 'Seasoning',
+        category: 'Other',
+        baseServings: 2,
+        tags: [],
+        images: [],
+        profiles: [],
+        steps: [],
+        isFavorite: false,
+        ingredients: [
+          { id: 'pepper', name: 'Pepper', quantity: null, quantityText: null, unit: '', order: 0 },
+        ],
+      });
+      expect(component.hasUnsavedChanges()).toBe(false);
+      component.updateQuantity(component.recipe()!.ingredients[0], draft);
+      expect(component.hasUnsavedChanges()).toBe(true);
+      const discard = vi.spyOn(component.discardChangesModal(), 'open').mockResolvedValue(false);
+      await expect(component.canDeactivate()).resolves.toBe(false);
+      expect(discard).toHaveBeenCalledOnce();
+    },
+  );
+
+  it('uses quantity steppers for numeric amounts and preserves typed wording', async () => {
+    component.ngOnInit();
+    component.addIngredient();
+    await fixture.whenStable();
+    const row = fixture.nativeElement.querySelector(
+      '[data-testid="ingredient-editor-row"]',
+    ) as HTMLElement;
+    const amount = row.querySelector('#ingredient-quantity-0') as HTMLInputElement;
+    const [minus, plus] = row.querySelectorAll(
+      'app-number-input button',
+    ) as NodeListOf<HTMLButtonElement>;
+    expect(amount.inputMode).toBe('text');
+    plus.click();
+    await fixture.whenStable();
+    expect(component.recipe()!.ingredients[0].quantity).toBe(1);
+    expect(amount.value).toBe('1');
+    amount.value = '0.5';
+    amount.dispatchEvent(new Event('input', { bubbles: true }));
+    await fixture.whenStable();
+    plus.click();
+    await fixture.whenStable();
+    expect(amount.value).toBe('1.5');
+    expect(component.recipe()!.ingredients[0].quantity).toBe(1.5);
+    amount.value = 'to taste';
+    amount.dispatchEvent(new Event('input', { bubbles: true }));
+    await fixture.whenStable();
+    expect(minus.disabled).toBe(true);
+    expect(plus.disabled).toBe(true);
+    expect(component.recipe()!.ingredients[0].quantityText).toBe('to taste');
+  });
+
+  it('accepts a text amount and switches back to a scalable numeric quantity', () => {
+    component.ngOnInit();
+    component.recipe()!.name = 'Seasoning';
+    component.addIngredient();
+    const ingredient = component.recipe()!.ingredients[0];
+    ingredient.name = 'Pepper';
+    component.updateQuantity(ingredient, 'to taste');
+    expect(ingredient.quantity).toBeNull();
+    expect(ingredient.quantityText).toBe('to taste');
+    expect(component.quantityDraft({ ...ingredient, id: 'reloaded' })).toBe('to taste');
+    const save = vi
+      .spyOn(component.recipeStore, 'saveRecipe')
+      .mockReturnValue(of({ ...component.recipe()!, id: 'r' }));
+    vi.spyOn(component.router, 'navigate').mockResolvedValue(true);
+    component.saveRecipe();
+    expect(component.validationErrors()).toEqual([]);
+    expect(save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ingredients: [
+          expect.objectContaining({ quantity: null, quantityText: 'to taste', unit: '' }),
+        ],
+      }),
+    );
+    component.updateQuantity(ingredient, '2');
+    expect(ingredient.quantity).toBe(2);
+    expect(ingredient.quantityText).toBeNull();
+  });
+
   it('offers Other as a recipe category', () => {
     component.ngOnInit();
     fixture.detectChanges();

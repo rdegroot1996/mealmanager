@@ -15,7 +15,7 @@ namespace MealManager.Infrastructure.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.11");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.14");
 
             modelBuilder.Entity("MealManager.Domain.Entities.AppSetting", b =>
                 {
@@ -394,8 +394,11 @@ namespace MealManager.Infrastructure.Migrations
                     b.Property<int>("Order")
                         .HasColumnType("INTEGER");
 
-                    b.Property<decimal>("Quantity")
+                    b.Property<decimal?>("Quantity")
                         .HasPrecision(10, 3)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("QuantityText")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("RecipeId")

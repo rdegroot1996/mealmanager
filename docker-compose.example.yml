@@ -1,6 +1,6 @@
 services:
   mealmanager:
-    image: ${MEALMANAGER_IMAGE:-ghcr.io/rdegroot1996/mealmanager:latest}
+    image: ${MEALMANAGER_IMAGE:-ghcr.io/rdegroot1996/mealmanager:v1}
     restart: unless-stopped
     volumes:
       - mealmanager-data:/app/data

@@ -7,20 +7,25 @@
   <button
     type="button"
     class="btn btn-ghost h-full min-h-0 w-11 shrink-0 p-0"
-    [disabled]="disabled() || !whole() || value() <= minimum()"
+    [disabled]="disabled() || steppedValue(-1) === null"
     [attr.aria-label]="decreaseLabel()"
-    (click)="valueChange.emit(value() - 1)"
+    (click)="adjust(-1)"
   >
     <app-icon name="remove" class="size-4" />
   </button>
   <input
     class="h-full min-w-0 flex-1 bg-transparent text-center tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none max-[799px]:text-base"
-    type="number"
+    [type]="allowText() ? 'text' : 'number'"
+    [attr.inputmode]="allowText() ? 'text' : 'numeric'"
+    autocomplete="off"
+    autocapitalize="none"
+    autocorrect="off"
+    spellcheck="false"
     [required]="required()"
     [id]="controlId()"
-    [min]="minimum()"
-    [attr.max]="maximum()"
-    step="1"
+    [attr.min]="allowText() ? null : minimum()"
+    [attr.max]="allowText() ? null : maximum()"
+    [attr.step]="allowText() ? null : 1"
     [disabled]="disabled()"
     [attr.aria-label]="label()"
     [attr.aria-invalid]="invalid()"
@@ -31,9 +36,9 @@
   <button
     type="button"
     class="btn btn-ghost h-full min-h-0 w-11 shrink-0 p-0"
-    [disabled]="disabled() || !whole() || (maximum() !== null && value() >= maximum()!)"
+    [disabled]="disabled() || steppedValue(1) === null"
     [attr.aria-label]="increaseLabel()"
-    (click)="valueChange.emit(value() + 1)"
+    (click)="adjust(1)"
   >
     <app-icon name="add" class="size-4" />
   </button>
