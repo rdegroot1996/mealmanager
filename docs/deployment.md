@@ -12,9 +12,11 @@ docker compose up -d
 
 The example uses a named Docker volume by default. Uncomment its bind-mount alternative when you prefer the data directory to be directly visible on the host.
 
-Release tags publish matching image tags and `latest`.
+Publish a [GitHub Release](https://github.com/rdegroot1996/mealmanager/releases) tagged `v1.0.0` from `main` to build image tags `v1.0.0`, `v1`, and `latest`. Prereleases publish only their exact tag. Maintain release notes and package links manually; check **Actions → Docker** before deploying.
+
+Compose defaults to `v1` for updates within major version 1. Set `MEALMANAGER_IMAGE` to an exact tag or digest to pin a version, or `latest` to follow all stable releases. Backports and older rebuilds can move aliases backwards. Pull and recreate containers to update.
+
 Manual builds use the selected branch or tag name, such as `main`.
-Set `MEALMANAGER_IMAGE` to a tag or digest to pin a deployment.
 Run [checks locally](development.md#verify-changes) while pipeline validation is deferred.
 
 To build and run the image directly instead, use:

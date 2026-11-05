@@ -114,7 +114,7 @@ public sealed class MealManagerMcpTools(
         [Description("Recipe category.")] RecipeCategory category,
         [Description("Base number of servings, greater than zero.")] int baseServings,
         [Description("Reusable household tags.")] string[] tags,
-        [Description("Ordered recipe ingredients with decimal quantities and measurement units.")] McpRecipeIngredientInput[] ingredients,
+        [Description("Ordered ingredients with optional units. Use a positive quantity for measured amounts, or quantityText such as 'to taste' for unmeasured amounts.")] McpRecipeIngredientInput[] ingredients,
         [Description("Ordered preparation-step descriptions.")] string[] steps,
         [Description("Optional plain-text notes or source reference, up to 4000 characters.")] string? notes = null) =>
         Execute(async () =>
@@ -131,6 +131,7 @@ public sealed class MealManagerMcpTools(
                     Id = Guid.Empty,
                     Name = ingredient.Name,
                     Quantity = ingredient.Quantity,
+                    QuantityText = ingredient.QuantityText,
                     Unit = ingredient.Unit,
                 }).ToArray(),
                 Steps = steps.Select(description => new RecipeStepInputDto
@@ -166,7 +167,7 @@ public sealed class MealManagerMcpTools(
             Tags = tags,
             Ingredients = ingredients?.Select(row => row is null || row.Id == Guid.Empty
                 ? throw new ValidationException("Ingredient rows cannot be null; omit IDs for new rows.")
-                : new RecipeIngredientInputDto { Id = row.Id ?? Guid.Empty, Name = row.Name, Quantity = row.Quantity, Unit = row.Unit }).ToArray(),
+                : new RecipeIngredientInputDto { Id = row.Id ?? Guid.Empty, Name = row.Name, Quantity = row.Quantity, QuantityText = row.QuantityText, Unit = row.Unit }).ToArray(),
             Steps = steps?.Select(row => row is null || row.Id == Guid.Empty
                 ? throw new ValidationException("Step rows cannot be null; omit IDs for new rows.")
                 : new RecipeStepInputDto { Id = row.Id ?? Guid.Empty, Description = row.Description }).ToArray(),

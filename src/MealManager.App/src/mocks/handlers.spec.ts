@@ -15,6 +15,33 @@ describe('mock meal plan contracts', () => {
   beforeEach(() => resetMockData());
   afterAll(() => server.close());
 
+  it('preserves omitted and null ingredient quantities and rejects nonpositive amounts', async () => {
+    const draft = {
+      name: 'Seasoning',
+      category: 'Other',
+      baseServings: 2,
+      tags: [],
+      steps: [],
+      ingredients: [{ name: 'Pepper', quantityText: 'to taste' }],
+    };
+    const created = await api('/api/recipes', 'POST', draft);
+    expect(created.status).toBe(201);
+    const recipe = await created.json();
+    expect(recipe.ingredients[0].quantity).toBeNull();
+    expect(recipe.ingredients[0].quantityText).toBe('to taste');
+    expect(recipe.ingredients[0].unit).toBe('');
+    const edit = { ...draft, ingredients: [{ ...recipe.ingredients[0], quantity: null }] };
+    expect((await api(`/api/recipes/${recipe.id}`, 'PUT', edit)).status).toBe(200);
+    expect(
+      (await (await api(`/api/recipes/${recipe.id}`)).json()).ingredients[0].quantity,
+    ).toBeNull();
+    for (const quantity of [0, -1]) {
+      const invalid = { ...draft, ingredients: [{ ...draft.ingredients[0], quantity }] };
+      expect((await api('/api/recipes', 'POST', invalid)).status).toBe(400);
+      expect((await api(`/api/recipes/${recipe.id}`, 'PUT', invalid)).status).toBe(400);
+    }
+  });
+
   it('returns upcoming entries across cycles with bounded calendar dates and input validation', async () => {
     const previous = await (await api('/api/meal-plans/cycle/c1')).json();
     const middle = await (await api('/api/meal-plans/cycle/c2')).json();

@@ -32,6 +32,44 @@ describe('RecipePage', () => {
     expect(component).toBeTruthy();
   });
 
+  it('scales measured ingredients while preserving unmeasured wording in details and cooking mode', async () => {
+    component.recipeStore.activeRecipe.set({
+      id: 'recipe-1',
+      name: 'Pasta',
+      category: 'Meals',
+      baseServings: 2,
+      tags: [],
+      isFavorite: false,
+      images: [],
+      profiles: [],
+      steps: [],
+      ingredients: [
+        { id: 'pasta', name: 'Pasta', quantity: 200, unit: 'g', order: 0 },
+        {
+          id: 'pepper',
+          name: 'Black pepper',
+          quantity: null,
+          quantityText: 'to taste',
+          unit: '',
+          order: 1,
+        },
+      ],
+    });
+    component.profile.set({ id: 'family', name: 'Family', servings: 4, groceries: [] });
+    component.loading.set(false);
+    expect(component.scaledIngredients().map((row) => row.quantity)).toEqual([400, null]);
+    expect(component.formatQuantity(component.scaledIngredients()[1])).toBe('to taste');
+    await fixture.whenStable();
+    const pepperRow = () =>
+      [...fixture.nativeElement.querySelectorAll('tr, li')].find((row) =>
+        (row as HTMLElement).textContent?.includes('Black pepper'),
+      ) as HTMLElement;
+    expect(pepperRow().children[1].textContent?.trim()).toBe('to taste');
+    component.cooking.set(true);
+    await fixture.whenStable();
+    expect(pepperRow().children[1].textContent?.trim()).toBe('to taste');
+  });
+
   it('cancels an older profile selection before applying the latest profile', () => {
     component.selectProfile('first');
     const first = http.expectOne('/api/recipe-profiles/first');

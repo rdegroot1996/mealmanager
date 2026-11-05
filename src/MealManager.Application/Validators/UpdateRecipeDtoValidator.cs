@@ -17,7 +17,10 @@ public class UpdateRecipeDtoValidator : AbstractValidator<UpdateRecipeDto>
         {
             i.RuleFor(x => x.Name).NotEmpty();
             i.RuleFor(x => x.Quantity).GreaterThan(0);
-            i.RuleFor(x => x.Unit).NotEmpty();
+            i.RuleFor(x => x.QuantityText).MaximumLength(200)
+                .Must((row, text) => string.IsNullOrWhiteSpace(text) || row.Quantity is null)
+                .WithMessage("Use either a numeric quantity or a text amount.");
+            i.RuleFor(x => x.Unit).NotNull();
         });
         RuleFor(x => x.Steps).NotNull()
             .Must(rows => rows is null || rows.Where(row => row.Id != Guid.Empty).Select(row => row.Id).Distinct().Count() == rows.Count(row => row.Id != Guid.Empty))

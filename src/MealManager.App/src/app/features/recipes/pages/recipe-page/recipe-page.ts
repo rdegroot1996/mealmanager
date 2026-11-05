@@ -112,7 +112,7 @@ export class RecipePage implements OnInit {
     const scale = profile.servings / recipe.baseServings;
     return recipe.ingredients.map((ingredient) => ({
       ...ingredient,
-      quantity: ingredient.quantity * scale,
+      quantity: ingredient.quantity === null ? null : ingredient.quantity * scale,
     }));
   });
 
@@ -294,6 +294,7 @@ export class RecipePage implements OnInit {
   }
 
   formatQuantity(ingredient: ApiRecipeIngredient): string {
+    if (ingredient.quantity === null) return ingredient.quantityText ?? '';
     return new Intl.NumberFormat(this.locale, { maximumFractionDigits: 3 }).format(
       ingredient.quantity,
     );

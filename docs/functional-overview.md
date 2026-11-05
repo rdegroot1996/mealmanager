@@ -16,7 +16,7 @@ Use these English terms in documentation, code, contracts, and tests. UI transla
 | Category             | One required, fixed classification: Meals, Baking, Desserts, Snacks, or Other.                                          | `RecipeCategory`           |
 | Tag                  | Reusable household-defined classification, such as Easy or Vegetarian. A recipe can have several.                       | `RecipeTag`                |
 | Recipe profile       | Reusable servings and grocery defaults for a recipe.                                                                    | `RecipeProfile`            |
-| Ingredient           | Cooking measurement; its quantity scales with servings.                                                                 | `RecipeIngredient`         |
+| Ingredient           | Cooking amount; numeric quantities scale with servings and text amounts stay unchanged.                                 | `RecipeIngredient`         |
 | Profile grocery item | Reusable purchase default with a whole quantity and Needed or Usually at home placement.                                | `RecipeProfileGroceryItem` |
 | Planner              | Screen for viewing and editing a cycle's meal plan.                                                                     | `/planner`                 |
 | Planning cycle       | Bounded, inclusive date range; not necessarily a calendar week.                                                         | `PlanningCycle`            |
@@ -48,7 +48,7 @@ The editor marks required fields and keeps save actions reachable. Validation id
 
 ### Recipe profiles
 
-Every recipe starts with a Default profile at its base servings and must retain at least one profile. Profiles have a name, servings, and ordered groceries. Ingredient amounts scale with servings; grocery quantities count packs or individual items and stay fixed when servings change.
+Every recipe starts with a Default profile at its base servings and must retain at least one profile. Profiles have a name, servings, and ordered groceries. An ingredient's Quantity field accepts either a positive number or a text amount up to 200 characters, such as “to taste”, “a handful”, or “as needed”. The editor recognizes numbers in the selected locale and allows up to three decimal places; non-numeric input such as “1.2.3” is kept as literal text. Zero and negative numbers remain invalid quantities. Amounts and units are optional. Its plus/minus buttons adjust numeric amounts by one, preserving decimal parts and keeping amounts positive. Plus starts an empty amount at one; both buttons are disabled for text amounts. The field uses a text keyboard so wording can always be entered. Numeric amounts scale with servings; text amounts stay unchanged in recipe details and Cooking mode. Grocery quantities count packs or individual items and stay fixed when servings change.
 
 The profile menu offers Add, Edit, and confirmed removal when another profile remains. The grocery section's Edit profile shortcut opens the same editor. Referenced recipes and profiles cannot be deleted, preserving meal-plan history.
 

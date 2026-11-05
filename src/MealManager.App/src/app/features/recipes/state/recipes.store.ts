@@ -95,10 +95,11 @@ export class RecipesStore {
       category: recipe.category,
       baseServings: recipe.baseServings,
       tags: recipe.tags.map((tag) => tag.name),
-      ingredients: recipe.ingredients.map(({ id, name, quantity, unit }) => ({
+      ingredients: recipe.ingredients.map(({ id, name, quantity, quantityText, unit }) => ({
         id,
         name,
         quantity,
+        quantityText: quantityText ?? null,
         unit,
       })),
       steps: recipe.steps.map(({ id, description }) => ({ id, description })),

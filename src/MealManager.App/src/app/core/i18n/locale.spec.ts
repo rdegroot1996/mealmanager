@@ -22,4 +22,18 @@ describe('language and ingredient quantities', () => {
     const arabic = formatDecimal(1.5, 'ar-EG');
     expect(parseDecimal(arabic, 'ar-EG')).toBe(1.5);
   });
+
+  it('recognizes signed numbers without disguising invalid quantities as text', () => {
+    expect(parseDecimal('-1', 'en-GB')).toBe(-1);
+    expect(parseDecimal('−0,5', 'nl-NL')).toBe(-0.5);
+    expect(parseDecimal('+1.5', 'en-GB')).toBe(1.5);
+  });
+
+  it('distinguishes non-numeric text from numbers exceeding the editor precision', () => {
+    for (const text of ['1.2.3', '1/2', 'to taste']) {
+      expect(Number.isNaN(parseDecimal(text, 'en-GB', Infinity))).toBe(true);
+    }
+    expect(parseDecimal('1,2345', 'nl-NL', Infinity)).toBe(1.2345);
+    expect(Number.isNaN(parseDecimal('1,2345', 'nl-NL'))).toBe(true);
+  });
 });

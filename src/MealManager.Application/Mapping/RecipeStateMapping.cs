@@ -31,7 +31,7 @@ public static class RecipeStateMapping
             recipe.BaseServings,
             Tags = recipe.Tags.Select(tag => tag.Name).Order(StringComparer.Ordinal),
             Ingredients = recipe.Ingredients.OrderBy(row => row.Order).ThenBy(row => row.Id)
-                .Select(row => new { row.Id, row.Name, Quantity = row.Quantity.ToString("G29", CultureInfo.InvariantCulture), row.Unit, row.Order }),
+                .Select(row => new { row.Id, row.Name, Quantity = row.Quantity?.ToString("G29", CultureInfo.InvariantCulture), row.QuantityText, row.Unit, row.Order }),
             Steps = recipe.Steps.OrderBy(row => row.Order).ThenBy(row => row.Id),
         }),
     };

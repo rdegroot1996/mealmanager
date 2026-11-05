@@ -1,7 +1,8 @@
 export interface ApiRecipeIngredient {
   id: string;
   name: string;
-  quantity: number;
+  quantity: number | null;
+  quantityText?: string | null;
   unit: string;
   order: number;
 }

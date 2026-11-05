@@ -51,14 +51,19 @@
     "
   >
     @if (ingredients().length) {
-      <section>
+      <section class="min-w-0">
         <h2 class="app-section-title" i18n="@@recipes.ingredients">Ingredients</h2>
         <ul class="mt-4 divide-y divide-base-300">
           @for (item of ingredients(); track item.id) {
             <li class="flex justify-between gap-4 py-3 text-base leading-6">
               <span class="min-w-0 break-words">{{ item.name }}</span>
-              <span class="shrink-0"
-                >{{ item.quantity | number: '1.0-2' : locale }} {{ unit(item.unit) }}</span
+              <span class="min-w-0 max-w-1/2 shrink-0 text-right break-words"
+                >{{
+                  item.quantity === null
+                    ? item.quantityText
+                    : (item.quantity | number: '1.0-2' : locale)
+                }}
+                {{ unit(item.unit) }}</span
               >
             </li>
           }

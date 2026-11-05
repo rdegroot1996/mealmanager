@@ -38,6 +38,7 @@ public class RecipeCommands(
                     RecipeId = recipeId,
                     Name = i.Name,
                     Quantity = i.Quantity,
+                    QuantityText = string.IsNullOrWhiteSpace(i.QuantityText) ? null : i.QuantityText.Trim(),
                     Unit = i.Unit,
                     Order = order,
                 })
@@ -177,6 +178,7 @@ public class RecipeCommands(
             {
                 ingredient.Name = dto.Name;
                 ingredient.Quantity = dto.Quantity;
+                ingredient.QuantityText = string.IsNullOrWhiteSpace(dto.QuantityText) ? null : dto.QuantityText.Trim();
                 ingredient.Unit = dto.Unit;
                 ingredient.Order = order;
             }
@@ -188,6 +190,7 @@ public class RecipeCommands(
                     RecipeId = recipe.Id,
                     Name = dto.Name,
                     Quantity = dto.Quantity,
+                    QuantityText = string.IsNullOrWhiteSpace(dto.QuantityText) ? null : dto.QuantityText.Trim(),
                     Unit = dto.Unit,
                     Order = order,
                 });
